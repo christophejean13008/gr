@@ -438,41 +438,64 @@ const BASE={lift:0,spine:0,spineSide:0,head:0,lArmF:0,lArmS:.3,rArmF:0,rArmS:.3,
 class ProcRig{
   constructor(L){
     this.root=new THREE.Group();
-    const tex=new THREE.CanvasTexture(leoCanvas(L)); tex.colorSpace=THREE.SRGBColorSpace;
-    const leo=new THREE.MeshStandardMaterial({map:tex,roughness:.4,metalness:.2});
-    const skin=new THREE.MeshStandardMaterial({color:new THREE.Color(L.skin||'#f0c4a4'),roughness:.75});
-    const hairM=new THREE.MeshStandardMaterial({color:new THREE.Color(L.hair||'#3a2215'),roughness:.85});
-    const cap=(r,l,m)=>new THREE.Mesh(new THREE.CapsuleGeometry(r,l,4,10),m);
+    const tex=new THREE.CanvasTexture(leoCanvas(L)); tex.colorSpace=THREE.SRGBColorSpace; tex.anisotropy=4;
+    const leo=new THREE.MeshStandardMaterial({map:tex,roughness:.38,metalness:.22,envMap:ENVTEX,envMapIntensity:.45});
+    const skin=new THREE.MeshStandardMaterial({color:new THREE.Color(L.skin||'#f0c4a4'),roughness:.62,envMap:ENVTEX,envMapIntensity:.15});
+    const hairM=new THREE.MeshStandardMaterial({color:new THREE.Color(L.hair||'#3a2215'),roughness:.55,envMap:ENVTEX,envMapIntensity:.3});
+    const dark=new THREE.MeshBasicMaterial({color:0x1d120c});
+    const V2=(r,y)=>new THREE.Vector2(r,y);
+    const lathe=(pts,m,seg=24)=>new THREE.Mesh(new THREE.LatheGeometry(pts.map(([r,y])=>V2(r,y)),seg),m);
+    /* membre fuselé qui pend vers le bas depuis l'articulation */
+    const limb=(prof,m)=>{const g=new THREE.LatheGeometry(prof.map(([r,d])=>V2(r,-d)).reverse(),16);return new THREE.Mesh(g,m);};
+    const ball=(r,m)=>new THREE.Mesh(new THREE.SphereGeometry(r,16,12),m);
     const hips=this.hips=new THREE.Group(); hips.position.y=.92; this.root.add(hips);
-    const pel=new THREE.Mesh(new THREE.SphereGeometry(.125,16,12),leo); pel.scale.set(1.12,.75,.8); hips.add(pel);
-    if(L.jupe){const jm=leo.clone();jm.side=THREE.DoubleSide;const sk=new THREE.Mesh(new THREE.CylinderGeometry(.13,.2,.13,22,1,true),jm);sk.position.y=-.035;sk.scale.z=.85;hips.add(sk);}
+    // bassin (dans le justaucorps)
+    const pel=lathe([[0,-.105],[.05,-.1],[.1,-.075],[.122,-.035],[.124,.005],[.112,.05],[.098,.085],[0,.085]],leo); pel.scale.z=.74; hips.add(pel);
+    if(L.jupe){const jm=leo.clone();jm.side=THREE.DoubleSide;const sk=new THREE.Mesh(new THREE.CylinderGeometry(.128,.2,.13,26,1,true),jm);sk.position.y=-.035;sk.scale.z=.82;hips.add(sk);}
+    // buste : taille fine, poitrine, épaules
     const spine=this.spine=new THREE.Group(); spine.position.y=.04; hips.add(spine);
-    const torso=cap(.112,.28,leo); torso.position.y=.22; torso.scale.set(1.08,1,.72); spine.add(torso);
-    const neck=cap(.038,.06,skin); neck.position.y=.44; spine.add(neck);
-    const head=this.head=new THREE.Group(); head.position.y=.5; spine.add(head);
-    const hm=new THREE.Mesh(new THREE.SphereGeometry(.1,20,16),skin); hm.position.y=.08; hm.scale.set(.92,1.05,.95); head.add(hm);
-    const hair=new THREE.Mesh(new THREE.SphereGeometry(.104,20,14,0,Math.PI*2,0,Math.PI*.58),hairM); hair.position.set(0,.09,-.008); hair.rotation.x=-.35; head.add(hair);
-    const bun=new THREE.Mesh(new THREE.SphereGeometry(.05,14,10),hairM); bun.position.set(0,.17,-.07); head.add(bun);
-    const eyeM=new THREE.MeshBasicMaterial({color:0x22140c});
-    for(const sx of [-1,1]){const e=new THREE.Mesh(new THREE.SphereGeometry(.011,8,6),eyeM); e.position.set(sx*.034,.09,.088); head.add(e);}
-    const mouth=new THREE.Mesh(new THREE.SphereGeometry(.014,8,6),new THREE.MeshBasicMaterial({color:0xd9707a})); mouth.scale.set(1.4,.5,.5); mouth.position.set(0,.045,.092); head.add(mouth);
+    const torso=lathe([[0,-.02],[.097,-.02],[.09,.05],[.093,.11],[.108,.18],[.12,.245],[.124,.3],[.118,.345],[.095,.385],[.055,.41],[0,.415]],leo); torso.scale.z=.7; spine.add(torso);
+    const neck=new THREE.Mesh(new THREE.CylinderGeometry(.032,.038,.1,14),skin); neck.position.y=.445; spine.add(neck);
+    // tête
+    const head=this.head=new THREE.Group(); head.position.y=.49; spine.add(head);
+    const hm=ball(.092,skin); hm.position.y=.085; hm.scale.set(.9,1.08,.96); head.add(hm);
+    for(const sx of [-1,1]){
+      const ear=ball(.018,skin); ear.position.set(sx*.083,.08,-.005); ear.scale.set(.5,1,.8); head.add(ear);
+      const w=ball(.016,new THREE.MeshBasicMaterial({color:0xffffff})); w.position.set(sx*.031,.092,.077); w.scale.set(1.15,.85,.5); head.add(w);
+      const iris=ball(.0105,dark); iris.position.set(sx*.031,.091,.084); iris.scale.set(1,1,.5); head.add(iris);
+      const lash=new THREE.Mesh(new THREE.BoxGeometry(.034,.004,.006),dark); lash.position.set(sx*.031,.103,.082); lash.rotation.z=-sx*.08; head.add(lash);
+      const brow=new THREE.Mesh(new THREE.BoxGeometry(.03,.005,.006),hairM); brow.position.set(sx*.032,.121,.079); brow.rotation.z=-sx*.2; head.add(brow);
+      const blush=ball(.012,new THREE.MeshBasicMaterial({color:0xff8fa3,transparent:true,opacity:.28})); blush.position.set(sx*.05,.06,.072); blush.scale.set(1,.6,.4); head.add(blush);
+    }
+    const nose=ball(.0075,skin); nose.position.set(0,.069,.088); nose.scale.set(.85,1.1,.8); head.add(nose);
+    const smile=new THREE.Mesh(new THREE.TorusGeometry(.014,.0028,6,14,Math.PI),new THREE.MeshBasicMaterial({color:0xc9506a})); smile.position.set(0,.045,.086); smile.rotation.z=Math.PI; head.add(smile);
+    // cheveux tirés + chignon + chouchou
+    const hair=new THREE.Mesh(new THREE.SphereGeometry(.097,24,16,0,Math.PI*2,0,Math.PI*.6),hairM); hair.position.set(0,.088,-.01); hair.rotation.x=-.85; hair.scale.set(.94,1.1,1.02); head.add(hair);
+    const back=ball(.088,hairM); back.position.set(0,.1,-.035); back.scale.set(.95,1.1,.82); head.add(back);
+    const bun=ball(.045,hairM); bun.position.set(0,.19,-.06); bun.scale.set(1,.9,1); head.add(bun);
+    const chou=new THREE.Mesh(new THREE.TorusGeometry(.04,.012,8,20),new THREE.MeshStandardMaterial({color:new THREE.Color(L.second||'#ffffff'),roughness:.4,metalness:.3,envMap:ENVTEX})); chou.position.set(0,.17,-.05); chou.rotation.x=Math.PI/2+.5; head.add(chou);
     this.sh={};this.el={};this.hand={};this.hip={};this.knee={};this.ank={};
     const manche=s=>L.manches==='deux'||L.manches===(s==='l'?'gauche':'droite');
     for(const s of ['l','r']){
-      const sg=s==='l'?1:-1;
-      const sh=new THREE.Group(); sh.position.set(sg*.165,.39,0); spine.add(sh);
-      const ua=cap(.036,.22,manche(s)?leo:skin); ua.position.y=-.14; sh.add(ua);
+      const sg=s==='l'?1:-1, mA=manche(s)?leo:skin;
+      const sh=new THREE.Group(); sh.position.set(sg*.158,.375,0); spine.add(sh);
+      const shb=ball(.042,manche(s)?leo:leo); shb.scale.set(1,.9,.85); sh.add(shb);
+      sh.add(limb([[.037,0],[.036,.06],[.031,.2],[.027,.29]],mA));
       const el=new THREE.Group(); el.position.y=-.29; sh.add(el);
-      const fa=cap(.03,.2,manche(s)?leo:skin); fa.position.y=-.13; el.add(fa);
+      el.add(ball(.027,mA));
+      el.add(limb([[.027,0],[.028,.05],[.021,.2],[.017,.255]],mA));
       const hd=new THREE.Group(); hd.position.y=-.27; el.add(hd);
-      const hdm=new THREE.Mesh(new THREE.SphereGeometry(.034,10,8),skin); hdm.scale.set(.8,1.2,.6); hd.add(hdm);
+      const palm=ball(.026,skin); palm.position.y=-.03; palm.scale.set(.75,1.35,.42); hd.add(palm);
+      const thumb=ball(.01,skin); thumb.position.set(sg*-.012,-.025,.012); thumb.scale.set(1,2,1); hd.add(thumb);
       this.sh[s]=sh; this.el[s]=el; this.hand[s]=hd;
-      const hp=new THREE.Group(); hp.position.set(sg*.082,-.04,0); hips.add(hp);
-      const th=cap(.058,.32,skin); th.position.y=-.22; hp.add(th);
+      const hp=new THREE.Group(); hp.position.set(sg*.075,-.04,0); hips.add(hp);
+      hp.add(limb([[.066,0],[.068,.05],[.06,.18],[.047,.36],[.04,.44]],skin));
       const kn=new THREE.Group(); kn.position.y=-.44; hp.add(kn);
-      const sn=cap(.043,.32,skin); sn.position.y=-.21; kn.add(sn);
+      kn.add(ball(.041,skin));
+      const calf=limb([[.04,0],[.047,.08],[.047,.14],[.035,.27],[.024,.4],[.022,.44]],skin); calf.scale.z=1.05; kn.add(calf);
       const an=new THREE.Group(); an.position.y=-.44; kn.add(an);
-      const ft=cap(.03,.1,skin); ft.rotation.x=Math.PI/2; ft.position.set(0,-.005,.05); an.add(ft);
+      an.add(ball(.023,skin));
+      const ft=limb([[.026,0],[.03,.05],[.026,.11],[.014,.15]],skin); ft.rotation.x=-Math.PI/2+.45; ft.position.set(0,-.012,.012); ft.scale.x=.85; an.add(ft);
       this.hip[s]=hp; this.knee[s]=kn; this.ank[s]=an;
     }
     this.S=Object.assign({},BASE);
