@@ -247,6 +247,8 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
   <div class="card"><div class="lbl">😈 Perturbatrice</div><p class="hint" style="margin-top:2px">Une seule joueuse peut la jouer : au lieu de faire la chorégraphie, elle réussit des gestes qui gênent les autres (accélération, flash, brouillard, secousses).</p>
     <button id="lbPerturb" style="width:100%;margin-top:8px"></button></div>
   <p class="hint" id="lbStatut"></p>
+  <button class="big" id="lbPret" style="display:none;width:100%;max-width:440px;margin:0 auto 8px">✋ Je suis prête !</button>
+  <button id="lbForce" style="display:none;width:100%;max-width:440px;margin:0 auto 8px">⏩ Lancer sans les retardataires</button>
   <div class="actions"><button id="lbQuitter">Quitter</button><button class="big" id="lbLancer">Lancer !</button></div>
 </div>
 
@@ -1447,7 +1449,7 @@ function computeD(st){return sum([...st.DB].sort((a,b)=>b-a).slice(0,8))+sum(st.
 function liveScores(){const g=GAME,st=g.st;const D=computeD(st),E=Math.max(0,10-st.dedE),A=Math.max(0,10-st.dedA);const T=gameTime();return {D,E,A,T:Math.max(0,D+E+A-st.line),prog:clamp((T-g.first)/(g.final-g.first),0,1)};}
 function gameTime(){if(!GAME)return 0;return AC.currentTime-GAME.startAt-S.latence/1000-(AC.outputLatency||0);}
 
-function lancerPartie({choreo,music,nom,leo,design=null,opponents=[],online=false,demo=false,retour=null,coop=null,perturb=false,vue=null,onFin}){
+function lancerPartie({choreo,music,nom,leo,design=null,opponents=[],online=false,demo=false,retour=null,coop=null,perturb=false,vue=null,debut=null,onFin}){
   if(PREV){PREV.dispose();PREV=null;PREVKEY='';}
   const ac=getAC();
   const g={choreo,notes:choreo.notes.map(n=>Object.assign({},n)),els:choreo.els.map(e=>Object.assign({},e)),niv:choreo.niv,engin:choreo.engin,B:choreo.B,first:choreo.first,final:choreo.final,
@@ -1467,7 +1469,13 @@ function lancerPartie({choreo,music,nom,leo,design=null,opponents=[],online=fals
   opponents.slice(0,5).forEach((o,i)=>{const gh=new Gymnast(o.leo,choreo.engin,{ghost:true,ox:slots[i][0],oz:slots[i][1],design:o.eng?o.eng[choreo.engin]:null});gh.setTimeline(vue||choreo);g.ghosts.set(o.pid,{gym:gh,nom:o.nom});});
   }
   const src=ac.createBufferSource(); src.buffer=music.buffer; const gain=ac.createGain(); src.connect(gain); gain.connect(ac.destination);
-  g.startAt=ac.currentTime+3.3; src.start(g.startAt); g.src=src; g.gain=gain;
+  if(debut!=null){ // départ synchronisé sur l'horloge commune de la salle
+    const d=(debut-maint())/1000;
+    if(d>=.05){g.startAt=ac.currentTime+d;src.start(g.startAt);}
+    else {g.startAt=ac.currentTime+d;src.start(ac.currentTime,Math.min(-d,music.buffer.duration-1));}
+  } else {g.startAt=ac.currentTime+3.3; src.start(g.startAt);}
+  g.src=src; g.gain=gain;
+  if(online&&navigator.wakeLock)navigator.wakeLock.request('screen').then(l=>{g.wl=l;}).catch(()=>{});
   GAME=g; show('sJeu'); resizeHUD();
   g.demo=demo; g.retour=retour; lane.style.display=demo?'none':''; hEls.Judge.style.display=demo?'none':'';
   hEls.Live.style.display=online?'block':'none'; hEls.Elem.innerHTML=''; hEls.Prompt.innerHTML='';
@@ -1487,7 +1495,7 @@ function exPerte(n,kind){
   popup(kind==='lancer'?'Lancer raté !':'Échange raté !','#ff6b6b','E −0,70 · A −0,30');
   if(g.online)sendNet({t:'xfail',k:n.ex,kind});
 }
-function finirJeu(){const g=GAME;if(!g)return;fxReset();clearInterval(g.liveTimer);g.main.dispose();for(const v of g.ghosts.values())v.gym.dispose();GAME=null;}
+function finirJeu(){const g=GAME;if(!g)return;fxReset();try{g.wl&&g.wl.release();}catch(e){}clearInterval(g.liveTimer);g.main.dispose();for(const v of g.ghosts.values())v.gym.dispose();GAME=null;}
 
 function finalize(n,gr){
   const g=GAME,st=g.st,el=g.els[n.el],T=gameTime();
@@ -1558,6 +1566,7 @@ function addTrail(id,x,y){const g=GAME;if(!g)return;let a=g.trails.get(id);if(!a
 const jeuEl=$('#sJeu');
 jeuEl.addEventListener('pointerdown',e=>{
   if(!GAME||GAME.done||e.target.id==='hQuit')return; e.preventDefault();
+  if(AC&&AC.state!=='running')AC.resume();
   const T=gameTime(),x=e.clientX,y=e.clientY; PT.set(e.pointerId,{x,y,lx:x,ly:y,cx:x,cy:y,ang:null,tn:null}); addTrail(e.pointerId,x,y);
   const dbl=GAME.notes.find(n=>n.g==='double'&&n.started&&!n.judged);
   if(dbl&&T-dbl.first<=.42){finalize(dbl,dbl.pend);return;}
@@ -1854,6 +1863,48 @@ $('#tdGo').onclick=()=>{
 /* ========================= En ligne (PeerJS) ========================= */
 const NET={peer:null,host:false,conns:new Map(),hostConn:null,players:[],me:null,code:null,set:null,prep:null,mus:null,finals:new Map(),rx:null,podTimer:null,inGame:false};
 const PREFIX='rythmiquestar-v1-';
+/* Serveurs pour traverser les box / la 4G. Si une amie en 4G n'arrive jamais à se connecter, on peut ajouter
+   ici un serveur TURN (ex. compte gratuit metered.ca) : {urls:'turn:…',username:'…',credential:'…'} */
+const TURN_SERVEURS=[];
+const PEER_OPT={debug:0,config:{iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'},{urls:'stun:stun.cloudflare.com:3478'},...TURN_SERVEURS]}};
+const maint=()=>performance.timeOrigin+performance.now();
+const dodo=ms=>new Promise(r=>setTimeout(r,ms));
+/* envoi avec contrôle du débit : on attend que le tuyau se vide (sinon la connexion peut sauter) */
+async function envoiDoux(c,msg){for(let k=0;k<200&&c.open&&c.dataChannel&&c.dataChannel.bufferedAmount>256*1024;k++)await dodo(40);if(c.open){try{c.send(msg);}catch(e){}}}
+async function envoyerMorceaux(c,idx){const b=NET.musBytes,CH=16000,n=Math.ceil(b.length/CH);for(const i of idx){if(!c.open||!NET.prep)return;await envoiDoux(c,{t:'m',i,n,b:b.slice(i*CH,(i+1)*CH).buffer});}}
+/* battements de cœur + surveillance */
+function demarrerVeille(){
+  clearInterval(NET.hbTimer);
+  NET.hbTimer=setInterval(()=>{
+    if(!NET.peer)return; const t=maint();
+    if(NET.host){
+      broadcast({t:'hb'});
+      for(const [id,c] of NET.conns){const vu=NET.seen[id]||t; if(t-vu>25000){try{c.close();}catch(e){} quitter(id);}}
+      const f=$('#lbForce'); const attente=NET.prep&&!GAME&&NET.prepAt&&t-NET.prepAt>20000&&NET.players.some(p=>!p.pret);
+      f.style.display=attente?'':'none';
+    } else {
+      if(NET.hostConn&&NET.hostConn.open)NET.hostConn.send({t:'hb'});
+      const silence=t-(NET.lastHb||t);
+      if(silence>9000&&!GAME)netStatus('⚠ Connexion avec la salle perdue… on attend qu\'elle revienne');
+      if(silence>30000&&!GAME){alert('La connexion avec la salle est perdue.');resetNet();goAccueil();}
+      const rx=NET.rx; if(rx&&t-rx.last>4000){const miss=[];for(let i=0;i<rx.n&&miss.length<400;i++)if(!rx.parts[i])miss.push(i);if(miss.length){NET.hostConn.send({t:'need',miss});rx.last=t;}}
+    }
+  },2000);
+}
+function quitter(pid){
+  NET.conns.delete(pid); NET.players=NET.players.filter(p=>p.pid!==pid); if(NET.perturb===pid)NET.perturb=null; delete NET.seen[pid];
+  broadcastLobby(); if(NET.prep)checkAllReady(); if(NET.inGame)checkPodium();
+}
+/* horloge commune : on estime le décalage entre ce téléphone et celui de la salle */
+async function syncHorloge(n=8){for(let i=0;i<n;i++){if(!NET.hostConn||!NET.hostConn.open)return;NET.hostConn.send({t:'ping',c:maint()});await dodo(220);}}
+let _etatT=0;
+function envoyerEtat(e,force){if(NET.host||!NET.hostConn||!NET.hostConn.open)return;const t=maint();if(!force&&t-_etatT<700)return;_etatT=t;NET.hostConn.send({t:'etat',e,ping:Math.round(NET.rtt||0)});}
+let _lobT=0;function lobbyBientot(){const t=maint();if(t-_lobT>500){_lobT=t;broadcastLobby();}else{clearTimeout(NET.lobTO);NET.lobTO=setTimeout(broadcastLobby,520);}}
+function musiquePrete(){
+  NET.musOk=true;
+  if(AC&&AC.state==='running'){NET.hostConn.send({t:'pret'});envoyerEtat('prête',true);netStatus('Prête ! En attente des autres…');}
+  else {$('#lbPret').style.display='';envoyerEtat('touche « Je suis prête »',true);netStatus('Musique prête : touche « Je suis prête » !');}
+}
 function loadPeer(){
   if(window.Peer)return Promise.resolve();
   return new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';s.onload=()=>res();s.onerror=()=>rej(new Error('Impossible de charger le module réseau (connexion internet ?)'));document.head.appendChild(s);});
@@ -1865,13 +1916,14 @@ async function creerSalle(){
   await loadPeer(); hostSettings();
   return new Promise((res,rej)=>{
     const essai=n=>{
-      const code=code4(); const peer=new Peer(PREFIX+code,{debug:0});
-      peer.on('open',()=>{NET.peer=peer;NET.host=true;NET.code=code;NET.me='host';NET.players=[{pid:'host',nom:S.nom||'Hôte',leo:netLeo(),eng:S.engDesign,pret:true}];res(code);});
+      const code=code4(); const peer=new Peer(PREFIX+code,PEER_OPT);
+      peer.on('open',()=>{NET.peer=peer;NET.host=true;NET.code=code;NET.me='host';NET.seen={};NET.players=[{pid:'host',nom:S.nom||'Hôte',leo:netLeo(),eng:S.engDesign,pret:true}];demarrerVeille();res(code);});
+      peer.on('disconnected',()=>{try{if(NET.peer===peer)peer.reconnect();}catch(e){}});
       peer.on('error',err=>{if(err.type==='unavailable-id'&&n<4){peer.destroy();essai(n+1);}else if(!NET.peer)rej(new Error('Réseau : '+err.type));else netStatus('Souci réseau : '+err.type);});
       peer.on('connection',conn=>{
-        conn.on('open',()=>NET.conns.set(conn.peer,conn));
-        conn.on('data',d=>hostData(conn,d));
-        conn.on('close',()=>{NET.conns.delete(conn.peer);NET.players=NET.players.filter(p=>p.pid!==conn.peer);if(NET.perturb===conn.peer)NET.perturb=null;broadcastLobby();if(NET.prep)checkAllReady();if(NET.inGame)checkPodium();});
+        conn.on('open',()=>{NET.conns.set(conn.peer,conn);NET.seen[conn.peer]=maint();});
+        conn.on('data',d=>{NET.seen[conn.peer]=maint();hostData(conn,d);});
+        conn.on('close',()=>{if(NET.conns.has(conn.peer))quitter(conn.peer);});
       });
     };
     essai(0);
@@ -1882,9 +1934,13 @@ function broadcastLobby(){broadcast({t:'lobby',players:NET.players,set:NET.set,p
 function sendNet(msg){if(!NET.peer)return;if(NET.host)broadcast(Object.assign({},msg,{from:'host'}));else if(NET.hostConn&&NET.hostConn.open)NET.hostConn.send(msg);}
 function hostData(conn,d){
   switch(d.t){
+    case 'ping': conn.send({t:'pong',c:d.c,h:maint()}); return;
+    case 'hb': return;
+    case 'etat': {const p=NET.players.find(p=>p.pid===conn.peer);if(p){p.etat=String(d.e||'').slice(0,40);p.ping=d.ping|0;lobbyBientot();}return;}
+    case 'need': if(NET.prep&&NET.musBytes&&Array.isArray(d.miss))envoyerMorceaux(conn,d.miss.slice(0,400).map(x=>x|0)); return;
     case 'hello': {const mx=NET.set&&NET.set.coop?5:6; if(NET.players.length>=mx||NET.inGame){conn.send({t:'refus',raison:NET.inGame?'Partie en cours, réessaie juste après.':`Salle pleine (${mx} gymnastes).`});return;}}
       NET.players.push({pid:conn.peer,nom:String(d.nom||'Gymnaste').slice(0,14),leo:d.leo||'p0',eng:(d.eng&&typeof d.eng==='object')?d.eng:{},pret:false}); broadcastLobby(); break;
-    case 'pret': {const p=NET.players.find(p=>p.pid===conn.peer);if(p)p.pret=true;renderLobby();checkAllReady();break;}
+    case 'pret': {const p=NET.players.find(p=>p.pid===conn.peer);if(p){p.pret=true;p.etat='prête';}lobbyBientot();checkAllReady();break;}
     case 'perturb_claim': if(!NET.perturb&&!NET.inGame){NET.perturb=conn.peer;broadcastLobby();} break;
     case 'perturb_release': if(NET.perturb===conn.peer){NET.perturb=null;broadcastLobby();} break;
     case 'live': case 'drop': case 'xfail': case 'perturb': {const m=Object.assign({},d,{from:conn.peer});broadcast(m,conn.peer);handleGameMsg(m);break;}
@@ -1894,12 +1950,12 @@ function hostData(conn,d){
 async function rejoindre(code){
   await loadPeer();
   return new Promise((res,rej)=>{
-    const peer=new Peer({debug:0}); let ok=false;
+    const peer=new Peer(PEER_OPT); let ok=false;
     peer.on('open',id=>{
       NET.peer=peer;NET.me=id;NET.host=false;NET.code=code;
       const conn=peer.connect(PREFIX+code,{reliable:true}); NET.hostConn=conn;
-      conn.on('open',()=>{ok=true;conn.send({t:'hello',nom:S.nom||'Gymnaste',leo:netLeo(),eng:S.engDesign});res();});
-      conn.on('data',guestData);
+      conn.on('open',()=>{ok=true;NET.lastHb=maint();conn.send({t:'hello',nom:S.nom||'Gymnaste',leo:netLeo(),eng:S.engDesign});demarrerVeille();syncHorloge();res();});
+      conn.on('data',d=>{NET.lastHb=maint();guestData(d);});
       conn.on('close',()=>{if(NET.peer){alert('La salle a été fermée.');resetNet();if(GAME){stopAudio(GAME,.2);finirJeu();}goAccueil();}});
       setTimeout(()=>{if(!ok){rej(new Error('Salle introuvable : vérifie le code.'));try{peer.destroy();}catch(e){}NET.peer=null;}},10000);
     });
@@ -1910,20 +1966,24 @@ async function guestData(d){
   switch(d.t){
     case 'lobby': NET.players=d.players;NET.set=d.set;NET.perturb=d.perturb||null;if(!GAME&&['sOnline','sLobby'].includes(VIEW)){renderLobby();show('sLobby');}else renderLobby();break;
     case 'refus': alert(d.raison);resetNet();show('sOnline');break;
-    case 'prep': NET.prep=d;NET.finals=new Map();netStatus('Préparation de la musique…');
-      if(d.musique!=='custom'){try{NET.mus=await genMusic(d.musique);NET.hostConn.send({t:'pret'});netStatus('Prête ! En attente des autres…');}catch(e){netStatus('Erreur musique : '+e.message);}}
-      else NET.rx={n:d.n,parts:new Array(d.n),got:0};
+    case 'pong': {const t=maint(),rtt=t-d.c; if(NET.rtt==null||rtt<=NET.rtt+5){NET.rtt=Math.min(NET.rtt==null?1e9:NET.rtt,rtt);NET.off=d.h+rtt/2-t;} break;}
+    case 'hb': break;
+    case 'exclu': NET.prep=null;NET.mus=null;NET.rx=null;$('#lbPret').style.display='none';netStatus('⏩ La partie a démarré sans toi (musique pas prête à temps). Tu joueras la suivante !');break;
+    case 'prep': NET.prep=d;NET.finals=new Map();NET.musOk=false;NET.mus=null;netStatus('Préparation de la musique…');envoyerEtat('prépare la musique',true);syncHorloge(4);
+      if(d.musique!=='custom'){try{NET.mus=await genMusic(d.musique);musiquePrete();}catch(e){netStatus('Erreur musique : '+e.message);envoyerEtat('erreur musique',true);}}
+      else NET.rx={n:d.n,parts:new Array(d.n),got:0,last:maint()};
       break;
     case 'm': {
       const rx=NET.rx;if(!rx)return; const b=d.b instanceof ArrayBuffer?new Uint8Array(d.b):new Uint8Array(d.b.buffer?d.b.buffer.slice(d.b.byteOffset,d.b.byteOffset+d.b.byteLength):d.b);
-      if(!rx.parts[d.i]){rx.parts[d.i]=b;rx.got++;} netStatus(`Réception de la musique… ${Math.round(rx.got/rx.n*100)} %`);
+      rx.last=maint(); if(!rx.parts[d.i]){rx.parts[d.i]=b;rx.got++;} const pc=Math.round(rx.got/rx.n*100); netStatus(`Réception de la musique… ${pc} %`); envoyerEtat(`musique ${pc} %`);
       if(rx.got===rx.n){
         const tot=rx.parts.reduce((s,p)=>s+p.length,0),all=new Uint8Array(tot);let o=0;for(const p of rx.parts){all.set(p,o);o+=p.length;}
-        try{const buf=await getAC().decodeAudioData(all.buffer);const p=NET.prep;NET.mus={buffer:buf,bpm:p.bpm,offset:p.offset,dur:p.dur,finAt:p.finAt,nom:p.musNom};NET.rx=null;NET.hostConn.send({t:'pret'});netStatus('Prête ! En attente des autres…');}
-        catch(e){netStatus('Musique illisible sur ce téléphone.');}
+        NET.rx=null;
+        try{const buf=await getAC().decodeAudioData(all.buffer);const p=NET.prep;NET.mus={buffer:buf,bpm:p.bpm,offset:p.offset,dur:p.dur,finAt:p.finAt,nom:p.musNom};musiquePrete();}
+        catch(e){netStatus('Musique illisible sur ce téléphone.');envoyerEtat('musique illisible',true);}
       }
       break;}
-    case 'go': startOnlineGame();break;
+    case 'go': $('#lbPret').style.display='none'; if(NET.prep&&NET.mus&&(!d.pids||d.pids.includes(NET.me)))startOnlineGame(Object.assign({},d,{local:d.at!=null?d.at-(NET.off||0):null})); break;
     case 'live': case 'drop': case 'xfail': case 'perturb': case 'final': handleGameMsg(d);break;
     case 'podium': NET.prep=null;afficherPodiumOnline(d.list);break;
   }
@@ -1957,24 +2017,37 @@ async function lancerOnline(){
     prep.perturb=NET.perturb||null;
     if(NET.set&&NET.set.coop){prep.coop=true;prep.order=NET.players.filter(p=>p.pid!==NET.perturb).map(p=>p.pid);prep.design=S.engDesign[S.engin]||null;}
     NET.players.forEach(p=>p.pret=p.pid==='host');
+    NET.prepAt=maint(); NET.players.forEach(p=>{if(p.pid!=='host')p.etat='prépare la musique';});
     if(prep.musique==='custom'){
-      const bytes=new Uint8Array(S.custom.bytes),CH=16000,n=Math.ceil(bytes.length/CH); prep.n=n; NET.prep=prep; broadcast(prep);
-      for(let i=0;i<n;i++){broadcast({t:'m',i,n,b:bytes.slice(i*CH,(i+1)*CH).buffer}); if(i%40===39)await new Promise(r=>setTimeout(r,30));}
-    } else {NET.prep=prep;broadcast(prep);}
+      const bytes=new Uint8Array(S.custom.bytes),CH=16000,n=Math.ceil(bytes.length/CH); prep.n=n; NET.prep=prep; NET.musBytes=bytes; broadcast(prep);
+      const idx=[...Array(n).keys()]; for(const c of NET.conns.values())envoyerMorceaux(c,idx);
+    } else {NET.prep=prep;NET.musBytes=null;broadcast(prep);}
+    lobbyBientot();
     netStatus('Les autres téléphones se préparent…'); renderLobby(); checkAllReady();
   }catch(e){alert('Problème : '+e.message);NET.inGame=false;NET.prep=null;btn.disabled=false;}
 }
-function checkAllReady(){if(!NET.host||!NET.prep||GAME)return;if(NET.players.every(p=>p.pret)){broadcast({t:'go'});startOnlineGame();}}
-function startOnlineGame(){
-  const p=NET.prep; if(!p||!NET.mus)return; netStatus('');
+function checkAllReady(force){
+  if(!NET.host||!NET.prep||GAME)return;
+  const prets=NET.players.filter(p=>p.pret);
+  if(!force&&prets.length<NET.players.length)return;
+  if(prets.length<2){if(force)alert('Il faut au moins 2 gymnastes prêtes.');return;}
+  for(const p of NET.players)if(!p.pret){const c=NET.conns.get(p.pid);if(c&&c.open)c.send({t:'exclu'});}
+  const pids=prets.map(p=>p.pid), go={t:'go',at:maint()+4000,pids};
+  if(NET.prep.coop)go.order=NET.prep.order.filter(x=>pids.includes(x));
+  if(NET.prep.perturb&&!pids.includes(NET.prep.perturb))go.sansPerturb=true;
+  NET.pids=pids; broadcast(go); $('#lbForce').style.display='none'; startOnlineGame(Object.assign({},go,{local:go.at}));
+}
+function startOnlineGame(go={}){
+  const p0=NET.prep; if(!p0||!NET.mus)return; netStatus('');
+  const p=Object.assign({},p0); if(go.order)p.order=go.order; if(go.sansPerturb)p.perturb=null; const pids=go.pids||NET.players.map(x=>x.pid);
   const moiP=!!p.perturb&&p.perturb===NET.me;
   const ch=moiP?genPerturb({seed:p.seed,engin:p.engin,niv:p.niv,bpm:p.bpm,offset:p.offset,dur:p.dur,finAt:p.finAt})
               :genChoreo({seed:p.seed,engin:p.engin,niv:p.niv,bpm:p.bpm,offset:p.offset,dur:p.dur,finAt:p.finAt,coop:p.coop?p.order.length:0});
-  const opp=NET.players.filter(x=>x.pid!==NET.me&&x.pid!==p.perturb).map(x=>({pid:x.pid,nom:x.nom,leo:x.leo,eng:x.eng}));
+  const opp=NET.players.filter(x=>x.pid!==NET.me&&x.pid!==p.perturb&&pids.includes(x.pid)).map(x=>({pid:x.pid,nom:x.nom,leo:x.leo,eng:x.eng}));
   getAC();
   if(moiP){
     const vue=p.coop?genChoreo({seed:p.seed,engin:p.engin,niv:p.niv,bpm:p.bpm,offset:p.offset,dur:p.dur,finAt:p.finAt,coop:p.order.length}):genChoreo({seed:p.seed,engin:p.engin,niv:p.niv,bpm:p.bpm,offset:p.offset,dur:p.dur,finAt:p.finAt});
-    lancerPartie({choreo:ch,music:NET.mus,nom:S.nom||'Moi',leo:S.leo,design:S.engDesign[ch.engin],online:true,perturb:true,opponents:opp,coop:p.coop?{order:p.order,me:NET.me,design:p.design}:null,onFin:()=>{
+    lancerPartie({choreo:ch,music:NET.mus,nom:S.nom||'Moi',leo:S.leo,design:S.engDesign[ch.engin],online:true,perturb:true,debut:go.local,opponents:opp,coop:p.coop?{order:p.order,me:NET.me,design:p.design}:null,onFin:()=>{
       const st=GAME_ST_PX||{}; const slim={nom:S.nom||'Moi',leo:netLeo(),perturb:true,px:st.px||0,pxTot:st.pxTot||0,total:0};
       NET.finals.set(NET.me,slim); sendNet({t:'final',res:slim});
       $('#reTitre').textContent='😈 Perturbatrice';
@@ -1985,7 +2058,7 @@ function startOnlineGame(){
     },vue});
     return;
   }
-  lancerPartie({choreo:ch,music:NET.mus,nom:S.nom||'Moi',leo:S.leo,design:S.engDesign[ch.engin],online:true,opponents:opp,coop:p.coop?{order:p.order,me:NET.me,design:p.design}:null,onFin:res=>{
+  lancerPartie({choreo:ch,music:NET.mus,nom:S.nom||'Moi',leo:S.leo,design:S.engDesign[ch.engin],online:true,debut:go.local,opponents:opp,coop:p.coop?{order:p.order,me:NET.me,design:p.design}:null,onFin:res=>{
     const slim={nom:res.nom,leo:netLeo(),total:res.total,D:res.D,A:res.A,E:res.E,pen:res.pen,nEX:res.nEX,exRates:res.exRates,coop:res.coop};
     NET.finals.set(NET.me,slim); sendNet({t:'final',res:slim});
     showResult(res,{titre:p.coop?'🤝 Ma part dans l\'équipe':undefined,avant:'<div id="rePodium"><p class="hint" style="text-align:center">⏳ En attente des notes des autres gymnastes…</p></div>',actions:[{t:'Retour au salon',big:true,f:()=>{renderLobby();show('sLobby');}}]});
@@ -1995,7 +2068,8 @@ function startOnlineGame(){
 }
 function checkPodium(){
   if(!NET.host||!NET.inGame)return;
-  if(NET.players.every(p=>NET.finals.has(p.pid)))publierPodium();
+  const part=NET.players.filter(p=>!NET.pids||NET.pids.includes(p.pid));
+  if(part.every(p=>NET.finals.has(p.pid)))publierPodium();
   else if(!NET.podTimer)NET.podTimer=setTimeout(publierPodium,25000);
 }
 function publierPodium(){
@@ -2027,7 +2101,7 @@ function htmlEquipe(list){
 }
 function renderLobby(){
   $('#lbCode').textContent=NET.code||''; $('#lbNb').textContent=NET.players.length; const coop=!!(NET.set&&NET.set.coop); $('#lbMax').textContent=coop?5:6;
-  $('#lbList').innerHTML=NET.players.map(p=>`<div class="pl"><span class="sw" style="background-image:url(${swatchURL(p.leo)})"></span><span>${esc(p.nom)}${p.pid===NET.me?' <small>(toi)</small>':''}${p.pid==='host'?' 👑':''}${p.pid===NET.perturb?' 😈':''}</span><small>${NET.prep?(p.pret?'✓ prête':'…'):''}</small></div>`).join('');
+  $('#lbList').innerHTML=NET.players.map(p=>`<div class="pl"><span class="sw" style="background-image:url(${swatchURL(p.leo)})"></span><span>${esc(p.nom)}${p.pid===NET.me?' <small>(toi)</small>':''}${p.pid==='host'?' 👑':''}${p.pid===NET.perturb?' 😈':''}</span><small>${NET.prep?(p.pret?'✓ prête':esc(p.etat||'…')):''}${p.ping&&p.pid!=='host'?` · 📶 ${p.ping} ms`:''}</small></div>`).join('');
   const s=NET.set; $('#lbSet').innerHTML=s?`${s.coop?'🤝 <b>Mode coopératif</b> · ':''}${ENGINS[s.engin].ico} <b>${ENGINS[s.engin].nom}</b> · ${NIVEAUX[s.niv].nom}<br><span class="hint">🎵 ${esc(s.mus)}</span>`:'';
   {const b=$('#lbPerturb'),pz=NET.perturb,qui=(NET.players.find(p=>p.pid===pz)||{}).nom;
    b.disabled=!!NET.prep||(!!pz&&pz!==NET.me);
@@ -2038,7 +2112,7 @@ function renderLobby(){
   $('#lbInfo').innerHTML=NET.host?`Donne le code <b>${NET.code}</b> à tes amies : elles choisissent « Rejoindre »${coop?' dans le mode coopératif':''}. Tout le monde passe en même temps sur la même musique.${coop?' Les engins de l\'équipe prennent tes couleurs.':''}`:coop?'🤝 Mode coopératif : la créatrice de la salle va lancer la chorégraphie d\'équipe.':'La créatrice de la salle va lancer la compétition.';
   $('#lbLancer').textContent=coop?'Lancer l\'équipe !':'Lancer !';
 }
-function resetNet(){NET.perturb=null;try{if(NET.peer)NET.peer.destroy();}catch(e){}Object.assign(NET,{peer:null,host:false,conns:new Map(),hostConn:null,players:[],me:null,code:null,set:null,prep:null,mus:null,finals:new Map(),rx:null,inGame:false});clearTimeout(NET.podTimer);NET.podTimer=null;}
+function resetNet(){NET.perturb=null;clearInterval(NET.hbTimer);NET.rtt=null;NET.off=0;NET.pids=null;$('#lbPret').style.display='none';$('#lbForce').style.display='none';try{if(NET.peer)NET.peer.destroy();}catch(e){}Object.assign(NET,{peer:null,host:false,conns:new Map(),hostConn:null,players:[],me:null,code:null,set:null,prep:null,mus:null,finals:new Map(),rx:null,inGame:false});clearTimeout(NET.podTimer);NET.podTimer=null;}
 
 /* ======================= Atelier de chorégraphie ======================= */
 /* Difficultés corporelles : valeurs du Code de pointage FIG 2025-2028 (brochure officielle) */
@@ -2449,6 +2523,12 @@ $('#onRejoindre').onclick=async()=>{
 };
 $('#lbModif').onclick=()=>openReglage('online');
 $('#lbLancer').onclick=lancerOnline;
+$('#lbPret').onclick=()=>{ // le toucher débloque le son (iPhone/iPad)
+  const ac=getAC(); try{const b=ac.createBuffer(1,1,22050),s=ac.createBufferSource();s.buffer=b;s.connect(ac.destination);s.start();}catch(e){}
+  $('#lbPret').style.display='none'; if(NET.hostConn&&NET.hostConn.open){NET.hostConn.send({t:'pret'});envoyerEtat('prête',true);} netStatus('Prête ! En attente des autres…');
+};
+$('#lbForce').onclick=()=>{if(confirm('Lancer avec seulement les gymnastes prêtes ?'))checkAllReady(true);};
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&AC&&AC.state!=='running')AC.resume();});
 $('#vicOk').onclick=()=>fermerVictoire();
 $('#lbPerturb').onclick=()=>{
   const moi=NET.perturb===NET.me;
