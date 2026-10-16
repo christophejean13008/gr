@@ -2056,7 +2056,7 @@ async function scannerPersos(){
   if(ok){SCAN.etat='ok';}
   else{SCAN.etat='secours';
     await Promise.all(PERSOS_SPECIAUX.map(async m=>{try{const ac=new AbortController();setTimeout(()=>ac.abort(),6000);const r=await fetch(m.fichier,{method:'HEAD',cache:'no-store',signal:ac.signal});DISPO.set(m.fichier,r.ok);}catch(e){DISPO.set(m.fichier,location.protocol==='file:'?null:false);}}));}
-  if(VIEW==='sVestiaire')renderVestiaire();
+  setTimeout(()=>{if(VIEW==='sVestiaire')renderVestiaire();},0);
 }
 /* ---- Mes engins ---- */
 let ENG_DRAFT={};
