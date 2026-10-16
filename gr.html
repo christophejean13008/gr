@@ -287,7 +287,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <!-- REVOIR LE PASSAGE -->
 <div id="sReplay" class="screen" style="background:none;padding:0;touch-action:none">
   <div id="rpTouch" style="position:absolute;inset:0"></div>
-  <div class="rpTop"><button id="rpClose" class="quit" style="position:static">✕</button><div id="rpTitre"></div></div>
+  <div class="rpTop"><button id="rpClose" class="quit" style="position:static">✕</button><div id="rpTitre"></div><button id="rpNote" style="display:none;margin-left:auto;margin-right:52px;padding:8px 10px;white-space:nowrap;font-size:.8rem">🏅 Note max</button></div>
   <div id="rpJudge" class="rpJudge"></div>
   <div class="rpSide"><button id="rpZin" title="Zoom avant">＋</button><button id="rpZout" title="Zoom arrière">－</button><button id="rpRotL">⟲</button><button id="rpRotR">⟳</button><button id="rpFace" title="Vue de face">🎯</button></div>
   <div class="rpBar">
@@ -1928,12 +1928,16 @@ function completer(){
   }
   renderSeq();
 }
-async function lancerChoreo(demo){
+async function lancerChoreo(demo,noteMax){
   if(!CH.seq.length){alert('Ajoute d\'abord des éléments à ta chorégraphie.');return;}
   const b=$(demo?'#chVoir':'#chJouer'),txt=b.textContent; b.disabled=true; b.textContent='Préparation…';
   try{
     getAC(); const mus=await getMusicSel();
     const ch=buildChoreo(CH.seq,CH.engin,{bpm:mus.bpm,offset:mus.offset,dur:mus.dur},S.niv);
+    if(demo&&!noteMax){
+      // Visionneuse : rotation, zoom, pause, vitesse (exécution parfaite)
+      ouvrirReplay({choreo:ch,buffer:mus.buffer,leo:S.leo,design:S.engDesign[CH.engin],rec:{drops:[],wobs:[],grades:[]},els:ch.els,nom:CH.nom||'Ma chorégraphie',ghosts:[]},ouvrirAtelier);
+    }else
     lancerPartie({choreo:ch,music:mus,nom:S.nom||'Moi',leo:S.leo,design:S.engDesign[CH.engin],demo,retour:ouvrirAtelier,onFin:res=>{
       showResult(res,{titre:(CH.nom||'Ma chorégraphie')+(demo?' – note maximale':''),avant:demo?'<p class="hint" style="text-align:center">Exécution parfaite : voici la note maximale de cette chorégraphie. À toi de l\'atteindre !</p>':'',actions:[{t:'← Atelier',f:ouvrirAtelier},{t:demo?'🎮 M\'entraîner':'Rejouer',big:true,f:()=>lancerChoreo(false)}]});
     }});
@@ -2220,14 +2224,15 @@ function ensurePreview(){
 /* ======================= Revoir le passage ======================= */
 let DERNIER=null, RP=null;
 const VITESSES=[[.25,'×¼'],[.5,'×½'],[1,'×1'],[2,'×2'],[4,'×4']];
-function ouvrirReplay(){
-  const d=DERNIER; if(!d)return;
+function ouvrirReplay(dd,retour){
+  const d=(dd&&dd.choreo)?dd:DERNIER; if(!d)return;
   if(PREV){PREV.dispose();PREV=null;PREVKEY='';}
   const ch=d.choreo;
   const main=new Gymnast(d.leo,ch.engin,{design:d.design}); main.setTimeline(ch); for(const x of d.rec.drops)main.drop(x.at,x.out);
   const gh=d.ghosts.map(o=>{const g=new Gymnast(o.leo,ch.engin,{ghost:true,ox:o.ox,oz:o.oz,design:o.design});g.setTimeline(ch);for(const x of o.drops)g.drop(x.at,x.out);return g;});
   const t0=ch.first-2, t1=ch.final+3;
-  RP={d,main,gh,T:t0,t0,t1,speed:1,paused:false,src:null,aT0:0,cam:{yaw:0,dist:5.6,h:1.9},grades:[...d.rec.grades].sort((a,b)=>a.t-b.t),touch:new Map(),pinch:0};
+  RP={d,main,gh,T:t0,t0,t1,speed:1,paused:false,src:null,aT0:0,cam:{yaw:0,dist:5.6,h:1.9},grades:[...d.rec.grades].sort((a,b)=>a.t-b.t),touch:new Map(),pinch:0,retour:typeof retour==='function'?retour:null};
+  $('#rpNote').style.display=RP.retour?'':'none';
   $('#rpTitre').textContent='🎬 '+d.nom; const L=t1-t0; $('#rpDur').textContent=`${Math.floor(L/60)}:${String(Math.floor(L%60)).padStart(2,'0')}`;
   renderVitesses(); show('sReplay'); rpAudio();
 }
@@ -2239,7 +2244,8 @@ function rpAudio(){
   const ac=getAC(),s=ac.createBufferSource(); s.buffer=RP.d.buffer; s.connect(ac.destination);
   const off=Math.max(0,RP.T), when=ac.currentTime+Math.max(0,-RP.T); s.start(when,off); RP.src=s; RP.aT0=ac.currentTime-RP.T-rpLat();
 }
-function fermerReplay(){if(!RP)return;if(RP.src){try{RP.src.stop();}catch(e){}}RP.main.dispose();RP.gh.forEach(g=>g.dispose());RP=null;show('sResultat');}
+function fermerReplay(){if(!RP)return;if(RP.src){try{RP.src.stop();}catch(e){}}RP.main.dispose();RP.gh.forEach(g=>g.dispose());const r=RP.retour;RP=null;if(r)r();else show('sResultat');}
+$('#rpNote').onclick=()=>{fermerReplay();lancerChoreo(true,true);};
 function rpTick(dt){
   const R=RP;
   if(!R.paused){ if(R.speed===1&&R.src) R.T=AC.currentTime-R.aT0-rpLat(); else R.T+=dt*R.speed; }
