@@ -411,7 +411,7 @@ const MODELES_TRIPO = [
    La liste ci-dessous sert seulement à donner un joli nom et un emoji à certains fichiers. */
 /* Si le jeu est ouvert via ton nom de domaine (ex. adapt.boussoleebep.fr), indique ici ton dépôt GitHub
    au format 'pseudo/nom-du-depot'. Sur une adresse en .github.io, il est trouvé tout seul. */
-const GITHUB_DEPOT = '';
+const GITHUB_DEPOT = 'christophejean13008/gr';
 const PERSOS_SPECIAUX = [
   { nom: 'Père Noël',  emoji: '🎅', fichier: 'modeles/persos/papa-noel.fbx', couleurEngin: '#d00000' },
   { nom: 'Monstre',    emoji: '👹', fichier: 'modeles/persos/monstre.fbx',   couleurEngin: '#5be7a9' },
@@ -533,7 +533,7 @@ function persoInfo(fichier){
   if(m) return {nom:m.nom,emoji:m.emoji||'⭐',color:m.couleurEngin||'#ff4fa3'};
   const s=base.replace(/\.[^.]+$/,'').replace(/[-_]+/g,' ').trim(); const n=s.charAt(0).toUpperCase()+s.slice(1);
   const k=s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  const EMO=[['noel','🎅'],['monstre','👹'],['halloween','🎃'],['citrouille','🎃'],['catch','🤼'],['sorci','🧙‍♀️'],['licorne','🦄'],['zombie','🧟'],['fantome','👻'],['vampire','🧛'],['pirate','🏴‍☠️'],['robot','🤖'],['princesse','👸'],['reine','👑'],['super','🦸‍♀️'],['fee','🧚'],['sirene','🧜‍♀️'],['clown','🤡'],['ninja','🥷'],['astronaute','👩‍🚀'],['chat','🐱'],['lapin','🐰'],['ours','🐻'],['dragon','🐉'],['alien','👽'],['elfe','🧝‍♀️'],['lutin','🧝']];
+  const EMO=[['noel','🎅'],['chien','🐶'],['squelette','💀'],['loup','🐺'],['renard','🦊'],['panda','🐼'],['singe','🐵'],['cheval','🐴'],['momie','🧟'],['sorcier','🧙'],['dino','🦖'],['pingouin','🐧'],['grenouille','🐸'],['monstre','👹'],['halloween','🎃'],['citrouille','🎃'],['catch','🤼'],['sorci','🧙‍♀️'],['licorne','🦄'],['zombie','🧟'],['fantome','👻'],['vampire','🧛'],['pirate','🏴‍☠️'],['robot','🤖'],['princesse','👸'],['reine','👑'],['super','🦸‍♀️'],['fee','🧚'],['sirene','🧜‍♀️'],['clown','🤡'],['ninja','🥷'],['astronaute','👩‍🚀'],['chat','🐱'],['lapin','🐰'],['ours','🐻'],['dragon','🐉'],['alien','👽'],['elfe','🧝‍♀️'],['lutin','🧝']];
   const e=(EMO.find(([w])=>k.includes(w))||[0,'⭐'])[1];
   return {nom:n.slice(0,18),emoji:e,color:['#ff4fa3','#4cc9f0','#ffd166','#5be7a9','#b388ff'][hash(base)%5]};
 }
@@ -1999,8 +1999,9 @@ function renderVestiaire(){
   const spe=S.corps[0]==='s';
   $('#vsList').style.display=spe?'none':''; $('#vsJusLbl').style.display=spe?'none':''; $('#vsCreaBtns').style.display=spe?'none':'';
   const liste=listePersos();
-  $('#vsPersoBox').style.display=liste.length?'':'none';
-  $('#vsPersos').innerHTML=liste.length?liste.map(p=>`<div class="leo ${S.corps===p.id?'on':''} ${p.dispo===false?'off':''}" data-s="${esc(p.id)}"><i class="emo">${p.emoji}</i>${esc(p.nom)}${p.dispo===false?'<small>à venir</small>':''}</div>`).join(''):'<p class="hint">Aucun personnage pour l\'instant.</p>';
+  const fini=SCAN.etat==='ok'||SCAN.etat==='secours';
+  $('#vsPersoBox').style.display=(liste.length||fini)?'':'none';
+  $('#vsPersos').innerHTML=liste.length?liste.map(p=>`<div class="leo ${S.corps===p.id?'on':''} ${p.dispo===false?'off':''}" data-s="${esc(p.id)}"><i class="emo">${p.emoji}</i>${esc(p.nom)}${p.dispo===false?'<small>à venir</small>':''}</div>`).join(''):`<p class="hint">Aucun personnage trouvé dans modeles/persos/${SCAN.diag?' – '+esc(SCAN.diag):''}.</p>`;
   $('#vsPersos').querySelectorAll('.leo').forEach(el=>el.onclick=()=>{const p=liste.find(x=>x.id===el.dataset.s);
     if(p.dispo===false){$('#vsPersoInfo').textContent=`« ${p.nom} » n'est pas encore en ligne : dépose ${p.fichier} sur ton site.`;return;}
     if(S.corps===p.id){S.corps=MODELES_TRIPO.length?'t0':'mannequin';S.tenue='orig';}else{S.corps=p.id;S.tenue='orig';}
@@ -2022,10 +2023,11 @@ $('#vsOk').onclick=goAccueil;
 const SCAN={etat:'',fichiers:[]}; const DISPO=new Map();
 function depotInfo(){
   let dir=location.pathname.replace(/[^/]*$/,''), owner, repo; const hn=location.hostname;
-  if(GITHUB_DEPOT){[owner,repo]=GITHUB_DEPOT.split('/');}
-  else if(hn.endsWith('.github.io')){owner=hn.split('.')[0];const seg=dir.split('/').filter(Boolean);
+  if(hn.endsWith('.github.io')){owner=hn.split('.')[0];const seg=dir.split('/').filter(Boolean);
     if(seg.length){repo=seg[0];dir='/'+seg.slice(1).join('/')+(seg.length>1?'/':'');}else repo=hn;}
-  else return null;
+  else if(!/^(localhost|127\.)/.test(hn)&&location.protocol!=='file:'){dir=dir;} else if(!GITHUB_DEPOT) return null; else dir='/';
+  if(GITHUB_DEPOT){[owner,repo]=GITHUB_DEPOT.split('/');}
+  if(!owner||!repo) return null;
   return {owner,repo,path:dir.replace(/^\//,'')+'modeles/persos'};
 }
 function listePersos(){
@@ -2037,14 +2039,16 @@ async function scannerPersos(){
   if(SCAN.etat==='encours'||SCAN.etat==='ok'||SCAN.etat==='secours')return; SCAN.etat='encours';
   const d=depotInfo(); let ok=false;
   if(d){
-    const cle='rs_scan_'+d.owner+'/'+d.repo+'/'+d.path, c=store.get(cle,null);
+    const cle='rs_scan2_'+d.owner+'/'+d.repo+'/'+d.path, c=store.get(cle,null);
     if(c&&Date.now()-c.t<20*60*1000){SCAN.fichiers=c.f;ok=true;}
     else try{
       const r=await fetch(`https://api.github.com/repos/${d.owner}/${d.repo}/contents/${d.path}`,{cache:'no-store'});
-      if(r.ok){const j=await r.json();SCAN.fichiers=j.filter(x=>x.type==='file'&&/\.(fbx|glb|gltf)$/i.test(x.name)).map(x=>'modeles/persos/'+x.name).sort((a,b)=>a.localeCompare(b,'fr'));store.set(cle,{t:Date.now(),f:SCAN.fichiers});ok=true;}
-      else if(r.status===404){SCAN.fichiers=[];ok=true;}
+      if(r.ok){const j=await r.json();const f=Array.isArray(j)?j.filter(x=>x.type==='file'&&/\.(fbx|glb|gltf)$/i.test(x.name)).map(x=>'modeles/persos/'+x.name).sort((a,b)=>a.localeCompare(b,'fr')):[];
+        if(f.length){SCAN.fichiers=f;store.set(cle,{t:Date.now(),f});ok=true;}}
+      SCAN.diag=r.ok?'dossier lu sur GitHub ('+d.owner+'/'+d.repo+')':'GitHub ne trouve pas '+d.owner+'/'+d.repo+'/'+d.path+' (erreur '+r.status+')';
     }catch(e){}
   }
+  if(!d)SCAN.diag='dépôt GitHub non renseigné (ligne GITHUB_DEPOT)';
   if(ok){SCAN.etat='ok';}
   else{SCAN.etat='secours';
     await Promise.all(PERSOS_SPECIAUX.map(async m=>{try{const r=await fetch(m.fichier,{method:'HEAD',cache:'no-store'});DISPO.set(m.fichier,r.ok);}catch(e){DISPO.set(m.fichier,location.protocol==='file:'?null:false);}}));}
