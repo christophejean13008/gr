@@ -70,6 +70,14 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 .aide-l{display:flex;gap:10px;align-items:center;margin:7px 0;font-size:.92rem;line-height:1.35}
 .pt{flex:0 0 38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#1a0b2e;font-weight:800;font-size:1rem}
 .pt.barre{border-radius:12px;flex-basis:54px}
+.elems{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}
+.elems button{padding:9px 8px;font-size:.82rem;text-align:left;line-height:1.25}
+.elems button b{display:block;color:var(--accent2);font-size:.75rem}
+.seq{display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.08);font-size:.86rem}
+.seq .n{color:var(--muted);width:20px;text-align:right}.seq .c{padding:1px 6px;border-radius:7px;color:#1a0b2e;font-size:.7rem;font-weight:800}
+.seq span.t{flex:1}.seq b{color:var(--accent2);font-size:.78rem}.seq button{padding:4px 9px;border-radius:9px;font-size:.8rem}
+.jauge{height:10px;border-radius:6px;background:rgba(255,255,255,.12);overflow:hidden;margin:4px 0 6px}.jauge i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.jauge.trop i{background:var(--bad)}
 .leo .crea{position:absolute;margin:4px 0 0 4px;font-size:.8rem}
 /* jeu */
 #sJeu{background:none;padding:0;touch-action:none;overflow:hidden}
@@ -106,6 +114,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
     <button class="big" data-go="online">🌐 Compétition en ligne</button>
     <button data-go="local">📱 À tour de rôle (même téléphone)</button>
     <button data-go="vestiaire">👗 Vestiaire</button>
+    <button data-go="choreo">🎼 Créer ma chorégraphie</button>
     <button data-go="aide">🎮 Comment jouer ?</button>
     <button data-go="regles">⚖️ Comment notent les juges ?</button>
   </div>
@@ -235,6 +244,34 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
   <canvas id="lane"></canvas>
 </div>
 
+<!-- ATELIER CHOREGRAPHIE -->
+<div id="sChoreo" class="screen">
+  <h2>🎼 Ma chorégraphie</h2>
+  <div class="card">
+    <input id="chNom" maxlength="30" placeholder="Nom de la chorégraphie" style="width:100%">
+    <div class="lbl mt">Engin</div><div class="chips" id="chEngin"></div>
+    <div class="lbl mt">Musique</div><div class="chips" id="chMus"></div>
+    <label class="filebtn">📂 Importer une musique<input type="file" id="chFile" accept="audio/*" hidden></label>
+    <p class="hint" id="chMusInfo"></p>
+    <div class="lbl mt">Mes chorégraphies</div>
+    <div class="row"><select id="chListe" style="flex:1"></select><button id="chOuvrir">Ouvrir</button><button id="chSuppr">🗑</button></div>
+  </div>
+  <div class="card">
+    <div class="lbl">Ajouter des éléments</div>
+    <div class="chips" id="chCat"></div>
+    <p class="hint" id="chCatHint"></p>
+    <div id="chElems" class="elems"></div>
+  </div>
+  <div class="card">
+    <div class="lbl">Mon enchaînement</div>
+    <div id="chJauge"></div>
+    <div id="chSeq"></div>
+    <div class="row"><button id="chAuto" style="flex:1">🎲 Compléter</button><button id="chVider" style="flex:1">🗑 Vider</button><button id="chSave" style="flex:1">💾 Enregistrer</button></div>
+  </div>
+  <div class="actions"><button id="chRetour">← Retour</button></div>
+  <div class="actions"><button class="big" id="chVoir">▶ Voir</button><button class="big" id="chJouer">🎮 M'entraîner</button></div>
+</div>
+
 <!-- RESULTAT -->
 <div id="sResultat" class="screen">
   <h2 id="reTitre">Résultat</h2>
@@ -261,6 +298,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
     <div class="aide-l"><span class="pt" style="background:#ff4fa3"></span><div><b>Rose – DB</b> : difficultés corporelles (sauts, équilibres, pivots).</div></div>
     <div class="aide-l"><span class="pt" style="background:#ffd166"></span><div><b>Jaune – R</b> : lancers avec rotations.</div></div>
     <div class="aide-l"><span class="pt" style="background:#4cc9f0"></span><div><b>Bleu – DA</b> : difficultés d'engin.</div></div>
+    <div class="aide-l"><span class="pt" style="background:#5be7a9"></span><div><b>Vert – Acro</b> : roulades, roues, souplesses (dans tes chorégraphies).</div></div>
     <div class="aide-l"><span class="pt" style="background:#b388ff">♪</span><div><b>Violet</b> : pas de danse en rythme.</div></div>
     <div class="aide-l"><span class="pt" style="background:#fff">★</span><div><b>Blanc</b> : pose finale, pile sur la fin de la musique.</div></div>
     <h3>Comment gagner des points</h3>
@@ -397,13 +435,13 @@ const MUSIQUES=[
   {id:'elan',nom:'Élan · 100 bpm',bpm:100,seed:7,prog:[[60,64,67],[55,59,62],[57,60,64],[53,57,60]]},
   {id:'petillante',nom:'Pétillante · 124 bpm',bpm:124,seed:21,prog:[[57,60,64],[53,57,60],[60,64,67],[55,59,62]]}
 ];
-const CATCOL={DB:'#ff4fa3',R:'#ffd166',DA:'#4cc9f0',pas:'#b388ff',final:'#ffffff'};
-const CATLBL={DB:'DB',R:'R',DA:'DA',pas:'Pas',final:'Fin'};
+const CATCOL={DB:'#ff4fa3',R:'#ffd166',DA:'#4cc9f0',pas:'#b388ff',final:'#ffffff',acro:'#5be7a9'};
+const CATLBL={DB:'DB',R:'R',DA:'DA',pas:'Pas',final:'Fin',acro:'Acro'};
 const ICON={tap:'●',double:'●●',hold:'▬',swipe:'➜',circle:'↻',zigzag:'〰'};
 const ROLEICON={lancer:'⬆',tour:'↺',rattraper:'⬇'};
 const GHINT={tap:'Touche',double:'Touche 2 fois',hold:'Maintiens appuyé',swipe:'Glisse le doigt',circle:'Dessine des cercles',zigzag:'Fais des zigzags'};
 const ROLEHINT={lancer:'Lance !',tour:'Tourne sous l\'engin !',rattraper:'Rattrape !'};
-const ETAB={DB:[0,.1,.3,.5],R:[0,.1,.3,.5],DA:[0,.1,.3,.5],pas:[0,0,.1,.1],final:[0,.1,.2,.3]};
+const ETAB={acro:[0,.1,.3,.5],DB:[0,.1,.3,.5],R:[0,.1,.3,.5],DA:[0,.1,.3,.5],pas:[0,0,.1,.1],final:[0,.1,.2,.3]};
 const GRADES=[{t:'Parfait !',c:'#5be7a9'},{t:'Bien',c:'#9be15d'},{t:'Juste',c:'#ffd166'},{t:'Raté',c:'#ff6b6b'}];
 
 /* ============================ Réglages ============================ */
@@ -592,6 +630,16 @@ function poseFor(a,p,T,B){
       else if(v==='biche'){P.lLegF=1.4*e;P.lKnee=1.6*e;P.rLegF=-1.5*e;P.lArmS=2.4*e;P.rArmS=2.4*e;}
       else if(v==='cabriole'){P.lLegF=1.0*e;P.rLegF=.9*e;P.spine=-.15*e;P.lArmS=1.4;P.rArmS=1.4;}
       else if(v==='cambre'){P.lLegF=1.5*e;P.rLegF=-1.5*e;P.rKnee=1.4*e;P.spine=-.6*e;P.head=-.5*e;P.lArmS=2.6*e;P.rArmS=2.6*e;}
+      else if(v==='vertical'){P.lArmS=2.8*e;P.rArmS=2.8*e;P.spine=-.05*e;}
+      else if(v==='groupe'){P.lLegF=1.7*e;P.rLegF=1.7*e;P.lKnee=2.3*e;P.rKnee=2.3*e;P.lArmF=1.2*e;P.rArmF=1.2*e;}
+      else if(v==='passe'){P.rLegS=.9*e;P.rLegF=.5*e;P.rKnee=2.3*e;P.lArmS=2.7*e;P.rArmS=2.7*e;}
+      else if(v==='ciseaux'){const f=Math.sin(p*Math.PI*2);P.lLegF=1.4*Math.max(0,f)+.2;P.rLegF=1.4*Math.max(0,-f)+.2;P.lArmS=1.5;P.rArmS=1.5;}
+      else if(v==='cosaque'){P.lLegF=1.55*e;P.rLegF=.9*e;P.rKnee=2.2*e;P.lArmS=1.5;P.rArmS=1.5;P.lArmF=.6*e;}
+      else if(v==='lateral'){P.lLegS=1.5*e;P.rLegS=1.5*e;P.lArmS=1.6;P.rArmS=1.6;}
+      else if(v==='carpe'){P.lLegF=1.6*e;P.rLegF=1.6*e;P.spine=.7*e;P.lArmF=1.5*e;P.rArmF=1.5*e;}
+      else if(v==='anneau'){P.lLegF=1.5*e;P.rLegF=-1.4*e;P.rKnee=2.1*e;P.spine=-.6*e;P.head=-.6*e;P.lArmS=2.7*e;P.rArmS=2.7*e;}
+      else if(v==='bicheanneau'){P.lLegF=1.4*e;P.lKnee=1.6*e;P.rLegF=-1.5*e;P.rKnee=1.8*e;P.spine=-.55*e;P.head=-.5*e;P.lArmS=2.6*e;P.rArmS=2.6*e;}
+      else if(v==='papillon'){P.spine=1.2*e;P.rLegF=-1.7*e;P.lLegF=-.9*e;P.lArmS=1.6;P.rArmS=1.6;}
       else {P.lLegF=1.4*e;P.rLegF=-1.4*e;P.lArmS=2.2;P.rArmS=2.2;}
       const cr=p<.12?(1-p/.12):(p>.88?(p-.88)/.12:0); P.lKnee+=.5*cr; P.rKnee+=.5*cr; P.lift-=.06*cr; break;}
     case 'equilibre': {
@@ -600,6 +648,12 @@ function poseFor(a,p,T,B){
       else if(v==='passe'){P.rLegS=.9*e;P.rLegF=.5*e;P.rKnee=2.3*e;P.lArmS=2.8*e;P.rArmS=2.8*e;}
       else if(v==='penche'){P.rLegF=-2.7*e;P.spine=1.35*e;P.head=-.4*e;P.lArmF=1.6*e;P.rArmF=-.6*e;}
       else if(v==='tenue'){P.lLegS=2.5*e;P.lArmS=2.6*e;P.lEl=.2;P.rArmS=1.3*e;P.spineSide=-.25*e;}
+      else if(v==='devant'){P.rLegF=1.55*e;P.lArmS=1.5*e;P.rArmS=1.5*e;}
+      else if(v==='cote'){P.lLegS=1.5*e;P.lArmS=1.5*e;P.rArmS=1.5*e;P.spineSide=-.12*e;}
+      else if(v==='attitude'){P.rLegF=-1.3*e;P.rKnee=1.2*e;P.lArmS=2.7*e;P.rArmS=1.2*e;}
+      else if(v==='ecartavant'){P.rLegF=2.6*e;P.rArmF=2.4*e;P.rEl=.3;P.lArmS=1.4*e;P.spine=-.1*e;}
+      else if(v==='anneau'){P.rLegF=-2.2*e;P.rKnee=1.7*e;P.spine=-.55*e;P.head=-.5*e;P.lArmS=2.6*e;P.rArmS=2.6*e;P.rEl=.8;}
+      else if(v==='fouette'){const f=Math.sin(p*Math.PI*4);P.rLegF=1.5*Math.max(0,f)-1.5*Math.max(0,-f)*.9;P.rLegS=.4;P.lArmS=1.4;P.rArmS=1.4;}
       else {P.lift=-.38*e;P.rKnee=2.2*e;P.rLegF=.9*e;P.lLegS=1.5*e;P.lArmS=1.5;P.rArmS=1.5;}
       break;}
     case 'pivot': {
@@ -608,7 +662,20 @@ function poseFor(a,p,T,B){
       else if(v==='arabesque'){P.rLegF=-1.55*e;P.spine=.3*e;P.lArmF=1.4*e;P.rArmS=1.4*e;}
       else if(v==='penche'){P.rLegF=-2.6*e;P.spine=1.3*e;P.lArmF=1.4*e;}
       else if(v==='fouette'){const f=Math.sin(p*Math.PI*8);P.rLegF=.9*Math.max(0,f);P.rLegS=1.2*Math.max(0,-f);P.rKnee=.6;P.lArmS=1.3;P.rArmS=1.3;}
+      else if(v==='devant'){P.rLegF=1.5*e;P.lArmS=1.4*e;P.rArmS=1.4*e;}
+      else if(v==='cote'){P.lLegS=1.5*e;P.lArmS=1.5*e;P.rArmS=1.5*e;}
+      else if(v==='tonneau'){P.spine=1.1*e;P.rLegF=-.9*e;P.lArmF=1.6*e;P.rArmF=1.2*e;P.head=.3*e;}
+      else if(v==='anneau'){P.rLegF=-2.2*e;P.rKnee=1.7*e;P.spine=-.5*e;P.head=-.5*e;P.lArmS=2.6*e;P.rArmS=2.6*e;}
+      else if(v==='tenue'){P.lLegS=2.5*e;P.lArmS=2.6*e;P.rArmS=1.3*e;P.spineSide=-.25*e;}
+      else if(v==='illusion'){P.rLegF=-2.6*e;P.lArmF=1.6*e;P.rArmF=1.2*e;}
       else {P.rLegS=.9*e;P.rLegF=.5*e;P.rKnee=2.3*e;P.lArmS=1.4*e;P.rArmS=1.4*e;P.lArmF=.9*e;P.rArmF=.9*e;}
+      break;}
+    case 'acro': {
+      if(v==='roulade'){const e=Math.min(1,p*8,(1-p)*8);P.lift=-.42*e;P.spine=1.45*e;P.head=.8*e;P.lLegF=2.2*e;P.rLegF=2.2*e;P.lKnee=2.4*e;P.rKnee=2.4*e;P.lArmF=1.4*e;P.rArmF=1.4*e;}
+      else if(v==='roue'){P.lArmS=2.9;P.rArmS=2.9;P.lLegS=1.25*s;P.rLegS=1.25*s;}
+      else if(v==='souplesseav'||v==='souplessear'){const sg=v==='souplesseav'?1:-1;P.lArmS=2.9;P.rArmS=2.9;P.lLegF=1.5*s*sg;P.rLegF=-1.5*s*sg;P.spine=-.7*s;P.head=-.6*s;}
+      else if(v==='illusion'){P.rLegF=-2.6*s;P.lArmF=1.6*s;P.rArmF=1.2*s;}
+      else {P.lArmS=1.1;P.rArmS=1.1;P.lArmF=.5;P.rArmF=.5;P.lift=.05;}
       break;}
     case 'lancer': P.rArmF=lerp(-.4,3.0,ease(p)); P.lArmS=1.5; P.lift=-.08*s; P.spine=-.1*p; P.lKnee=.3*s; P.rKnee=.3*s; break;
     case 'tour': P.lArmS=1.0+.4*s; P.rArmS=1.0+.4*s; P.lArmF=.6*s; P.rArmF=.6*s; P.lift=.04; P.rLegS=.3*s; P.rKnee=.8*s; break;
@@ -1020,10 +1087,11 @@ class Gymnast{
   constructor(leoId,engin,opt={}){
     this.root=new THREE.Group(); scene.add(this.root); this.opt=opt;
     const L=leoDef(leoId); this.L=L; if(L.outfit)L.kind='tripo';
-    this.proc=new ProcRig(L.kind==='proc'&&!L.src?L:(L.outfit||LEOS[0])); this.root.add(this.proc.root);
+    this.proc=new ProcRig(L.kind==='proc'&&!L.src?L:(L.outfit||LEOS[0]));
+    this.tumble=new THREE.Group(); this.tumble.rotation.order='YXZ'; this.root.add(this.tumble); this.tumble.add(this.proc.root);
     this.custom=null;
     if(L.kind!=='proc'){ this.proc.root.visible=false;
-      makeCustom(L).then(c=>{if(this.dead)return;this.custom=c;this.root.add(c.obj);}).catch(e=>{console.warn(e);this.proc.root.visible=true;if(opt.onErr)opt.onErr(e);}); }
+      makeCustom(L).then(c=>{if(this.dead)return;this.custom=c;this.tumble.add(c.obj);}).catch(e=>{console.warn(e);this.proc.root.visible=true;if(opt.onErr)opt.onErr(e);}); }
     this.engin=new Engin(engin,L,opt.design);
     this.tl=[];this.flights=[];this.extra=[];this.wob=-9;this.yaw=0;this.B=.6;
     const sh=new THREE.Mesh(new THREE.PlaneGeometry(1.1,1.1),new THREE.MeshBasicMaterial({map:SHADOWTEX,transparent:true,depthWrite:false}));
@@ -1066,11 +1134,21 @@ class Gymnast{
     this.proc.setPose(P,1-Math.exp(-dt*16));
     const pt=this.path(T); this.root.position.set(pt.x,0,pt.z);
     let yaw=pt.yaw; const clip=this.custom&&this.custom.has(a.name);
-    if(!clip){if(a.name==='pivot')yaw+=2*Math.PI*(a.turns||1)*ease(p);else if(a.name==='tour')yaw+=2*Math.PI*ease(p);}
-    this.yaw=yaw; this.proc.root.rotation.y=yaw;
+    if(!clip){if(a.name==='pivot')yaw+=2*Math.PI*(a.turns||1)*ease(p);else if(a.name==='tour')yaw+=2*Math.PI*ease(p);else if(a.turns)yaw+=2*Math.PI*a.turns*ease(p);}
+    let pitch=0,roll=0,piv=0; const av=a.variant;
+    if(a.name==='acro'){const e=ease(p);
+      if(av==='roulade'){pitch=2*Math.PI*e;piv=.5;}
+      else if(av==='souplesseav'){pitch=2*Math.PI*e;piv=.8;}
+      else if(av==='souplessear'){pitch=-2*Math.PI*e;piv=.8;}
+      else if(av==='roue'){roll=2*Math.PI*e;piv=.95;}
+      else if(av==='chaines'){yaw+=4*Math.PI*e;}}
+    if(av==='illusion'&&(a.name==='acro'||a.name==='pivot')){pitch=1.45*Math.sin(Math.PI*p);yaw+=2*Math.PI*ease(p)*(a.name==='acro'?1:0);}
+    this.yaw=yaw; this.proc.root.rotation.y=0;
+    this.tumble.rotation.set(pitch,yaw,roll);
+    this.tumble.position.set(0,-piv,0).applyQuaternion(this.tumble.quaternion); this.tumble.position.y+=piv;
     if(this.custom){
       const c=this.custom,procA=!c.has(a.name);
-      c.obj.rotation.y=yaw; c.play(procA?'idle':a.name); c.mixer.update(dt);
+      c.obj.rotation.y=0; c.play(procA?'idle':a.name); c.mixer.update(dt);
       const wt=(procA&&a!==IDLE)||!c.clips.idle?1:0; c.w=lerp(c.w,wt,1-Math.exp(-dt*10));
       c.obj.position.y=this.proc.S.lift*c.w;
     }
@@ -1210,7 +1288,7 @@ function computeD(st){return sum([...st.DB].sort((a,b)=>b-a).slice(0,8))+sum(st.
 function liveScores(){const g=GAME,st=g.st;const D=computeD(st),E=Math.max(0,10-st.dedE),A=Math.max(0,10-st.dedA);const T=gameTime();return {D,E,A,T:Math.max(0,D+E+A-st.line),prog:clamp((T-g.first)/(g.final-g.first),0,1)};}
 function gameTime(){if(!GAME)return 0;return AC.currentTime-GAME.startAt-S.latence/1000-(AC.outputLatency||0);}
 
-function lancerPartie({choreo,music,nom,leo,design=null,opponents=[],online=false,onFin}){
+function lancerPartie({choreo,music,nom,leo,design=null,opponents=[],online=false,demo=false,retour=null,onFin}){
   if(PREV){PREV.dispose();PREV=null;PREVKEY='';}
   const ac=getAC();
   const g={choreo,notes:choreo.notes.map(n=>Object.assign({},n)),els:choreo.els.map(e=>Object.assign({},e)),niv:choreo.niv,engin:choreo.engin,B:choreo.B,first:choreo.first,final:choreo.final,
@@ -1222,6 +1300,7 @@ function lancerPartie({choreo,music,nom,leo,design=null,opponents=[],online=fals
   const src=ac.createBufferSource(); src.buffer=music.buffer; const gain=ac.createGain(); src.connect(gain); gain.connect(ac.destination);
   g.startAt=ac.currentTime+3.3; src.start(g.startAt); g.src=src; g.gain=gain;
   GAME=g; show('sJeu'); resizeHUD();
+  g.demo=demo; g.retour=retour; lane.style.display=demo?'none':''; hEls.Judge.style.display=demo?'none':'';
   hEls.Live.style.display=online?'block':'none'; hEls.Elem.innerHTML=''; hEls.Prompt.innerHTML='';
   if(online) g.liveTimer=setInterval(()=>{if(GAME===g&&!g.done)sendNet(Object.assign({t:'live'},liveScores()));},350);
 }
@@ -1249,6 +1328,7 @@ function closeElement(el){
   const g=GAME,st=g.st,T=gameTime();
   if(el.type==='pas'){if((el.mauvais||0)>=2){st.dedA+=.3;st.fA.pas++;g.flash={until:T+.9,html:'<span class="bad">✗ Pas de danse : A −0,30</span>'};}return;}
   if(el.type==='final')return;
+  if(el.type==='acro'){if(!el.invalid)g.flash={until:T+.7,html:`<span class="ok">✓ ${esc(el.nom)}</span>`};return;}
   if(el.type==='DB'&&!el.invalid)st.groups.add(el.group);
   if(!el.invalid&&el.v>0){
     if(el.type==='DB')st.DB.push(el.v);else if(el.type==='R'){if(st.R.length<4)st.R.push(el.v);}else if(st.DA.length<15)st.DA.push(el.v);
@@ -1322,12 +1402,13 @@ $('#hQuit').addEventListener('click',()=>{
   if(!GAME)return; if(!confirm('Quitter l\'enchaînement ?'))return;
   const g=GAME; stopAudio(g,.3); g.done=true;
   if(g.online){const r={nom:g.nom,leo:g.leo,total:0,D:0,A:0,E:0,pen:0,abandon:true};NET.finals.set(NET.me,r);sendNet({t:'final',res:r});if(NET.host)checkPodium();}
-  finirJeu(); if(g.online&&NET.peer){renderLobby();show('sLobby');} else goAccueil();
+  finirJeu(); if(g.online&&NET.peer){renderLobby();show('sLobby');} else if(g.retour)g.retour(); else goAccueil();
 });
 
 function tick(T,dt){
   const g=GAME; if(g.done)return; const w2=wins()[2];
-  for(const n of g.notes){
+  if(g.demo){for(const n of g.notes){if(!n.judged&&T>=n.t+(n.dur||0))finalize(n,0);}}
+  else for(const n of g.notes){
     if(n.judged)continue; if(n.t-.5>T&&!n.started)break;
     if(TAPLIKE.has(n.g)){
       if(!n.started&&T>n.t+w2)finalize(n,3);
@@ -1339,7 +1420,7 @@ function tick(T,dt){
   // HUD
   hEls.Count.textContent=T<0?Math.ceil(-T):'';
   const tn=activeTrace(T);
-  if(tn&&T>=n0(tn)){const r=clamp((tn.acc||0)/tn.need,0,1);hEls.Prompt.innerHTML=`${tn.g==='circle'?'↻ Dessine des cercles !':'〰 Fais des zigzags !'}<div class="bar"><i style="width:${Math.round(r*100)}%"></i></div>`;}
+  if(tn&&T>=n0(tn)&&!g.demo){const r=clamp((tn.acc||0)/tn.need,0,1);hEls.Prompt.innerHTML=`${tn.g==='circle'?'↻ Dessine des cercles !':'〰 Fais des zigzags !'}<div class="bar"><i style="width:${Math.round(r*100)}%"></i></div>`;}
   else if(hEls.Prompt.innerHTML)hEls.Prompt.innerHTML='';
   majElem(T);
   if(performance.now()-g.lastHud>120){
@@ -1356,7 +1437,7 @@ function majElem(T){
   let n=null; for(const x of g.notes){if(!x.judged){n=x;break;}}
   let html='';
   if(n&&n.t-T<1.8){
-    const e=g.els[n.el]; const geste=n.role?ROLEHINT[n.role]:(n.cat==='DA'&&n.g==='tap'?'Touche en rythme':GHINT[n.g]);
+    const e=g.els[n.el]; const geste=g.demo?'':n.role?ROLEHINT[n.role]:(n.cat==='DA'&&n.g==='tap'?'Touche en rythme':GHINT[n.g]);
     html=`<span class="cat" style="background:${CATCOL[n.cat]}">${CATLBL[n.cat]}</span> ${esc(e.nom)}${e.v>0?` <b>${fmt(e.v,2)}</b>`:''}<div class="geste">${geste}</div>`;
   }
   if(html!==g.lastElem){hEls.Elem.innerHTML=html;g.lastElem=html;}
@@ -1635,6 +1716,174 @@ function renderLobby(){
 }
 function resetNet(){try{if(NET.peer)NET.peer.destroy();}catch(e){}Object.assign(NET,{peer:null,host:false,conns:new Map(),hostConn:null,players:[],me:null,code:null,set:null,prep:null,mus:null,finals:new Map(),rx:null,inGame:false});clearTimeout(NET.podTimer);NET.podTimer=null;}
 
+/* ======================= Atelier de chorégraphie ======================= */
+/* Difficultés corporelles : valeurs du Code de pointage FIG 2025-2028 (brochure officielle) */
+const CAT_DB={
+  saut:[['Saut groupé avec tour',.1,'groupe',1],['Saut vertical avec tour',.1,'vertical',1],['Saut passé avec tour',.1,'passe',1],['Cabriole avant',.1,'cabriole'],['Saut ciseaux',.1,'ciseaux'],['Saut cosaque',.1,'cosaque'],
+    ['Saut biche',.2,'biche'],['Saut en anneau (une jambe)',.2,'anneau'],['Fouetté sauté',.2,'ecart'],['Grand jeté (saut écart)',.3,'ecart'],['Saut écart latéral',.3,'lateral'],['Saut carpé',.3,'carpe'],['Entrelacé',.3,'tourjete',.5],
+    ['Saut écart avec anneau',.4,'anneau'],['Saut biche avec cambré',.4,'bicheanneau'],['Jeté en tournant',.4,'tourjete',.5],['Saut écart cambré',.5,'cambre'],['Saut changement de jambes',.5,'ecart'],['Saut papillon',.5,'papillon',.5]],
+  equilibre:[['Équilibre passé',.1,'passe'],['Équilibre cosaque',.1,'cosaque'],['Jambe à l\'horizontale devant',.2,'devant'],['Jambe à l\'horizontale de côté',.2,'cote'],['Arabesque',.2,'arabesque'],['Attitude',.2,'attitude'],
+    ['Grand écart avant avec aide',.3,'ecartavant'],['Grand écart latéral avec aide',.3,'tenue'],['Anneau avec aide',.3,'anneau'],['Équilibre fouetté',.3,'fouette'],['Penché (écart arrière, buste en avant)',.6,'penche']],
+  pivot:[['Pivot passé',.1,'passe'],['Fouetté',.2,'fouette'],['Tonneau (tour plongé)',.3,'tonneau'],['Pivot jambe devant',.3,'devant'],['Pivot jambe de côté',.3,'cote'],['Pivot arabesque',.3,'arabesque'],['Pivot attitude',.3,'attitude'],
+    ['Pivot anneau avec aide',.3,'anneau'],['Pivot écart latéral avec aide',.3,'tenue'],['Pivot penché',.4,'penche'],['Illusion arrière',.4,'illusion']]
+};
+const CAT_ACRO=[['Roulade avant','roulade'],['Roue','roue'],['Souplesse avant','souplesseav'],['Souplesse arrière','souplessear'],['Chaînés (tours enchaînés)','chaines'],['Illusion','illusion']];
+const CAT_R=[['R2 · lancer + 2 tours',2,0,'tour'],['R3 · lancer + 3 tours',3,0,'tour'],['R3 · rattrapé hors champ visuel',3,1,'tour'],['R2 · 2 roulades sous l\'engin',2,0,'roulade'],['R2 · 2 roues sous l\'engin',2,0,'roue'],['R3 · 3 chaînés + rattrapé sans les mains',3,1,'chaines']];
+/* Groupes techniques propres à chaque engin (Code de pointage FIG) */
+const CAT_DA={
+  ballon:[['Grand roulé sur les bras','swipe','roule',.4],['Rebonds au sol','taps','rebonds',.3],['Huit du ballon','circle','huit',.3],['Rotations des mains autour du ballon','circle','huit',.3],['Rattrapé à une main','double','rebonds',.3]],
+  cerceau:[['Rotations autour de la main','circle','rotation',.3],['Grand roulé sur les bras','swipe','roule',.4],['Passage à travers le cerceau','double','passage',.4],['Rotation sur l\'axe','circle','rotation',.3]],
+  massues:[['Moulinets','circle','moulinets',.4],['Petits lancers asymétriques','double','petitslancers',.3],['Frappés','taps','frappes',.3],['Petits cercles','circle','moulinets',.3],['Mouvements asymétriques','zigzag','moulinets',.4]],
+  ruban:[['Spirales','circle','spirale',.3],['Serpentins','zigzag','serpentin',.3],['Échappé','swipe','echappe',.4],['Boomerang','double','echappe',.4],['Passage dans le dessin du ruban','circle','spirale',.4]],
+  corde:[['Sauts dans la corde','taps','sautscorde',.3],['Double rotation','double','doubletour',.4],['Corde en huit','circle','huitcorde',.3],['Échappé d\'un bout','swipe','huitcorde',.4],['Corde pliée en rotation','circle','huitcorde',.3]]
+};
+const CH_CATS=[['saut','Sauts'],['equilibre','Équilibres'],['pivot','Pivots'],['acro','Acrobaties'],['R','Lancers (R)'],['DA','Engin'],['pas','Danse']];
+const CH_HINT={saut:'Difficultés corporelles (DB). Valeurs officielles FIG.',equilibre:'Difficultés corporelles (DB). Tenues plus longtemps.',pivot:'Difficultés corporelles (DB) en rotation.',acro:'Éléments pré-acrobatiques : pas de valeur seuls, mais ils donnent du style.',R:'Lancer haut, rotations sous l\'engin, rattrapé.',DA:'Difficultés d\'engin (DA), propres à l\'engin choisi.',pas:'Combinaisons de pas de danse : comptent pour la note artistique.'};
+function itemInfo(it,engin){
+  if(CAT_DB[it.c]){const d=CAT_DB[it.c][it.i];return {cat:'DB',nom:d[0],v:d[1],var:d[2],turns:d[3]||0};}
+  if(it.c==='acro'){const d=CAT_ACRO[it.i];return {cat:'acro',nom:d[0],v:0,var:d[1]};}
+  if(it.c==='R'){const d=CAT_R[it.i];return {cat:'R',nom:d[0],n:d[1],crit:d[2],rot:d[3],v:.2+.1*(d[1]-2)+.1*d[2]+(d[3]!=='tour'?.1:0)};}
+  if(it.c==='DA'){const L=CAT_DA[engin];const d=L[it.i%L.length];return {cat:'DA',nom:d[0],g:d[1],var:d[2],v:d[3]};}
+  return {cat:'pas',nom:'Pas de danse (4 temps)',v:0};
+}
+function itemLen(it,engin){
+  const f=itemInfo(it,engin);
+  if(it.c==='saut'||it.c==='pivot')return 2; if(it.c==='equilibre')return 3; if(it.c==='acro')return f.var.startsWith('souplesse')?3:2;
+  if(it.c==='R')return f.n+3; if(it.c==='DA')return (f.g==='swipe'||f.g==='double')?2:4; return 4;
+}
+function chGrid(mus){let B=60/mus.bpm;while(B<.42)B*=2;while(B>1.1)B/=2;const first=mus.offset+Math.ceil((2.6-mus.offset)/B-1e-6)*B;return {B,first,end:Math.min(mus.dur-1.2,first+88)};}
+function buildChoreo(seq,engin,mus,niv){
+  const {B,first,end}=chGrid(mus);
+  const notes=[],els=[],acts=[],flights=[],vus=new Set(); let t=first,cut=0;
+  const note=o=>notes.push(Object.assign({judged:false,grade:null,dur:0},o));
+  for(const it of seq){
+    const f=itemInfo(it,engin),len=itemLen(it,engin);
+    if(t+(len+1)*B>end){cut++;continue;}
+    const ei=els.length,at=b=>t+b*B;
+    if(f.cat==='DB'){
+      const rep=vus.has(f.nom); vus.add(f.nom);
+      els.push({type:'DB',group:it.c,nom:f.nom+(rep?' (répétée)':''),v:rep?0:f.v});
+      if(it.c==='saut'){note({t:at(0),g:'tap',cat:'DB',el:ei});acts.push({name:'saut',variant:f.var,t0:at(0),dur:clamp(B*1.05,.55,.85),turns:f.turns});}
+      else if(it.c==='equilibre'){note({t:at(0),g:'hold',cat:'DB',el:ei,dur:2*B});acts.push({name:'equilibre',variant:f.var,t0:at(0)-.12,dur:2*B+.35});}
+      else {note({t:at(0),g:'swipe',cat:'DB',el:ei});acts.push({name:'pivot',variant:f.var,t0:at(0),dur:1.6*B,turns:f.var==='illusion'?1:1});}
+    } else if(f.cat==='acro'){
+      els.push({type:'acro',nom:f.nom,v:0}); note({t:at(0),g:'swipe',cat:'acro',el:ei});
+      acts.push({name:'acro',variant:f.var,t0:at(0),dur:(len-.4)*B});
+    } else if(f.cat==='R'){
+      els.push({type:'R',nom:f.nom,v:f.v});
+      note({t:at(0),g:'tap',cat:'R',role:'lancer',el:ei});
+      for(let i=1;i<=f.n;i++)note({t:at(i),g:'tap',cat:'R',role:'tour',el:ei});
+      note({t:at(f.n+1),g:'tap',cat:'R',role:'rattraper',el:ei});
+      acts.push({name:'lancer',t0:at(0)-.05,dur:.5*B+.1});
+      for(let i=1;i<=f.n;i++)acts.push(f.rot==='tour'?{name:'tour',t0:at(i)-B*.45,dur:B*.95}:{name:'acro',variant:f.rot==='chaines'?'chaines':f.rot,t0:at(i)-B*.45,dur:B*.95});
+      acts.push({name:'rattraper',t0:at(f.n+1)-.1,dur:.7*B+.1});
+      flights.push({t0:at(0)+.2*B,t1:at(f.n+1),H:2.2+.5*f.n,el:ei});
+    } else if(f.cat==='DA'){
+      els.push({type:'DA',nom:f.nom,v:f.v});
+      if(f.g==='circle'||f.g==='zigzag'){note({t:at(0),g:f.g,cat:'DA',el:ei,dur:3*B,need:f.g==='circle'?2:4});acts.push({name:'engin',variant:f.var,t0:at(0),dur:3*B});}
+      else if(f.g==='taps'){for(let b=0;b<3;b++)note({t:at(b),g:'tap',cat:'DA',el:ei});acts.push({name:'engin',variant:f.var,t0:at(0),dur:3*B});}
+      else {note({t:at(0),g:f.g,cat:'DA',el:ei});acts.push({name:'engin',variant:f.var,t0:at(0)-.05,dur:1.5*B});}
+    } else {
+      els.push({type:'pas',nom:'Pas de danse',v:0});
+      for(let b=0;b<4;b++){note({t:at(b),g:'tap',cat:'pas',el:ei});acts.push({name:'pas',t0:at(b),dur:B,k:b});}
+    }
+    t+=(len+1)*B;
+  }
+  const finalT=t;
+  els.push({type:'final',nom:'Pose finale',v:0}); note({t:finalT,g:'tap',cat:'final',el:els.length-1});
+  acts.push({name:'final',t0:finalT-.1,dur:6}); acts.sort((a,b)=>a.t0-b.t0);
+  return {notes,els,acts,flights,B,first,final:finalT,engin,niv,cut};
+}
+const CH={nom:'',engin:S.engin,seq:[],cat:'saut'};
+function chMus(){return S.musique==='custom'&&S.custom?{bpm:S.custom.bpm,offset:S.custom.offset,dur:S.custom.buffer.duration}:{bpm:(MUSIQUES.find(m=>m.id===S.musique)||MUSIQUES[0]).bpm,offset:.3,dur:91.5};}
+function ouvrirAtelier(){renderAtelier();show('sChoreo');}
+function renderAtelier(){
+  $('#chNom').value=CH.nom;
+  chips($('#chEngin'),Object.entries(ENGINS).map(([k,e])=>({k,t:e.ico+' '+e.nom})),CH.engin,k=>{CH.engin=k;CH.seq=CH.seq.filter(it=>it.c!=='DA');renderAtelier();});
+  const mus=MUSIQUES.map(m=>({k:m.id,t:'🎵 '+m.nom})); if(S.custom)mus.push({k:'custom',t:'🎧 '+S.custom.nom});
+  chips($('#chMus'),mus,S.musique,k=>{S.musique=k;saveS();renderAtelier();});
+  const liste=store.get('rs_choreos',[]);
+  $('#chListe').innerHTML=liste.length?liste.map((c,i)=>`<option value="${i}">${esc(c.nom)} – ${ENGINS[c.engin].nom}</option>`).join(''):'<option value="">(aucune pour l\'instant)</option>';
+  chips($('#chCat'),CH_CATS.map(([k,t])=>({k,t:k==='DA'?ENGINS[CH.engin].ico+' '+ENGINS[CH.engin].nom:t})),CH.cat,k=>{CH.cat=k;renderAtelier();});
+  $('#chCatHint').textContent=CH_HINT[CH.cat];
+  let items=[];
+  if(CAT_DB[CH.cat])items=CAT_DB[CH.cat].map((d,i)=>({c:CH.cat,i}));
+  else if(CH.cat==='acro')items=CAT_ACRO.map((d,i)=>({c:'acro',i}));
+  else if(CH.cat==='R')items=CAT_R.map((d,i)=>({c:'R',i}));
+  else if(CH.cat==='DA')items=CAT_DA[CH.engin].map((d,i)=>({c:'DA',i}));
+  else items=[{c:'pas',i:0}];
+  $('#chElems').innerHTML=items.map((it,j)=>{const f=itemInfo(it,CH.engin);return `<button data-j="${j}">${esc(f.nom)}${f.v?`<b>${fmt(f.v,2)}</b>`:''}</button>`;}).join('');
+  $('#chElems').querySelectorAll('button').forEach(b=>b.onclick=()=>{CH.seq.push(items[+b.dataset.j]);renderSeq();b.animate([{transform:'scale(.92)'},{transform:'scale(1)'}],{duration:180});});
+  renderSeq();
+}
+function renderSeq(){
+  const m=chMus(),{B,first,end}=chGrid(m); let t=first,D=[],R=[],DA=[],grp=new Set(),vus=new Set(),hors=0;
+  const rows=CH.seq.map((it,i)=>{const f=itemInfo(it,CH.engin),len=itemLen(it,CH.engin);const ok=t+(len+1)*B<=end;if(ok)t+=(len+1)*B;else hors++;
+    let v=f.v; if(f.cat==='DB'){if(vus.has(f.nom))v=0;vus.add(f.nom);if(ok){D.push(v);grp.add(it.c);}} else if(ok&&f.cat==='R')R.push(v); else if(ok&&f.cat==='DA')DA.push(v);
+    const col=CATCOL[f.cat];
+    return `<div class="seq" style="${ok?'':'opacity:.45'}"><span class="n">${i+1}</span><span class="c" style="background:${col}">${CATLBL[f.cat]}</span><span class="t">${esc(f.nom)}${f.cat==='DB'&&v===0?' <small class="bad">(répétée : 0)</small>':''}</span>${v?`<b>${fmt(v,2)}</b>`:''}<button data-up="${i}">↑</button><button data-del="${i}">✕</button></div>`;});
+  const Dt=sum([...D].sort((a,b)=>b-a).slice(0,8))+sum(R.slice(0,4))+sum(DA.slice(0,15))-.3*['saut','equilibre','pivot'].filter(g=>!grp.has(g)).length;
+  const dur=t-first+1.5,tot=end-first+1.5,pct=Math.min(100,dur/tot*100);
+  const req=['saut','equilibre','pivot'].map(g=>`${grp.has(g)?'✅':'⬜'} ${GROUPE_NOM[g]}`).join(' · ');
+  $('#chJauge').innerHTML=`<div class="jauge ${hors?'trop':''}"><i style="width:${pct}%"></i></div>
+    <p class="hint" style="margin:0">Durée ${Math.floor(dur/60)}:${String(Math.round(dur%60)).padStart(2,'0')} / ${Math.floor(tot/60)}:${String(Math.round(tot%60)).padStart(2,'0')} · <b>D ≈ ${fmt(Math.max(0,Dt),2)}</b> · R ${R.length}/4 · ${req}${hors?`<br><span class="bad">${hors} élément(s) dépassent la musique et ne seront pas joués.</span>`:''}${dur<75?'<br>Moins de 1\'15" : pénalité de durée.':''}</p>`;
+  $('#chSeq').innerHTML=rows.join('')||'<p class="hint">Touche des éléments ci-dessus pour construire ton enchaînement, ou 🎲 Compléter.</p>';
+  $('#chSeq').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{CH.seq.splice(+b.dataset.del,1);renderSeq();});
+  $('#chSeq').querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>{const i=+b.dataset.up;if(i>0){[CH.seq[i-1],CH.seq[i]]=[CH.seq[i],CH.seq[i-1]];renderSeq();}});
+}
+function completer(){
+  const m=chMus(),{B,first,end}=chGrid(m); let t=first; for(const it of CH.seq)t+=(itemLen(it,CH.engin)+1)*B;
+  const R=Math.random,pick=a=>a[Math.floor(R()*a.length)];
+  const has=c=>CH.seq.some(it=>it.c===c); const nR=()=>CH.seq.filter(it=>it.c==='R').length;
+  const vus=new Set(CH.seq.filter(it=>CAT_DB[it.c]).map(it=>it.c+it.i));
+  const besoin=['saut','equilibre','pivot'].filter(c=>!has(c));
+  for(let k=0;k<60;k++){
+    let c=besoin.length?besoin.shift():pick(['saut','saut','equilibre','pivot','DA','DA','R','pas','acro']);
+    if(c==='R'&&nR()>=4)c='DA';
+    let it;
+    if(CAT_DB[c]){const L=CAT_DB[c];let i,n=0;do{i=Math.floor(R()*L.length);n++;}while(vus.has(c+i)&&n<20);vus.add(c+i);it={c,i};}
+    else if(c==='DA')it={c,i:Math.floor(R()*CAT_DA[CH.engin].length)};
+    else if(c==='R')it={c,i:Math.floor(R()*CAT_R.length)};
+    else if(c==='acro')it={c,i:Math.floor(R()*CAT_ACRO.length)};
+    else it={c:'pas',i:0};
+    const len=itemLen(it,CH.engin); if(t+(len+1)*B>end){if(len<=2)break;continue;}
+    CH.seq.push(it); t+=(len+1)*B;
+  }
+  renderSeq();
+}
+async function lancerChoreo(demo){
+  if(!CH.seq.length){alert('Ajoute d\'abord des éléments à ta chorégraphie.');return;}
+  const b=$(demo?'#chVoir':'#chJouer'),txt=b.textContent; b.disabled=true; b.textContent='Préparation…';
+  try{
+    getAC(); const mus=await getMusicSel();
+    const ch=buildChoreo(CH.seq,CH.engin,{bpm:mus.bpm,offset:mus.offset,dur:mus.dur},S.niv);
+    lancerPartie({choreo:ch,music:mus,nom:S.nom||'Moi',leo:S.leo,design:S.engDesign[CH.engin],demo,retour:ouvrirAtelier,onFin:res=>{
+      showResult(res,{titre:(CH.nom||'Ma chorégraphie')+(demo?' – note maximale':''),avant:demo?'<p class="hint" style="text-align:center">Exécution parfaite : voici la note maximale de cette chorégraphie. À toi de l\'atteindre !</p>':'',actions:[{t:'← Atelier',f:ouvrirAtelier},{t:demo?'🎮 M\'entraîner':'Rejouer',big:true,f:()=>lancerChoreo(false)}]});
+    }});
+  }catch(e){alert('Problème : '+e.message);}
+  b.disabled=false; b.textContent=txt;
+}
+$('#chNom').addEventListener('input',e=>{CH.nom=e.target.value;});
+$('#chAuto').onclick=completer;
+$('#chVider').onclick=()=>{if(CH.seq.length&&!confirm('Vider l\'enchaînement ?'))return;CH.seq=[];renderSeq();};
+$('#chSave').onclick=()=>{
+  if(!CH.seq.length)return; if(!CH.nom.trim()){CH.nom=prompt('Nom de la chorégraphie ?','Ma chorégraphie')||'Ma chorégraphie';}
+  const l=store.get('rs_choreos',[]); const i=l.findIndex(c=>c.nom===CH.nom&&c.engin===CH.engin);
+  const o={nom:CH.nom,engin:CH.engin,seq:CH.seq,mus:S.musique==='custom'?'elan':S.musique}; if(i>=0)l[i]=o;else l.unshift(o);
+  store.set('rs_choreos',l.slice(0,30)); renderAtelier(); alert('Chorégraphie enregistrée ✓');
+};
+$('#chOuvrir').onclick=()=>{const l=store.get('rs_choreos',[]),c=l[+$('#chListe').value];if(!c)return;CH.nom=c.nom;CH.engin=c.engin;CH.seq=c.seq.map(x=>({...x}));if(S.musique!=='custom')S.musique=c.mus||'elan';renderAtelier();};
+$('#chSuppr').onclick=()=>{const l=store.get('rs_choreos',[]),i=+$('#chListe').value;if(!l[i]||!confirm('Supprimer « '+l[i].nom+' » ?'))return;l.splice(i,1);store.set('rs_choreos',l);renderAtelier();};
+$('#chFile').addEventListener('change',async e=>{
+  const f=e.target.files[0]; if(!f)return; e.target.value=''; $('#chMusInfo').textContent='Analyse de la musique…';
+  try{const bytes=await f.arrayBuffer();const buf=await getAC().decodeAudioData(bytes.slice(0));if(buf.duration<30)throw new Error('musique trop courte');
+    const on=analyseEnv(buf),tp=detectTempo(on);S.custom={nom:f.name.replace(/\.[^.]+$/,'').slice(0,28),bytes,buffer:buf,bpm:tp.bpm,offset:tp.offset,on};S.musique='custom';$('#chMusInfo').textContent='Tempo détecté : '+Math.round(tp.bpm)+' bpm';renderAtelier();}
+  catch(err){$('#chMusInfo').textContent='Impossible de lire cette musique : '+err.message;}
+});
+$('#chRetour').onclick=goAccueil;
+$('#chVoir').onclick=()=>lancerChoreo(true);
+$('#chJouer').onclick=()=>lancerChoreo(false);
+
 /* ============================== Écrans ============================== */
 let VIEW='sAccueil';
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id));VIEW=id;if(id==='sJeu')resizeHUD();}
@@ -1648,6 +1897,7 @@ document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=
   else if(go==='online'){if(needNom())premiere(()=>{netStatus('');show('sOnline');});}
   else if(go==='local'){premiere(()=>{renderLocal();show('sLocal');});}
   else if(go==='aide'){AIDE_SUITE=null;show('sAide');}
+  else if(go==='choreo'){ouvrirAtelier();}
   else if(go==='vestiaire'){S.prevEngin=S.engin;renderVestiaire();show('sVestiaire');}
   else if(go==='regles')show('sRegles');
 }));
