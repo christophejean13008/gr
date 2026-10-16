@@ -533,7 +533,7 @@ function persoInfo(fichier){
   if(m) return {nom:m.nom,emoji:m.emoji||'⭐',color:m.couleurEngin||'#ff4fa3'};
   const s=base.replace(/\.[^.]+$/,'').replace(/[-_]+/g,' ').trim(); const n=s.charAt(0).toUpperCase()+s.slice(1);
   const k=s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  const EMO=[['noel','🎅'],['chien','🐶'],['squelette','💀'],['loup','🐺'],['renard','🦊'],['panda','🐼'],['singe','🐵'],['cheval','🐴'],['momie','🧟'],['sorcier','🧙'],['dino','🦖'],['pingouin','🐧'],['grenouille','🐸'],['monstre','👹'],['halloween','🎃'],['citrouille','🎃'],['catch','🤼'],['sorci','🧙‍♀️'],['licorne','🦄'],['zombie','🧟'],['fantome','👻'],['vampire','🧛'],['pirate','🏴‍☠️'],['robot','🤖'],['princesse','👸'],['reine','👑'],['super','🦸‍♀️'],['fee','🧚'],['sirene','🧜‍♀️'],['clown','🤡'],['ninja','🥷'],['astronaute','👩‍🚀'],['chat','🐱'],['lapin','🐰'],['ours','🐻'],['dragon','🐉'],['alien','👽'],['elfe','🧝‍♀️'],['lutin','🧝']];
+  const EMO=[['noel','🎅'],['sumo','🤼‍♂️'],['chien','🐶'],['squelette','💀'],['loup','🐺'],['renard','🦊'],['panda','🐼'],['singe','🐵'],['cheval','🐴'],['momie','🧟'],['sorcier','🧙'],['dino','🦖'],['pingouin','🐧'],['grenouille','🐸'],['monstre','👹'],['halloween','🎃'],['citrouille','🎃'],['catch','🤼'],['sorci','🧙‍♀️'],['licorne','🦄'],['zombie','🧟'],['fantome','👻'],['vampire','🧛'],['pirate','🏴‍☠️'],['robot','🤖'],['princesse','👸'],['reine','👑'],['super','🦸‍♀️'],['fee','🧚'],['sirene','🧜‍♀️'],['clown','🤡'],['ninja','🥷'],['astronaute','👩‍🚀'],['chat','🐱'],['lapin','🐰'],['ours','🐻'],['dragon','🐉'],['alien','👽'],['elfe','🧝‍♀️'],['lutin','🧝']];
   const e=(EMO.find(([w])=>k.includes(w))||[0,'⭐'])[1];
   return {nom:n.slice(0,18),emoji:e,color:['#ff4fa3','#4cc9f0','#ffd166','#5be7a9','#b388ff'][hash(base)%5]};
 }
@@ -2000,9 +2000,9 @@ function renderVestiaire(){
   $('#vsList').style.display=spe?'none':''; $('#vsJusLbl').style.display=spe?'none':''; $('#vsCreaBtns').style.display=spe?'none':'';
   const liste=listePersos();
   const fini=SCAN.etat==='ok'||SCAN.etat==='secours';
-  $('#vsPersoBox').style.display=(liste.length||fini)?'':'none';
+  $('#vsPersoBox').style.display='';
   const principal=`<div class="leo ${spe?'':'on'}" data-s="principal"><i class="emo">🤸‍♀️</i>Ma gymnaste</div>`;
-  $('#vsPersos').innerHTML=liste.length?principal+liste.map(p=>`<div class="leo ${S.corps===p.id?'on':''} ${p.dispo===false?'off':''}" data-s="${esc(p.id)}"><i class="emo">${p.emoji}</i>${esc(p.nom)}${p.dispo===false?'<small>à venir</small>':''}</div>`).join(''):`<p class="hint">Aucun personnage trouvé dans modeles/persos/${SCAN.diag?' – '+esc(SCAN.diag):''}.</p>`;
+  $('#vsPersos').innerHTML=liste.length?principal+liste.map(p=>`<div class="leo ${S.corps===p.id?'on':''} ${p.dispo===false?'off':''}" data-s="${esc(p.id)}"><i class="emo">${p.emoji}</i>${esc(p.nom)}${p.dispo===false?'<small>à venir</small>':''}</div>`).join(''):principal+(fini?`<p class="hint" style="align-self:center">Aucun personnage trouvé${SCAN.diag?' – '+esc(SCAN.diag):''}.</p>`:'<p class="hint" style="align-self:center">🔎 Recherche des personnages…</p>');
   $('#vsPersos').querySelectorAll('.leo').forEach(el=>el.onclick=()=>{
     if(el.dataset.s==='principal'){if(spe){S.corps=MODELES_TRIPO.length?'t0':'mannequin';S.tenue=S.tenuePrinc||'orig';saveS();renderVestiaire();}return;}
     const p=liste.find(x=>x.id===el.dataset.s);
@@ -2045,7 +2045,8 @@ async function scannerPersos(){
     const cle='rs_scan2_'+d.owner+'/'+d.repo+'/'+d.path, c=store.get(cle,null);
     if(c&&Date.now()-c.t<20*60*1000){SCAN.fichiers=c.f;ok=true;}
     else try{
-      const r=await fetch(`https://api.github.com/repos/${d.owner}/${d.repo}/contents/${d.path}`,{cache:'no-store'});
+      const ac=new AbortController(), to=setTimeout(()=>ac.abort(),6000);
+      const r=await fetch(`https://api.github.com/repos/${d.owner}/${d.repo}/contents/${d.path}`,{cache:'no-store',signal:ac.signal}); clearTimeout(to);
       if(r.ok){const j=await r.json();const f=Array.isArray(j)?j.filter(x=>x.type==='file'&&/\.(fbx|glb|gltf)$/i.test(x.name)).map(x=>'modeles/persos/'+x.name).sort((a,b)=>a.localeCompare(b,'fr')):[];
         if(f.length){SCAN.fichiers=f;store.set(cle,{t:Date.now(),f});ok=true;}}
       SCAN.diag=r.ok?'dossier lu sur GitHub ('+d.owner+'/'+d.repo+')':'GitHub ne trouve pas '+d.owner+'/'+d.repo+'/'+d.path+' (erreur '+r.status+')';
@@ -2054,7 +2055,7 @@ async function scannerPersos(){
   if(!d)SCAN.diag='dépôt GitHub non renseigné (ligne GITHUB_DEPOT)';
   if(ok){SCAN.etat='ok';}
   else{SCAN.etat='secours';
-    await Promise.all(PERSOS_SPECIAUX.map(async m=>{try{const r=await fetch(m.fichier,{method:'HEAD',cache:'no-store'});DISPO.set(m.fichier,r.ok);}catch(e){DISPO.set(m.fichier,location.protocol==='file:'?null:false);}}));}
+    await Promise.all(PERSOS_SPECIAUX.map(async m=>{try{const ac=new AbortController();setTimeout(()=>ac.abort(),6000);const r=await fetch(m.fichier,{method:'HEAD',cache:'no-store',signal:ac.signal});DISPO.set(m.fichier,r.ok);}catch(e){DISPO.set(m.fichier,location.protocol==='file:'?null:false);}}));}
   if(VIEW==='sVestiaire')renderVestiaire();
 }
 /* ---- Mes engins ---- */
