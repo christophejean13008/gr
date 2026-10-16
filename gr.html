@@ -887,8 +887,9 @@ class Engin{
     if(type==='ballon'){this.ball=new THREE.Mesh(new THREE.SphereGeometry(.095,24,16),mat);this.g.add(this.ball);}
     if(type==='cerceau'){this.hoop=new THREE.Mesh(new THREE.TorusGeometry(.42,.016,8,56),mat);this.g.add(this.hoop);}
     if(type==='massues'){
-      const pts=[[0,0],[.014,.004],[.016,.03],[.011,.07],[.012,.12],[.024,.2],[.036,.3],[.038,.36],[.031,.42],[.018,.455],[0,.46]].map(([r,y])=>new THREE.Vector2(r,y));
-      const geo=new THREE.LatheGeometry(pts,14); this.clubs=[new THREE.Mesh(geo,mat),new THREE.Mesh(geo,mat)]; this.clubs.forEach(c=>this.g.add(c));
+      // massue de GR (≈ 45 cm) : petite tête ronde dans la main, long col fin, corps fuselé étroit
+      const pts=[[0,-.032],[.01,-.03],[.0155,-.022],[.0175,-.012],[.0175,-.002],[.015,.007],[.0095,.014],[.0075,.022],[.007,.06],[.0072,.11],[.0088,.16],[.0118,.21],[.0155,.26],[.0192,.31],[.0215,.35],[.022,.385],[.0205,.415],[.0168,.44],[.0102,.458],[0,.467]].map(([r,y])=>new THREE.Vector2(r,y));
+      const geo=new THREE.LatheGeometry(pts,18); this.clubs=[new THREE.Mesh(geo,mat),new THREE.Mesh(geo,mat)]; this.clubs.forEach(c=>this.g.add(c));
     }
     if(type==='ruban'){
       const sg=new THREE.CylinderGeometry(.006,.005,.6,6); sg.translate(0,.3,0);
