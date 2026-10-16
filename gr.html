@@ -108,6 +108,12 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 #hElem{position:absolute;bottom:calc(max(10px,env(safe-area-inset-bottom)) + 118px);left:8px;right:8px;text-align:center;font-weight:700;pointer-events:none;text-shadow:0 2px 8px #000;font-size:1.05rem}
 #hElem .cat{padding:2px 8px;border-radius:8px;color:#1a0b2e;font-size:.8rem;margin-right:4px}
 #hElem .geste{font-size:.85rem;color:var(--muted);font-weight:600}
+#sVictoire .vicTop{position:absolute;top:max(18px,env(safe-area-inset-top));left:0;right:0;text-align:center;pointer-events:none;padding:0 12px}
+.vicCoupe{font-size:3rem;animation:vicBounce 1s ease-in-out infinite}
+#vicNom{font-size:clamp(2rem,9vw,3.6rem);font-weight:900;line-height:1.05;background:linear-gradient(90deg,#ffd166,#ff4fa3,#b388ff,#4cc9f0,#ffd166);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:vicGrad 3s linear infinite,vicPop .7s cubic-bezier(.2,1.6,.4,1) both;filter:drop-shadow(0 3px 10px rgba(0,0,0,.6))}
+#vicSous{margin-top:6px;font-size:1.05rem;font-weight:800;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.8)}
+@keyframes vicBounce{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-10px) rotate(6deg)}}
+@keyframes vicGrad{to{background-position:300% 0}}@keyframes vicPop{from{transform:scale(.2);opacity:0}to{transform:scale(1);opacity:1}}
 #hFlash{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(circle at 50% 78%,#fff 0%,#fff 35%,rgba(255,255,255,.85) 60%,rgba(255,240,180,.4) 100%)}
 #hFlash.on{animation:pxflash 1.3s ease-out forwards}@keyframes pxflash{0%{opacity:1}55%{opacity:.95}100%{opacity:0}}
 #hPx{position:absolute;top:calc(max(8px,env(safe-area-inset-top)) + 52px);left:8px;font-size:.85rem;font-weight:800;color:#ff6b6b;background:rgba(18,8,31,.7);border-radius:10px;padding:4px 10px;pointer-events:none;display:none}
@@ -242,6 +248,13 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
     <button id="lbPerturb" style="width:100%;margin-top:8px"></button></div>
   <p class="hint" id="lbStatut"></p>
   <div class="actions"><button id="lbQuitter">Quitter</button><button class="big" id="lbLancer">Lancer !</button></div>
+</div>
+
+<!-- VICTOIRE -->
+<div id="sVictoire" class="screen" style="background:none;padding:0;touch-action:none">
+  <canvas id="vicFx" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none"></canvas>
+  <div class="vicTop"><div class="vicCoupe">🏆</div><div id="vicNom"></div><div id="vicSous"></div></div>
+  <div class="actions" style="position:absolute;left:0;right:0;bottom:max(18px,env(safe-area-inset-bottom));padding:0 16px"><button class="big" id="vicOk">Voir le classement</button></div>
 </div>
 
 <!-- JEU -->
@@ -1681,6 +1694,63 @@ function computeFinal(g){
   return {nom:g.nom,leo:g.leo,engin:g.engin,niv:g.niv,D,Ddb,Dr,Dda,nDB:Math.min(8,st.DB.length),nR:st.R.length,nDA:st.DA.length,Dex,nEX:(st.EX||[]).length,exRates:st.exRates||0,coop:!!g.coop,manque,A:jA.score,E:jE.score,jA,jE,pen,penT,penL:st.line,duree,total,fE:st.fE,fA:st.fA,count:st.count,maxCombo:st.maxCombo,nb:st.nb};
 }
 let GAME_ST_PX=null;
+/* ================= Écran de victoire (parties en opposition) ================= */
+let VICT=null;
+function danseVictoire(B,dec){
+  const acts=[]; let t=dec;
+  while(t<180){
+    for(let k=0;k<4;k++)acts.push({name:'pas',t0:t+k*B,dur:B,k});           t+=4*B;
+    acts.push({name:'saut',variant:'groupe',t0:t,dur:.75});                 t+=2*B;
+    for(let k=0;k<2;k++)acts.push({name:'pas',t0:t+k*B,dur:B,k:k+1});       t+=2*B;
+    acts.push({name:'pivot',variant:'passe',t0:t,dur:1.6*B,turns:1});       t+=3*B;
+    acts.push({name:'acro',variant:'roue',t0:t,dur:1.1});                   t+=3*B;
+    acts.push({name:'saut',variant:'ecart',t0:t,dur:.75});                  t+=2*B;
+    acts.push({name:'final',t0:t,dur:3*B});                                 t+=4*B;
+  }
+  return {acts,flights:[],B};
+}
+function montrerVictoire(gagnants,engin,sous,apres){
+  if(!gagnants.length){apres&&apres();return;}
+  if(PREV){PREV.dispose();PREV=null;PREVKEY='';}
+  fermerVictoire(true);
+  const n=gagnants.length, B=.42;
+  const gyms=gagnants.slice(0,4).map((w,i)=>{const G=new Gymnast(w.leo||'p0',engin||'ruban',{design:w.design||null,coop:true,ox:(i-(Math.min(n,4)-1)/2)*1.25,oz:0});G.setTimeline(danseVictoire(B,i*.12));return G;});
+  VICT={gyms,t0:performance.now()/1000,parts:[],next:0,apres};
+  $('#vicNom').textContent=gagnants.map(w=>w.nom).join(' & ');
+  $('#vicSous').textContent=sous||(n>1?'Ex æquo, bravo à vous !':'Victoire !');
+  const cv=$('#vicFx'),dpr=Math.min(2,devicePixelRatio||1); cv.width=innerWidth*dpr; cv.height=innerHeight*dpr; VICT.ctx=cv.getContext('2d'); VICT.ctx.setTransform(dpr,0,0,dpr,0,0);
+  show('sVictoire'); fanfare();
+}
+function fermerVictoire(silencieux){
+  if(!VICT)return; const a=VICT.apres; VICT.gyms.forEach(g=>g.dispose()); VICT=null;
+  if(!silencieux&&a)a();
+}
+function fanfare(){
+  try{const ac=getAC(),t=ac.currentTime+.05,g=ac.createGain();g.gain.value=.18;g.connect(ac.destination);
+    [[523,0,.18],[659,.18,.18],[784,.36,.18],[1047,.54,.5],[784,.98,.16],[1047,1.14,.8]].forEach(([f,d,l])=>{
+      const o=ac.createOscillator(),e=ac.createGain();o.type='triangle';o.frequency.value=f;o.connect(e);e.connect(g);
+      e.gain.setValueAtTime(0,t+d);e.gain.linearRampToValueAtTime(1,t+d+.02);e.gain.exponentialRampToValueAtTime(.001,t+d+l);o.start(t+d);o.stop(t+d+l+.05);});
+  }catch(e){}
+}
+function vicTick(dt){
+  const V=VICT,T=performance.now()/1000-V.t0, portrait=camera.aspect<1;
+  for(const g of V.gyms)g.update(T,dt,camera);
+  const n=V.gyms.length; _t.set(0,1.25,(portrait?3.5:3.3)+(n-1)*(portrait?2.1:.8)); _l.set(0,portrait?.82:.95,0);
+  camera.position.lerp(_t,1-Math.exp(-dt*4)); camLook.lerp(_l,1-Math.exp(-dt*4)); camera.lookAt(camLook);
+  // feux d'artifice
+  const c=V.ctx,W=innerWidth,H=innerHeight; c.clearRect(0,0,W,H);
+  if(T>V.next){V.next=T+.25+Math.random()*.45;
+    const x=W*(.08+Math.random()*.84),y=H*(.12+Math.random()*.42),hue=Math.floor(Math.random()*360),N=46+Math.floor(Math.random()*30);
+    for(let i=0;i<N;i++){const a=2*Math.PI*i/N+Math.random()*.2,sp=90+Math.random()*170;V.parts.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1+Math.random()*.6,age:0,col:`hsl(${(hue+Math.random()*40)%360} 100% ${60+Math.random()*20}%)`});}
+  }
+  c.globalCompositeOperation='lighter';
+  V.parts=V.parts.filter(p=>(p.age+=dt)<p.life);
+  for(const p of V.parts){p.vy+=110*dt;p.vx*=.985;p.vy*=.985;p.x+=p.vx*dt;p.y+=p.vy*dt;const al=1-p.age/p.life;
+    c.fillStyle=p.col;c.globalAlpha=al;c.beginPath();c.arc(p.x,p.y,2.6*al+1,0,7);c.fill();
+    c.globalAlpha=al*.35;c.beginPath();c.arc(p.x-p.vx*.03,p.y-p.vy*.03,1.6,0,7);c.fill();}
+  c.globalAlpha=1;c.globalCompositeOperation='source-over';
+}
+function gagnantsDe(list){const L=list.filter(r=>!r.perturb&&isFinite(r.total));if(!L.length)return [];const m=Math.max(...L.map(r=>r.total));return L.filter(r=>Math.abs(r.total-m)<.0005);}
 function finPartie(){
   const g=GAME; if(g.done)return; g.done=true; stopAudio(g,1.5); GAME_ST_PX=g.st;
   const res=computeFinal(g);
@@ -1758,7 +1828,10 @@ function tourSuivant(){
     const box=$('#reActions'); box.innerHTML='';
     const b1=document.createElement('button');b1.textContent='Accueil';b1.onclick=goAccueil;
     const b2=document.createElement('button');b2.className='big';b2.textContent='Revanche';b2.onclick=()=>{LOCAL.idx=0;LOCAL.res=[];tourSuivant();};
-    box.append(b1,b2); show('sResultat'); return;
+    box.append(b1,b2);
+    const W=gagnantsDe(list).map(r=>({nom:r.nom,leo:r.leo,design:r.nom===S.nom?S.engDesign[LOCAL.ch.engin]:null}));
+    montrerVictoire(W,LOCAL.ch.engin,W.length>1?`Ex æquo avec ${fmt(list[0].total)} points !`:`remporte la victoire avec ${fmt(list[0].total)} points !`,()=>show('sResultat'));
+    return;
   }
   const j=LOCAL.joueuses[LOCAL.idx]; $('#tdNom').textContent=j.nom; show('sTourDe');
 }
@@ -1900,6 +1973,7 @@ function startOnlineGame(){
       $('#reCorps').innerHTML=`<div class="card"><div class="score-big">${slim.px}</div><p class="hint" style="text-align:center">perturbation(s) envoyée(s) sur ${slim.pxTot} gestes</p></div><div id="rePodium"><p class="hint" style="text-align:center">⏳ En attente des notes des gymnastes…</p></div>`;
       const box=$('#reActions');box.innerHTML='';const b=document.createElement('button');b.className='big';b.textContent='Retour au salon';b.onclick=()=>{renderLobby();show('sLobby');};box.appendChild(b);show('sResultat');
       if(NET.host)checkPodium();
+      if(NET.pendingPodium)setTimeout(()=>{if(NET.pendingPodium)afficherPodiumOnline(NET.pendingPodium);},1200);
     },vue});
     return;
   }
@@ -1908,6 +1982,7 @@ function startOnlineGame(){
     NET.finals.set(NET.me,slim); sendNet({t:'final',res:slim});
     showResult(res,{titre:p.coop?'🤝 Ma part dans l\'équipe':undefined,avant:'<div id="rePodium"><p class="hint" style="text-align:center">⏳ En attente des notes des autres gymnastes…</p></div>',actions:[{t:'Retour au salon',big:true,f:()=>{renderLobby();show('sLobby');}}]});
     if(NET.host)checkPodium();
+    if(NET.pendingPodium)setTimeout(()=>{if(NET.pendingPodium)afficherPodiumOnline(NET.pendingPodium);},1200);
   }});
 }
 function checkPodium(){
@@ -1924,9 +1999,16 @@ function publierPodium(){
 function afficherPodiumOnline(list){
   const pz=list.filter(r=>r.perturb), L=list.filter(r=>!r.perturb);
   const box=document.getElementById('rePodium'), coop=L.some(r=>r.coop), H=(coop?htmlEquipe(L):htmlPodium(L))+pz.map(r=>`<div class="card"><div class="lbl">😈 Perturbatrice</div><p style="text-align:center;margin:4px 0"><b>${esc(r.nom)}</b> : ${r.px} perturbation(s) envoyée(s) sur ${r.pxTot}</p></div>`).join('');
-  if(box)box.innerHTML=H;
-  else if(!GAME){$('#reTitre').textContent=coop?'Note de l\'équipe':'Podium';$('#reCorps').innerHTML=H;const a=$('#reActions');a.innerHTML='';const b=document.createElement('button');b.className='big';b.textContent='Retour au salon';b.onclick=()=>{renderLobby();show('sLobby');};a.appendChild(b);show('sResultat');}
-  else NET.pendingPodium=list;
+  if(GAME){NET.pendingPodium=list;return;}
+  NET.pendingPodium=null;
+  const afficher=()=>{
+    if(document.getElementById('rePodium')){document.getElementById('rePodium').innerHTML=H;show('sResultat');}
+    else {$('#reTitre').textContent=coop?'Note de l\'équipe':'Podium';$('#reCorps').innerHTML=H;const a=$('#reActions');a.innerHTML='';const b=document.createElement('button');b.className='big';b.textContent='Retour au salon';b.onclick=()=>{renderLobby();show('sLobby');};a.appendChild(b);show('sResultat');}
+  };
+  if(!coop&&L.length>1){
+    const W=gagnantsDe(L).map(w=>{const p=NET.players.find(x=>x.nom===w.nom&&x.leo===w.leo)||{};const eng=NET.set&&NET.set.engin;return {nom:w.nom,leo:w.leo,design:p.eng&&eng?p.eng[eng]:null};});
+    montrerVictoire(W,NET.set&&NET.set.engin,W.length>1?`Ex æquo avec ${fmt(gagnantsDe(L)[0].total)} points !`:`remporte la victoire avec ${fmt(gagnantsDe(L)[0].total)} points !`,afficher);
+  } else afficher();
 }
 function htmlEquipe(list){
   const moy=list.reduce((s,r)=>s+r.total,0)/Math.max(1,list.length), ex=Math.max(0,...list.map(r=>r.nEX||0)), rates=list.reduce((s,r)=>s+(r.exRates||0),0);
@@ -2359,6 +2441,7 @@ $('#onRejoindre').onclick=async()=>{
 };
 $('#lbModif').onclick=()=>openReglage('online');
 $('#lbLancer').onclick=lancerOnline;
+$('#vicOk').onclick=()=>fermerVictoire();
 $('#lbPerturb').onclick=()=>{
   const moi=NET.perturb===NET.me;
   if(NET.host){if(moi)NET.perturb=null;else if(!NET.perturb)NET.perturb=NET.me;broadcastLobby();}
@@ -2462,6 +2545,7 @@ function loop(now){
   requestAnimationFrame(loop);
   const dt=Math.min(.05,(now-lastNow)/1000); lastNow=now;
   if(RP){if(VIT.offset){camera.clearViewOffset();VIT.offset=false;}rpTick(dt);renderer.render(scene,camera);return;}
+  if(VICT){if(VIT.offset){camera.clearViewOffset();VIT.offset=false;}vicTick(dt);renderer.render(scene,camera);return;}
   if(GAME){
     if(VIT.offset){camera.clearViewOffset();VIT.offset=false;}
     const T=gameTime(); tick(T,dt); if(!GAME){renderer.render(scene,camera);return;}
