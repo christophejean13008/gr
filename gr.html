@@ -144,9 +144,9 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
     <div class="chips" id="vsEngin"></div>
     <div class="row" id="vsCreaBtns"></div>
     <button id="vsEng" style="width:100%;margin-top:8px">🎀 Personnaliser mes engins</button>
-    <div class="lbl" style="margin-top:12px">🎭 Personnages spéciaux</div>
+    <div id="vsPersoBox" style="display:none"><div class="lbl" style="margin-top:12px">🎭 Personnages spéciaux</div>
     <div class="leos" id="vsPersos"></div>
-    <p class="hint" id="vsPersoInfo" style="margin-top:2px"></p>
+    <p class="hint" id="vsPersoInfo" style="margin-top:2px"></p></div>
     <label class="filebtn">🧩 Tester un modèle 3D (GLB / FBX)<input type="file" id="vsFile" accept=".glb,.gltf,.fbx" hidden></label>
     <p class="hint" id="vsInfo"></p>
   </div>
@@ -1999,12 +1999,13 @@ function renderVestiaire(){
   const spe=S.corps[0]==='s';
   $('#vsList').style.display=spe?'none':''; $('#vsJusLbl').style.display=spe?'none':''; $('#vsCreaBtns').style.display=spe?'none':'';
   const liste=listePersos();
+  $('#vsPersoBox').style.display=liste.length?'':'none';
   $('#vsPersos').innerHTML=liste.length?liste.map(p=>`<div class="leo ${S.corps===p.id?'on':''} ${p.dispo===false?'off':''}" data-s="${esc(p.id)}"><i class="emo">${p.emoji}</i>${esc(p.nom)}${p.dispo===false?'<small>à venir</small>':''}</div>`).join(''):'<p class="hint">Aucun personnage pour l\'instant.</p>';
   $('#vsPersos').querySelectorAll('.leo').forEach(el=>el.onclick=()=>{const p=liste.find(x=>x.id===el.dataset.s);
     if(p.dispo===false){$('#vsPersoInfo').textContent=`« ${p.nom} » n'est pas encore en ligne : dépose ${p.fichier} sur ton site.`;return;}
     if(S.corps===p.id){S.corps=MODELES_TRIPO.length?'t0':'mannequin';S.tenue='orig';}else{S.corps=p.id;S.tenue='orig';}
     saveS();renderVestiaire();});
-  $('#vsPersoInfo').textContent=spe?'Ce personnage garde son costume. Touche-le à nouveau pour revenir à ta gymnaste.':(SCAN.etat==='ok'?`${liste.length} personnage(s) trouvé(s) dans modeles/persos/`:'');
+  $('#vsPersoInfo').textContent=spe?'Ce personnage garde son costume. Touche-le à nouveau pour revenir à ta gymnaste.':'';
   scannerPersos();
   const isCrea=S.tenue[0]==='c'&&creations().includes(S.tenue);
   $('#vsCreaBtns').innerHTML=`<button class="big" id="vsNew" style="flex:1">✨ Créer un justaucorps</button>`+(isCrea?`<button id="vsEdit">✏️</button><button id="vsDel">🗑</button>`:'');
@@ -2029,7 +2030,8 @@ function depotInfo(){
 }
 function listePersos(){
   if(SCAN.etat==='ok') return SCAN.fichiers.map(f=>{const i=persoInfo(f);return {id:'s:'+f.split('/').pop(),fichier:f,nom:i.nom,emoji:i.emoji,dispo:true};});
-  return PERSOS_SPECIAUX.map(m=>{const i=persoInfo(m.fichier);return {id:'s:'+m.fichier.split('/').pop(),fichier:m.fichier,nom:i.nom,emoji:i.emoji,dispo:DISPO.get(m.fichier)};});
+  if(SCAN.etat!=='secours') return [];
+  return PERSOS_SPECIAUX.filter(m=>DISPO.get(m.fichier)===true).map(m=>{const i=persoInfo(m.fichier);return {id:'s:'+m.fichier.split('/').pop(),fichier:m.fichier,nom:i.nom,emoji:i.emoji,dispo:true};});
 }
 async function scannerPersos(){
   if(SCAN.etat==='encours'||SCAN.etat==='ok'||SCAN.etat==='secours')return; SCAN.etat='encours';
