@@ -193,7 +193,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
   <div class="card"><div class="lbl">Engin</div><div class="chips" id="rgEngin"></div></div>
   <div class="card"><div class="lbl">Niveau</div><div class="chips" id="rgNiv"></div><p class="hint" id="rgNivHint"></p></div>
   <div class="card"><div class="lbl">Musique</div><div class="chips" id="rgMus"></div>
-    <label class="filebtn">📂 Importer ma musique (MP3, M4A…)<input type="file" id="rgFile" accept="audio/*" hidden></label>
+    <label class="filebtn">📂 Importer ma musique (MP3, M4A…)<input type="file" id="rgFile" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,audio/mpeg,audio/mp4" hidden></label>
     <p class="hint" id="rgMusInfo"></p>
     <div class="row" id="rgBpmRow" style="display:none">Tempo :<button id="bpmM">−</button><b id="bpmV">100</b>bpm<button id="bpmP">+</button></div>
   </div>
@@ -263,7 +263,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
     <input id="chNom" maxlength="30" placeholder="Nom de la chorégraphie" style="width:100%">
     <div class="lbl mt">Engin</div><div class="chips" id="chEngin"></div>
     <div class="lbl mt">Musique</div><div class="chips" id="chMus"></div>
-    <label class="filebtn">📂 Importer une musique<input type="file" id="chFile" accept="audio/*" hidden></label>
+    <label class="filebtn">📂 Importer une musique<input type="file" id="chFile" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,audio/mpeg,audio/mp4" hidden></label>
     <p class="hint" id="chMusInfo"></p>
     <div class="lbl mt">Mes chorégraphies</div>
     <div class="row"><select id="chListe" style="flex:1"></select><button id="chOuvrir">Ouvrir</button><button id="chSuppr">🗑</button></div>
@@ -1959,7 +1959,7 @@ $('#chFile').addEventListener('change',async e=>{
   const f=e.target.files[0]; if(!f)return; e.target.value=''; $('#chMusInfo').textContent='Analyse de la musique…';
   try{const bytes=await f.arrayBuffer();const buf=await getAC().decodeAudioData(bytes.slice(0));if(buf.duration<30)throw new Error('musique trop courte');
     const on=analyseEnv(buf),tp=detectTempo(on);S.custom={nom:f.name.replace(/\.[^.]+$/,'').slice(0,28),bytes,buffer:buf,bpm:tp.bpm,offset:tp.offset,on};S.musique='custom';$('#chMusInfo').textContent='Tempo détecté : '+Math.round(tp.bpm)+' bpm';renderAtelier();}
-  catch(err){$('#chMusInfo').textContent='Impossible de lire cette musique : '+err.message;}
+  catch(err){$('#chMusInfo').textContent='Impossible de lire cette musique : '+((err&&err.message)||'format non reconnu (essaie un MP3 ou M4A)');}
 });
 $('#chRetour').onclick=goAccueil;
 $('#chVoir').onclick=()=>lancerChoreo(true);
@@ -2169,6 +2169,9 @@ function renderReglage(){
 $('#rgLat').addEventListener('input',e=>{S.latence=+e.target.value;$('#rgLatV').textContent=S.latence+' ms';saveS();});
 function bpmAdj(d){const c=S.custom;if(!c)return;c.bpm=Math.max(60,Math.min(190,Math.round(c.bpm)+d));c.offset=gridScore(c.on,c.bpm).offset;renderReglage();if(RG_MODE==='online'&&NET.host){hostSettings();broadcastLobby();}}
 $('#bpmM').onclick=()=>bpmAdj(-1); $('#bpmP').onclick=()=>bpmAdj(1);
+/* iPad / iPhone : le filtre « accept » grise souvent les MP3 et les FBX dans l'app Fichiers → on l'enlève */
+if(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1))
+  document.querySelectorAll('input[type=file]').forEach(i=>i.removeAttribute('accept'));
 $('#rgFile').addEventListener('change',async e=>{
   const f=e.target.files[0]; if(!f)return; e.target.value=''; $('#rgMusInfo').textContent='Analyse de la musique…';
   try{
@@ -2176,7 +2179,7 @@ $('#rgFile').addEventListener('change',async e=>{
     if(buf.duration<30)throw new Error('musique trop courte (moins de 30 s)');
     const on=analyseEnv(buf); const tp=detectTempo(on);
     S.custom={nom:f.name.replace(/\.[^.]+$/,'').slice(0,28),bytes,buffer:buf,bpm:tp.bpm,offset:tp.offset,on}; S.musique='custom'; renderReglage();
-  }catch(err){$('#rgMusInfo').textContent='Impossible de lire cette musique : '+err.message;}
+  }catch(err){$('#rgMusInfo').textContent='Impossible de lire cette musique : '+((err&&err.message)||'format non reconnu (essaie un MP3 ou M4A)');}
 });
 $('#rgRetour').onclick=()=>{if(RG_MODE==='online'){renderLobby();show('sLobby');}else if(RG_MODE==='local')show('sLocal');else goAccueil();};
 $('#rgGo').onclick=()=>{if(RG_MODE==='solo')demarrerSolo();else if(RG_MODE==='local')demarrerLocal();else{hostSettings();broadcastLobby();show('sLobby');}};
