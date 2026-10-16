@@ -413,7 +413,7 @@ const MODELES_TRIPO = [
    au format 'pseudo/nom-du-depot'. Sur une adresse en .github.io, il est trouvé tout seul. */
 const GITHUB_DEPOT = '';
 const PERSOS_SPECIAUX = [
-  { nom: 'Père Noël',  emoji: '🎅', fichier: 'modeles/persos/pere-noel.fbx', couleurEngin: '#d00000' },
+  { nom: 'Père Noël',  emoji: '🎅', fichier: 'modeles/persos/papa-noel.fbx', couleurEngin: '#d00000' },
   { nom: 'Monstre',    emoji: '👹', fichier: 'modeles/persos/monstre.fbx',   couleurEngin: '#5be7a9' },
   { nom: 'Halloween',  emoji: '🎃', fichier: 'modeles/persos/halloween.fbx', couleurEngin: '#ff8c42' },
   { nom: 'Catcheur',   emoji: '🤼', fichier: 'modeles/persos/catcheur.fbx',  couleurEngin: '#ffd166' },
@@ -988,10 +988,26 @@ function loadAsset(src){
   ASSETS.set(key,pr); pr.catch(()=>ASSETS.delete(key)); return pr;
 }
 const CLIPMAP={idle:'idle',pas:'pas',saut:'saut',equilibre:'equilibre',pivot:'pivot',lancer:'lancer',tour:'tour',rattraper:'rattraper',engin:'engin',final:'salut',chute:'chute'};
+/* Redresse un modèle enregistré couché ou de dos : tête au-dessus des pieds, bras gauche vers +X (donc face à la caméra) */
+function redresser(obj){
+  obj.updateMatrixWorld(true);
+  const find=n=>{let r=null;obj.traverse(o=>{if(!r&&o.isBone&&o.name.toLowerCase().replace(/[^a-z]/g,'').endsWith(n))r=o;});return r;};
+  const head=find('head'),lf=find('leftfoot'),rf=find('rightfoot'),la=find('leftarm'),ra=find('rightarm');
+  if(!head||!lf||!rf)return;
+  const pF=lf.getWorldPosition(V3()).add(rf.getWorldPosition(V3())).multiplyScalar(.5);
+  const up=head.getWorldPosition(V3()).sub(pF); if(up.lengthSq()<1e-10)return; up.normalize();
+  obj.quaternion.premultiply(new THREE.Quaternion().setFromUnitVectors(up,new THREE.Vector3(0,1,0))); obj.updateMatrixWorld(true);
+  if(la&&ra){const d=la.getWorldPosition(V3()).sub(ra.getWorldPosition(V3()));d.y=0;
+    if(d.lengthSq()>1e-10){d.normalize();obj.quaternion.premultiply(new THREE.Quaternion().setFromUnitVectors(d,new THREE.Vector3(1,0,0)));obj.updateMatrixWorld(true);}}
+}
 async function makeCustom(L){
   const base=await loadAsset(L.src);
   const obj=SkeletonUtils.clone(base.scene);
-  obj.updateMatrixWorld(true); const box=new THREE.Box3().setFromObject(obj); const h=(box.max.y-box.min.y)||1; const sc=1.65/h;
+  redresser(obj);
+  obj.updateMatrixWorld(true);
+  /* mesure le personnage tel qu'il est posé par son squelette (certains modèles sont enregistrés couchés) */
+  obj.traverse(o=>{if(o.isSkinnedMesh){o.skeleton.update();o.boundingBox=null;o.computeBoundingBox();}});
+  const box=new THREE.Box3().setFromObject(obj); const h=(box.max.y-box.min.y)||1; const sc=1.65/h;
   const inner=new THREE.Group(); inner.add(obj); inner.scale.setScalar(sc); inner.position.y=-box.min.y*sc;
   const wrap=new THREE.Group(); wrap.add(inner);
   const mixer=new THREE.AnimationMixer(obj); const clips={};
@@ -1064,17 +1080,18 @@ function medianCol(px,uv,idx,flipY){
   const med=a=>{a.sort((x,y)=>x-y);return a[a.length>>1];};
   return new THREE.Vector3(lin(med(R)),lin(med(G)),lin(med(B)));
 }
-async function infoTenue(mesh){
+async function infoTenue(mesh,qr){
   const g=mesh.geometry; if(g.userData.tenue) return g.userData.tenue;
+  const vv=V3(); const rp=i=>vv.set(P[i*3],P[i*3+1],P[i*3+2]).applyQuaternion(qr);
   const names=mesh.skeleton.bones.map(b=>b.name.toLowerCase().replace(/[^a-z0-9]/g,''));
   const cat=names.map(n=>/(hips|spine|spine1|spine2|leftshoulder|rightshoulder)$/.test(n)?0:/(leftarm|leftforearm)$/.test(n)?1:/(rightarm|rightforearm)$/.test(n)?2:/(leftleg|rightleg|leftupleg|rightupleg|neck|head)$/.test(n)?3:-1);
   const si=g.attributes.skinIndex.array,sw=g.attributes.skinWeight.array,P=g.attributes.position.array,n=g.attributes.position.count;
-  const a=new Float32Array(n*3),torse=[],peau=[],brasL=[]; let cx=0,cz=0,ay=0;
+  const a=new Float32Array(n*3),torse=[],peau=[],brasL=[]; let cx=0,cz=0,ay=0,ymin=1e9,ymax=-1e9;
   for(let i=0;i<n;i++){let t=0,l=0,r=0,s=0;for(let k=0;k<4;k++){const c=cat[si[i*4+k]],w=sw[i*4+k];if(c===0)t+=w;else if(c===1)l+=w;else if(c===2)r+=w;else if(c===3)s+=w;}
-    a[i*3]=t;a[i*3+1]=l;a[i*3+2]=r; if(t>.85){torse.push(i);cx+=P[i*3];cz+=P[i*3+2];} if(s>.85)peau.push(i); if(l>.8){brasL.push(i);ay+=P[i*3+1];}}
+    const q=rp(i); if(q.y<ymin)ymin=q.y; if(q.y>ymax)ymax=q.y;
+    a[i*3]=t;a[i*3+1]=l;a[i*3+2]=r; if(t>.85){torse.push(i);cx+=q.x;cz+=q.z;} if(s>.85)peau.push(i); if(l>.8){brasL.push(i);ay+=q.y;}}
   g.setAttribute('aLeo',new THREE.BufferAttribute(a,3));
-  g.computeBoundingBox(); const bb=g.boundingBox;
-  const info={H:bb.max.y-bb.min.y,cx:torse.length?cx/torse.length:0,cz:torse.length?cz/torse.length:0,armY:brasL.length?ay/brasL.length:(bb.min.y+bb.max.y*.8),torse,peau,refs:new Map()};
+  const info={H:(ymax-ymin)||1,cx:torse.length?cx/torse.length:0,cz:torse.length?cz/torse.length:0,armY:brasL.length?ay/brasL.length:(ymin+(ymax-ymin)*.8),torse,peau,refs:new Map()};
   return g.userData.tenue=info;
 }
 async function habiller(obj,out,bones){
@@ -1083,7 +1100,8 @@ async function habiller(obj,out,bones){
   const manL=out.manches==='deux'||out.manches==='gauche',manR=out.manches==='deux'||out.manches==='droite';
   for(const m of meshes){
     if(!m.geometry.attributes.skinIndex||!m.geometry.attributes.uv)continue;
-    const info=await infoTenue(m);
+    obj.updateMatrixWorld(true); const qr=new THREE.Quaternion(); m.getWorldQuaternion(qr); const pq=new THREE.Quaternion(); if(obj.parent)obj.parent.getWorldQuaternion(pq); qr.premultiply(pq.invert());
+    const info=await infoTenue(m,qr);
     const mats=Array.isArray(m.material)?m.material:[m.material];
     const nm=[];
     for(const mat0 of mats){
@@ -1098,11 +1116,11 @@ async function habiller(obj,out,bones){
         if(rf&&rf.l)leoRef=rf.l; if(rf&&rf.s)skinRef=rf.s; if(rf&&rf.cl&&rf.cl.length)clus=rf.cl; if(rf&&rf.sk&&rf.sk.length)skins=rf.sk;}
       const C4=[0,1,2,3].map(i=>(clus&&clus[i])?clus[i]:new THREE.Vector3(9,9,9)); if(!clus)C4[0]=leoRef;
       const S4=[0,1,2,3].map(i=>(skins&&skins[i])?skins[i]:(i?new THREE.Vector3(-9,-9,-9):skinRef));
-      const U={uSkinC:{value:S4},uLeoC:{value:C4},uLeoMap:{value:pat},uLeoRef:{value:leoRef},uSkinRef:{value:skinRef},uSleeve:{value:new THREE.Vector2(manL?1:0,manR?1:0)},uCenter:{value:new THREE.Vector3(info.cx,info.armY,info.cz)},uH:{value:info.H}};
+      const U={uBindRot:{value:new THREE.Matrix3().setFromMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(qr))},uSkinC:{value:S4},uLeoC:{value:C4},uLeoMap:{value:pat},uLeoRef:{value:leoRef},uSkinRef:{value:skinRef},uSleeve:{value:new THREE.Vector2(manL?1:0,manR?1:0)},uCenter:{value:new THREE.Vector3(info.cx,info.armY,info.cz)},uH:{value:info.H}};
       mat.onBeforeCompile=sh=>{
         Object.assign(sh.uniforms,U);
-        sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute vec3 aLeo;\nvarying vec3 vLeo;\nvarying vec3 vBindPos;')
-          .replace('#include <begin_vertex>','#include <begin_vertex>\nvLeo=aLeo; vBindPos=position;');
+        sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute vec3 aLeo;\nvarying vec3 vLeo;\nvarying vec3 vBindPos;\nuniform mat3 uBindRot;')
+          .replace('#include <begin_vertex>','#include <begin_vertex>\nvLeo=aLeo; vBindPos=uBindRot*position;');
         sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vLeo;\nvarying vec3 vBindPos;\nuniform sampler2D uLeoMap;\nuniform vec3 uLeoRef,uSkinRef,uCenter;\nuniform vec3 uLeoC[4];\nuniform vec3 uSkinC[4];\nuniform vec2 uSleeve;\nuniform float uH;')
           .replace('#include <map_fragment>',`#include <map_fragment>
   {
