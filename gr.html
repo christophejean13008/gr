@@ -55,6 +55,12 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 .podium li b{margin-left:auto;color:var(--accent2)}.podium .rg{width:32px;text-align:center;font-size:1.3rem}
 .regles p,.regles li{font-size:.92rem;line-height:1.45}.regles h3{margin:.8em 0 .3em;color:var(--accent2)}
 .sheet{position:absolute;left:0;right:0;bottom:0;max-height:58vh;overflow-y:auto;background:var(--panel);border-radius:22px 22px 0 0;padding:14px 16px max(18px,env(safe-area-inset-bottom));touch-action:pan-y}
+.screen.cote{background:none;padding:0;touch-action:none}
+.screen.cote .sheet{top:0;right:auto;width:min(56vw,460px);max-height:none;border-radius:0 22px 22px 0;padding-top:max(14px,env(safe-area-inset-top))}
+.screen.cote .row{flex-wrap:wrap}.screen.cote .row>input{flex:1 1 100%}.screen.cote .cols button{width:30px;height:30px}
+.vitrine{position:absolute;top:max(10px,env(safe-area-inset-top));right:10px;display:flex;flex-direction:column;gap:8px;align-items:flex-end;pointer-events:none}
+.vitrine button{pointer-events:auto;width:44px;height:44px;padding:0;border-radius:50%;background:rgba(18,8,31,.65);font-size:1.2rem}
+.vitrine small{color:var(--muted);background:rgba(18,8,31,.55);padding:3px 8px;border-radius:8px;font-size:.7rem;text-align:right;max-width:150px}
 .sheet .actions{max-width:none}.mt{margin-top:12px}
 .cols{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
 .cols button{width:34px;height:34px;padding:0;border-radius:50%;border:3px solid rgba(255,255,255,.15)}
@@ -110,8 +116,8 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <div id="sVestiaire" class="screen clair">
   <div class="spacer"></div>
   <div class="card">
-    <div class="lbl">Gymnaste</div>
-    <div class="chips" id="vsCorps"></div>
+    <div id="vsCorpsBox"><div class="lbl">Gymnaste</div>
+    <div class="chips" id="vsCorps"></div></div>
     <div class="lbl" style="margin-top:10px">Justaucorps</div>
     <div class="leos" id="vsList"></div>
     <div class="lbl" style="margin-top:10px">Engin pour l'aperçu</div>
@@ -125,7 +131,8 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 </div>
 
 <!-- CREATRICE DE JUSTAUCORPS -->
-<div id="sCreatrice" class="screen clair" style="padding:0">
+<div id="sCreatrice" class="screen cote">
+  <div class="vitrine"><button data-zoom>🔍</button><small>Fais glisser pour tourner</small></div>
   <div class="sheet">
     <div class="row" style="margin-top:0"><input id="crNom" maxlength="20" placeholder="Nom du justaucorps"><button class="big" id="crSurprise" style="padding:11px 14px">🎲 Surprise</button></div>
     <div class="lbl mt">Couleur principale</div><div class="cols" id="crBase"></div>
@@ -141,7 +148,8 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 </div>
 
 <!-- MES ENGINS -->
-<div id="sEngin" class="screen clair" style="padding:0">
+<div id="sEngin" class="screen cote">
+  <div class="vitrine"><button data-zoom>🔍</button><small>Fais glisser pour tourner</small></div>
   <div class="sheet">
     <div class="chips" id="enType"></div>
     <div class="row"><div class="chips" id="enAssorti" style="flex:1"></div><button class="big" id="enSurprise" style="padding:11px 14px">🎲 Surprise</button></div>
@@ -401,7 +409,7 @@ const S=Object.assign({nom:'',leo:'p0',engin:'ruban',niv:'federale',latence:0,mu
 S.custom=null; S.prevEngin=S.engin;
 if(!S.corps){if(S.leo&&S.leo[0]==='t'&&!S.leo.includes('|')){S.corps=S.leo;S.tenue='orig';}else{S.corps='mannequin';S.tenue=S.leo||'p0';}}
 if(S.leo&&S.leo.includes('|')){const [cb,ct]=S.leo.split('|');S.corps=cb;S.tenue=ct;} S.engDesign=store.get('rs_eng',{}); if(S.musique==='custom') S.musique='elan';
-function composeLeo(){if(S.corps!=='mannequin'&&!leoDefBody(S.corps))S.corps='mannequin';if(S.corps==='mannequin'&&S.tenue==='orig')S.tenue='p0';S.leo=S.corps==='mannequin'?S.tenue:S.corps+'|'+S.tenue;}
+function composeLeo(){if(S.corps!=='mannequin'&&!leoDefBody(S.corps))S.corps='mannequin';if(S.corps==='mannequin'&&MODELES_TRIPO.length){S.corps='t0';if(S.tenue==='p0'&&!S._tenueChoisie)S.tenue='orig';}if(S.corps==='mannequin'&&S.tenue==='orig')S.tenue='p0';S.leo=S.corps==='mannequin'?S.tenue:S.corps+'|'+S.tenue;}
 function saveS(){composeLeo();const corps=S.corps==='local'?'mannequin':S.corps;store.set('rs_cfg',{nom:S.nom,corps,tenue:(corps==='mannequin'&&S.tenue==='orig')?'p0':S.tenue,leo:corps==='mannequin'?(S.tenue==='orig'?'p0':S.tenue):corps+'|'+S.tenue,engin:S.engin,niv:S.niv,latence:S.latence,musique:S.musique==='custom'?'elan':S.musique});}
 let LOCAL_LEO=null;
 
@@ -603,6 +611,7 @@ function poseFor(a,p,T,B){
     case 'lancer': P.rArmF=lerp(-.4,3.0,ease(p)); P.lArmS=1.5; P.lift=-.08*s; P.spine=-.1*p; P.lKnee=.3*s; P.rKnee=.3*s; break;
     case 'tour': P.lArmS=1.0+.4*s; P.rArmS=1.0+.4*s; P.lArmF=.6*s; P.rArmF=.6*s; P.lift=.04; P.rLegS=.3*s; P.rKnee=.8*s; break;
     case 'rattraper': P.rArmF=lerp(2.9,.6,ease(p)); P.lArmS=1.6; P.lift=.03*(1-p); P.spine=-.15*(1-p); break;
+    case 'vitrine': P.rArmF=1.05; P.rArmS=.4; P.rEl=.55; P.lArmS=.5; P.lArmF=.12; P.lEl=.25; P.rLegF=.18; P.rLegS=.12; P.head=-.06; P.spine=-.03; break;
     case 'final': {const e=Math.min(1,p*6); P.rArmS=2.7*e; P.lArmS=1.1*e; P.lArmF=.4*e; P.lLegF=.35*e; P.spine=-.15*e; P.head=-.2*e; break;}
     case 'chute': P.lift=-.32*s; P.spine=.7*s; P.lKnee=1.2*s; P.rKnee=1.6*s; P.lLegF=.6*s; P.lArmF=1.2*s; P.rArmF=1.2*s; break;
     case 'engin': enginPose(P,v,p,T,B,a,s); break;
@@ -1461,7 +1470,9 @@ function renderLocal(){
   if(!LOCAL.joueuses.length&&S.nom)LOCAL.joueuses.push({nom:S.nom,leo:netLeo()});
   $('#lcList').innerHTML='<div class="lbl">Gymnastes</div>'+(LOCAL.joueuses.map((j,i)=>`<div class="pl"><span class="sw" style="background-image:url(${swatchURL(j.leo)})"></span><span>${esc(j.nom)}</span><button data-del="${i}">✕</button></div>`).join('')||'<p class="hint">Ajoute au moins 2 gymnastes.</p>');
   $('#lcList').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{LOCAL.joueuses.splice(+b.dataset.del,1);renderLocal();});
-  $('#lcLeo').innerHTML=allLeoIds().filter(id=>id!=='local').map(id=>`<option value="${id}">${esc(leoDef(id).nom)}</option>`).join('');
+  composeLeo(); const cb=S.corps==='local'?(MODELES_TRIPO.length?'t0':'mannequin'):S.corps;
+  const ids=[...(cb!=='mannequin'?['orig']:[]),...creations(),...LEOS.map(l=>l.id)];
+  $('#lcLeo').innerHTML=ids.map(id=>{const v=cb==='mannequin'?id:cb+'|'+id;return `<option value="${esc(v)}">${esc(id==='orig'?'Tenue d\'origine':leoDef(id).nom)}</option>`;}).join('');
 }
 async function demarrerLocal(){
   const btn=$('#rgGo'); btn.disabled=true; btn.textContent='Préparation…';
@@ -1650,7 +1661,8 @@ function renderRecords(){
 /* Vestiaire */
 function renderVestiaire(){
   composeLeo();
-  const corps=[{k:'mannequin',t:'🧍‍♀️ Mannequin'},...MODELES_TRIPO.map((m,i)=>({k:'t'+i,t:'✨ '+m.nom})),...(LOCAL_LEO?[{k:'local',t:'🧩 '+LOCAL_LEO.nom}]:[])];
+  const corps=[...(MODELES_TRIPO.length?[]:[{k:'mannequin',t:'🧍‍♀️ Gymnaste du jeu'}]),...MODELES_TRIPO.map((m,i)=>({k:'t'+i,t:'✨ '+m.nom})),...(LOCAL_LEO?[{k:'local',t:'🧩 '+LOCAL_LEO.nom}]:[])];
+  $('#vsCorpsBox').style.display=corps.length>1?'':'none';
   chips($('#vsCorps'),corps,S.corps,k=>{S.corps=k;if(k!=='mannequin'&&S.tenue==='p0'&&!S._tenueChoisie)S.tenue='orig';saveS();renderVestiaire();});
   $('#vsList').innerHTML=tenueIds().map(id=>{const sw=id==='orig'?swatchURL(S.corps):swatchURL(id);const nom=id==='orig'?'Tenue d\'origine':leoDef(id).nom;
     return `<div class="leo ${S.tenue===id?'on':''}" data-id="${esc(id)}">${id[0]==='c'?'<span class="crea">✨</span>':''}<i style="background-image:url(${sw})"></i>${esc(nom)}</div>`;}).join('');
@@ -1728,6 +1740,7 @@ function renderCrea(){
   chips($('#crStrass'),[['0','Aucun'],['1','Un peu'],['2','Beaucoup'],['3','Éblouissant ✨']].map(([k,t])=>({k,t})),String(CREA.p),k=>set('p',+k));
   chips($('#crManches'),[['','Sans'],['gauche','Gauche'],['droite','Droite'],['deux','Deux']].map(([k,t])=>({k,t})),CREA.a,k=>set('a',k));
   chips($('#crJupe'),[['0','Non'],['1','Oui']].map(([k,t])=>({k,t})),String(CREA.j),k=>set('j',+k));
+  for(const id of ['#crHair','#crSkin']){const show=S.corps==='mannequin';$(id).style.display=show?'':'none';$(id).previousElementSibling.style.display=show?'':'none';}
   colRow($('#crHair'),HAIRS,CREA.h,c=>set('h',c));
   colRow($('#crSkin'),SKINS,CREA.k,c=>set('k',c));
   const nid=encodeLeo(Object.assign({},CREA,{n:''}));
@@ -1746,7 +1759,7 @@ $('#vsFile').addEventListener('change',e=>{
   const f=e.target.files[0]; if(!f)return; e.target.value='';
   LOCAL_LEO={id:'local',kind:'file',nom:f.name.replace(/\.[^.]+$/,'').slice(0,16),src:f,color:'#ff4fa3',motif:'3d'}; delete TEXCACHE.local; delete SWCACHE.local;
   S.corps='local'; S.tenue='orig'; composeLeo(); $('#vsInfo').textContent='Chargement du modèle…';
-  loadAsset(f).then(()=>{PREVKEY='';renderVestiaire();$('#vsInfo').textContent='Modèle chargé ✓ (test sur ce téléphone uniquement)';}).catch(err=>{S.corps='mannequin';S.tenue='p0';composeLeo();renderVestiaire();$('#vsInfo').textContent='Impossible de lire ce fichier : '+err.message;});
+  loadAsset(f).then(()=>{PREVKEY='';renderVestiaire();$('#vsInfo').textContent='Modèle chargé ✓ (test sur ce téléphone uniquement)';}).catch(err=>{S.corps='mannequin';S.tenue='orig';composeLeo();renderVestiaire();$('#vsInfo').textContent='Impossible de lire ce fichier : '+err.message;});
 });
 function chips(box,items,cur,onPick){
   box.innerHTML=items.map(i=>`<button class="chip ${i.k===cur?'on':''}" data-k="${i.k}">${esc(i.t)}</button>`).join('');
@@ -1805,11 +1818,22 @@ $('#lbQuitter').onclick=()=>{if(!confirm('Quitter la salle ?'))return;resetNet()
 /* ======================== Aperçu & boucle ======================== */
 let PREV=null,PREVKEY='',PREVCH={};
 function previewChoreo(eng){return PREVCH[eng]||(PREVCH[eng]=genChoreo({seed:11,engin:eng,niv:'federale',bpm:100,offset:.3,dur:70,finAt:null}));}
+const VIT={yaw:0,zoom:{sCreatrice:true,sEngin:false},drag:null,offset:false};
+const enCreation=()=>VIEW==='sCreatrice'||VIEW==='sEngin';
+for(const id of ['sCreatrice','sEngin']){
+  const el=document.getElementById(id);
+  el.querySelector('[data-zoom]').onclick=()=>{VIT.zoom[id]=!VIT.zoom[id];};
+  el.addEventListener('pointerdown',e=>{if(e.target!==el)return;VIT.drag={x:e.clientX,y0:VIT.yaw};el.setPointerCapture(e.pointerId);});
+  el.addEventListener('pointermove',e=>{if(VIT.drag)VIT.yaw=VIT.drag.y0+(e.clientX-VIT.drag.x)*.012;});
+  const fin=()=>{VIT.drag=null;}; el.addEventListener('pointerup',fin); el.addEventListener('pointercancel',fin);
+}
 function ensurePreview(){
-  const vst=(VIEW==='sVestiaire'||VIEW==='sCreatrice'||VIEW==='sEngin'); const eng=vst?S.prevEngin:S.engin; const leo=VIEW==='sCreatrice'?(S.corps==='mannequin'?CREA_ID:S.corps+'|'+CREA_ID):S.leo; const des=VIEW==='sEngin'?ENG_DRAFT[eng]:S.engDesign[eng]; const key=leo+'|'+eng+'|'+(LOCAL_LEO?LOCAL_LEO.nom:'')+'|'+JSON.stringify(des||0);
+  const vst=(VIEW==='sVestiaire'||VIEW==='sCreatrice'||VIEW==='sEngin'); const eng=vst?S.prevEngin:S.engin; const leo=VIEW==='sCreatrice'?(S.corps==='mannequin'?CREA_ID:S.corps+'|'+CREA_ID):S.leo; const des=VIEW==='sEngin'?ENG_DRAFT[eng]:S.engDesign[eng]; const key=leo+'|'+eng+'|'+(LOCAL_LEO?LOCAL_LEO.nom:'')+'|'+JSON.stringify(des||0)+'|'+enCreation();
   if(PREV&&PREVKEY===key)return;
   if(PREV)PREV.dispose();
-  PREV=new Gymnast(leo,eng,{preview:true,design:des,previewYaw:T=>(VIEW==='sVestiaire'||VIEW==='sCreatrice'||VIEW==='sEngin')?T*.5:.35*Math.sin(T*.25)}); PREV.setTimeline(previewChoreo(eng)); PREVKEY=key;
+  PREV=new Gymnast(leo,eng,{preview:true,design:des,previewYaw:T=>enCreation()?VIT.yaw:VIEW==='sVestiaire'?T*.5:.35*Math.sin(T*.25)});
+  if(enCreation()){const ch=previewChoreo(eng);PREV.setTimeline({acts:[{name:'vitrine',t0:0,dur:1e9}],flights:[],B:ch.B});} else PREV.setTimeline(previewChoreo(eng));
+  PREVKEY=key;
 }
 function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w/h<1?62:46;camera.updateProjectionMatrix();if(VIEW==='sJeu')resizeHUD();}
 addEventListener('resize',resize); resize();
@@ -1818,6 +1842,7 @@ function loop(now){
   requestAnimationFrame(loop);
   const dt=Math.min(.05,(now-lastNow)/1000); lastNow=now;
   if(GAME){
+    if(VIT.offset){camera.clearViewOffset();VIT.offset=false;}
     const T=gameTime(); tick(T,dt); if(!GAME){renderer.render(scene,camera);return;}
     GAME.main.update(T,dt,camera); for(const v of GAME.ghosts.values())v.gym.update(T,dt,camera);
     const rp=GAME.main.root.position; boost=lerp(boost,GAME.main.inFlight(T),1-Math.exp(-dt*3));
@@ -1826,8 +1851,17 @@ function loop(now){
     _l.set(rp.x*.85,(portrait?.95:1.05)+boost*1.9,rp.z); camLook.lerp(_l,k); camera.lookAt(camLook);
     drawLane(T); drawFx();
   } else {
-    ensurePreview(); const T=now/1000; const ch=previewChoreo(PREV.engin.type); const span=ch.final+3-2.4; const Tp=2.4+(T%span);
+    ensurePreview(); const T=now/1000; const ch=previewChoreo(PREV.engin.type); const span=ch.final+3-2.4; const crea=enCreation(); const Tp=crea?10:2.4+(T%span);
     PREV.update(Tp,dt,camera);
+    if(crea){
+      const sheet=document.querySelector('#'+VIEW+' .sheet'), lw=sheet?sheet.getBoundingClientRect().width:0, W=innerWidth,H=innerHeight;
+      camera.setViewOffset(W,H,-lw/2,0,W,H); VIT.offset=true;
+      const z=VIT.zoom[VIEW], k=1-Math.exp(-dt*6), portrait=camera.aspect<1;
+      if(z){_t.set(0,1.28,portrait?2.15:1.8);_l.set(0,1.2,0);} else {_t.set(0,1.0,portrait?3.2:2.9);_l.set(0,.9,0);}
+      camera.position.lerp(_t,k); camLook.lerp(_l,k); camera.lookAt(camLook);
+      renderer.render(scene,camera); return;
+    }
+    if(VIT.offset){camera.clearViewOffset();VIT.offset=false;}
     const vest=(VIEW==='sVestiaire'||VIEW==='sCreatrice'||VIEW==='sEngin'), portrait=camera.aspect<1;
     const k=1-Math.exp(-dt*3);
     _t.set(0,vest?(portrait?1.0:1.2):1.7,vest?(portrait?4.6:4.4):(portrait?6.6:5.2)); camera.position.lerp(_t,k);
@@ -1835,6 +1869,7 @@ function loop(now){
   }
   renderer.render(scene,camera);
 }
+composeLeo(); saveS();
 renderRecords();
 $('#chargement').remove();
 requestAnimationFrame(loop);
