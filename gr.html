@@ -60,6 +60,9 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 .cols button{width:34px;height:34px;padding:0;border-radius:50%;border:3px solid rgba(255,255,255,.15)}
 .cols button.on{border-color:var(--accent2);transform:scale(1.12)}
 .cols input[type=color]{width:38px;height:38px;padding:0;border:0;border-radius:50%;background:none}
+.aide-l{display:flex;gap:10px;align-items:center;margin:7px 0;font-size:.92rem;line-height:1.35}
+.pt{flex:0 0 38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#1a0b2e;font-weight:800;font-size:1rem}
+.pt.barre{border-radius:12px;flex-basis:54px}
 .leo .crea{position:absolute;margin:4px 0 0 4px;font-size:.8rem}
 /* jeu */
 #sJeu{background:none;padding:0;touch-action:none;overflow:hidden}
@@ -96,6 +99,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
     <button class="big" data-go="online">🌐 Compétition en ligne</button>
     <button data-go="local">📱 À tour de rôle (même téléphone)</button>
     <button data-go="vestiaire">👗 Vestiaire</button>
+    <button data-go="aide">🎮 Comment jouer ?</button>
     <button data-go="regles">⚖️ Comment notent les juges ?</button>
   </div>
   <div id="records" class="card" style="display:none"></div>
@@ -106,7 +110,9 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <div id="sVestiaire" class="screen clair">
   <div class="spacer"></div>
   <div class="card">
-    <div class="lbl">Choisis ton justaucorps</div>
+    <div class="lbl">Gymnaste</div>
+    <div class="chips" id="vsCorps"></div>
+    <div class="lbl" style="margin-top:10px">Justaucorps</div>
     <div class="leos" id="vsList"></div>
     <div class="lbl" style="margin-top:10px">Engin pour l'aperçu</div>
     <div class="chips" id="vsEngin"></div>
@@ -224,6 +230,45 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
   <h2 id="reTitre">Résultat</h2>
   <div id="reCorps" class="wide"></div>
   <div class="actions" id="reActions"></div>
+</div>
+
+<!-- COMMENT JOUER -->
+<div id="sAide" class="screen">
+  <h2>Comment jouer ?</h2>
+  <div class="card regles">
+    <h3>Le principe</h3>
+    <p>La musique démarre, les <b>notes</b> arrivent de la droite sur la bande en bas de l'écran. Agis au moment où une note passe dans le <b>cercle blanc</b>, à gauche. Plus tu es pile dans le temps, meilleure est ta note.</p>
+    <p>Au-dessus de la bande, une étiquette annonce l'élément qui arrive, sa valeur et le geste à faire.</p>
+    <h3>Les gestes</h3>
+    <div class="aide-l"><span class="pt" style="background:#ff4fa3">●</span><div><b>Touche</b> l'écran une fois.</div></div>
+    <div class="aide-l"><span class="pt" style="background:#4cc9f0">●●</span><div><b>Touche 2 fois</b> rapidement.</div></div>
+    <div class="aide-l"><span class="pt barre" style="background:#ff4fa3">▬</span><div><b>Maintiens</b> le doigt appuyé jusqu'au bout de la barre (équilibres).</div></div>
+    <div class="aide-l"><span class="pt" style="background:#ff4fa3">➜</span><div><b>Glisse</b> le doigt, dans n'importe quel sens (pivots).</div></div>
+    <div class="aide-l"><span class="pt" style="background:#4cc9f0">↻</span><div><b>Dessine des cercles</b> avec le doigt tant que la barre passe. Une jauge verte montre où tu en es.</div></div>
+    <div class="aide-l"><span class="pt" style="background:#4cc9f0">〰</span><div><b>Fais des zigzags</b> (serpentins du ruban).</div></div>
+    <div class="aide-l"><span class="pt" style="background:#ffd166">⬆</span><div><b>Lancer</b> : touche ⬆ pour lancer, ↺ à chaque tour sous l'engin, puis ⬇ pour <b>rattraper</b>. Rater le rattrapé = perte d'engin !</div></div>
+    <h3>Les couleurs</h3>
+    <div class="aide-l"><span class="pt" style="background:#ff4fa3"></span><div><b>Rose – DB</b> : difficultés corporelles (sauts, équilibres, pivots).</div></div>
+    <div class="aide-l"><span class="pt" style="background:#ffd166"></span><div><b>Jaune – R</b> : lancers avec rotations.</div></div>
+    <div class="aide-l"><span class="pt" style="background:#4cc9f0"></span><div><b>Bleu – DA</b> : difficultés d'engin.</div></div>
+    <div class="aide-l"><span class="pt" style="background:#b388ff">♪</span><div><b>Violet</b> : pas de danse en rythme.</div></div>
+    <div class="aide-l"><span class="pt" style="background:#fff">★</span><div><b>Blanc</b> : pose finale, pile sur la fin de la musique.</div></div>
+    <h3>Comment gagner des points</h3>
+    <p><b>Note = D + A + E</b> (moins les pénalités).</p>
+    <ul>
+      <li><b>D (difficulté)</b> part de 0. Chaque élément réussi ajoute sa valeur (affichée sur l'étiquette). Il est raté s'il contient une seule note <i>Raté</i>.</li>
+      <li><b>E (exécution)</b> part de 10. À chaque note : Parfait 0 · Bien −0,10 · Juste −0,30 · Raté −0,50. Perte d'engin −0,70 ou −1,00.</li>
+      <li><b>A (artistique)</b> part de 10. On perd des points pour les notes <i>Juste</i> (rythme), les pas de danse ratés, une pose finale décalée ou une perte d'engin.</li>
+    </ul>
+    <p>Pour un gros score : vise les <b>Parfait</b> sur les éléments roses, jaunes et bleus (ils rapportent du D), et ne rate jamais un rattrapé.</p>
+    <h3>Astuces</h3>
+    <ul>
+      <li>Commence en niveau <b>Découverte</b> : notes plus lentes et plus tolérantes.</li>
+      <li>Avec un casque Bluetooth, règle le <b>décalage audio</b> dans les réglages.</li>
+      <li>Les meilleures notes possibles : environ 23 en Découverte, 26 en Fédérale, 29 en Élite.</li>
+    </ul>
+  </div>
+  <div class="actions"><button class="big" id="aideOk">C'est compris !</button></div>
 </div>
 
 <!-- REGLES -->
@@ -353,8 +398,11 @@ const GRADES=[{t:'Parfait !',c:'#5be7a9'},{t:'Bien',c:'#9be15d'},{t:'Juste',c:'#
 
 /* ============================ Réglages ============================ */
 const S=Object.assign({nom:'',leo:'p0',engin:'ruban',niv:'federale',latence:0,musique:'elan'},store.get('rs_cfg',{}));
-S.custom=null; S.prevEngin=S.engin; S.engDesign=store.get('rs_eng',{}); if(S.musique==='custom') S.musique='elan';
-function saveS(){store.set('rs_cfg',{nom:S.nom,leo:S.leo==='local'?'p0':S.leo,engin:S.engin,niv:S.niv,latence:S.latence,musique:S.musique==='custom'?'elan':S.musique});}
+S.custom=null; S.prevEngin=S.engin;
+if(!S.corps){if(S.leo&&S.leo[0]==='t'&&!S.leo.includes('|')){S.corps=S.leo;S.tenue='orig';}else{S.corps='mannequin';S.tenue=S.leo||'p0';}}
+if(S.leo&&S.leo.includes('|')){const [cb,ct]=S.leo.split('|');S.corps=cb;S.tenue=ct;} S.engDesign=store.get('rs_eng',{}); if(S.musique==='custom') S.musique='elan';
+function composeLeo(){if(S.corps!=='mannequin'&&!leoDefBody(S.corps))S.corps='mannequin';if(S.corps==='mannequin'&&S.tenue==='orig')S.tenue='p0';S.leo=S.corps==='mannequin'?S.tenue:S.corps+'|'+S.tenue;}
+function saveS(){composeLeo();const corps=S.corps==='local'?'mannequin':S.corps;store.set('rs_cfg',{nom:S.nom,corps,tenue:(corps==='mannequin'&&S.tenue==='orig')?'p0':S.tenue,leo:corps==='mannequin'?(S.tenue==='orig'?'p0':S.tenue):corps+'|'+S.tenue,engin:S.engin,niv:S.niv,latence:S.latence,musique:S.musique==='custom'?'elan':S.musique});}
 let LOCAL_LEO=null;
 
 /* ======================= Textures justaucorps ======================= */
@@ -392,7 +440,18 @@ function decodeLeo(id){try{const d=JSON.parse(decodeURIComponent(escape(atob(id.
 function creations(){return store.get('rs_crea',[]);}
 const SWCACHE={};
 function swatchURL(id){ if(SWCACHE[id]) return SWCACHE[id]; const L=leoDef(id); return SWCACHE[id]=leoCanvas(L).toDataURL('image/png'); }
+function leoDefBody(b){
+  if(b&&b[0]==='t'){const i=+b.slice(1),m=MODELES_TRIPO[i]; if(m) return {id:b,kind:'tripo',nom:m.nom,src:m.fichier,color:m.couleurEngin||'#ff4fa3',motif:'3d'};}
+  if(b==='local'&&LOCAL_LEO) return LOCAL_LEO;
+  return null;
+}
 function leoDef(id){
+  if(id&&id.includes('|')){
+    const [b,o]=id.split('|'); const body=leoDefBody(b); const out=o&&o!=='orig'?leoDef(o):null;
+    if(!body) return out||leoDef('p0');
+    if(!out) return Object.assign({},body,{id});
+    return Object.assign({},out,{id,kind:body.kind,src:body.src,outfit:out,corpsNom:body.nom});
+  }
   if(id&&id[0]==='p'){const L=LEOS.find(l=>l.id===id); if(L) return Object.assign({kind:'proc'},L);}
   if(id&&id[0]==='c'){const d=decodeLeo(id); if(d) return Object.assign({kind:'proc',id,nom:'Ma création',base:'#6a2fd6',second:'#ffffff',motif:'uni',manches:''},d);}
   if(id&&id[0]==='t'){const i=+id.slice(1),m=MODELES_TRIPO[i]; if(m) return {id,kind:'tripo',nom:m.nom,src:m.fichier,color:m.couleurEngin||'#ff4fa3',motif:'3d'};}
@@ -400,7 +459,8 @@ function leoDef(id){
   return Object.assign({kind:'proc'},LEOS[0]);
 }
 function allLeoIds(){ const ids=[...creations(),...LEOS.map(l=>l.id)]; MODELES_TRIPO.forEach((m,i)=>ids.push('t'+i)); if(LOCAL_LEO) ids.push('local'); return ids; }
-const netLeo=()=>S.leo==='local'?'p0':S.leo;
+const netLeo=()=>S.corps==='local'?(S.tenue==='orig'?'p0':S.tenue):S.leo;
+function tenueIds(){return [...(S.corps!=='mannequin'?['orig']:[]),...creations(),...LEOS.map(l=>l.id)];}
 
 /* ============================ Scène 3D ============================ */
 const canvas3d=$('#c3d');
@@ -807,7 +867,7 @@ async function makeCustom(L){
   const vrai=a=>a.find(c=>c.duration>.2);
   if(vrai(base.clips)) clips.idle=prep(vrai(base.clips));
   for(const [k,src] of Object.entries(ANIMS_MIXAMO)){try{const a=await loadAsset(src);if(vrai(a.clips))clips[k]=prep(vrai(a.clips));}catch(e){console.warn('Animation introuvable',src);}}
-  const BN={spine:'spine',neck:'neck',lSh:'leftarm',lEl:'leftforearm',lHa:'lefthand',rSh:'rightarm',rEl:'rightforearm',rHa:'righthand',lHip:'leftupleg',lKn:'leftleg',lFt:'leftfoot',rHip:'rightupleg',rKn:'rightleg',rFt:'rightfoot'};
+  const BN={hips:'hips',spine:'spine',neck:'neck',lSh:'leftarm',lEl:'leftforearm',lHa:'lefthand',rSh:'rightarm',rEl:'rightforearm',rHa:'righthand',lHip:'leftupleg',lKn:'leftleg',lFt:'leftfoot',rHip:'rightupleg',rKn:'rightleg',rFt:'rightfoot'};
   const bones={};
   obj.traverse(o=>{if(!o.isBone)return;const n=o.name.toLowerCase().replace(/[^a-z]/g,'');for(const [k,s] of Object.entries(BN))if(!bones[k]&&n.endsWith(s))bones[k]=o;});
   const hands={l:bones.lHa,r:bones.rHa},elbows={l:bones.lEl,r:bones.rEl};
@@ -829,9 +889,118 @@ async function makeCustom(L){
       aim(bones[S+'Hip'],bones[S+'Kn'],P.hip[s],P.knee[s],w); aim(bones[S+'Kn'],bones[S+'Ft'],P.knee[s],P.ank[s],w);}
   };
   obj.traverse(o=>{if(o.isMesh)o.frustumCulled=false;});
+  if(L.outfit){try{await habiller(obj,L.outfit,bones);}catch(e){console.warn('Tenue non appliquée',e);}}
   return {obj:wrap,mixer,clips,hands,elbows,bones,retarget,w:1,cur:null,curClip:null,
     has(n){return !!clips[CLIPMAP[n]];},
     play(n){const clip=clips[CLIPMAP[n]]||clips.idle; if(!clip||clip===this.curClip) return; const act=mixer.clipAction(clip); act.reset(); if(n==='final'){act.setLoop(THREE.LoopOnce,1);act.clampWhenFinished=true;} act.fadeIn(.2).play(); if(this.cur)this.cur.fadeOut(.2); this.cur=act; this.curClip=clip;}};
+}
+
+/* ============== Habillage d'un modèle 3D avec un justaucorps du jeu ============== */
+/* Le squelette Mixamo indique quelles zones sont le buste/bassin (le justaucorps) ;
+   la couleur d'origine sert à épargner la peau (décolleté, épaules). La tenue choisie
+   est peinte par-dessus en gardant les plis et ombres du modèle. */
+async function texPixels(map){
+  const t0=performance.now();
+  while(!(map.image&&(map.image.width||map.image.videoWidth)&&(map.image.complete!==false))){if(performance.now()-t0>8000)return null;await new Promise(r=>setTimeout(r,80));}
+  const im=map.image,W=Math.min(1024,im.width),H=Math.round(im.height*W/im.width);
+  const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(im,0,0,W,H);
+  return {W,H,d:g.getImageData(0,0,W,H).data};
+}
+const lin=v=>{v/=255;return v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4);};
+function sampleCols(px,uv,idx,flipY,max=4000){
+  const out=[],step=Math.max(1,Math.floor(idx.length/max));
+  for(let k=0;k<idx.length;k+=step){const i=idx[k];let u=uv.array[i*2],v=uv.array[i*2+1];u=((u%1)+1)%1;v=((v%1)+1)%1;
+    const x=Math.min(px.W-1,Math.floor(u*px.W)),y=Math.min(px.H-1,Math.floor((flipY?1-v:v)*px.H));const o=(y*px.W+x)*4;out.push(new THREE.Vector3(lin(px.d[o]),lin(px.d[o+1]),lin(px.d[o+2])));}
+  return out;
+}
+function kmeans(pts,k){
+  if(!pts.length)return [];
+  const C=[pts[Math.floor(pts.length/2)].clone()];
+  while(C.length<k){let best=null,bd=-1;for(const p of pts){let d=1e9;for(const c of C)d=Math.min(d,p.distanceToSquared(c));if(d>bd){bd=d;best=p;}}if(bd<1e-4)break;C.push(best.clone());}
+  let cnt=[];
+  for(let it=0;it<10;it++){
+    const S=C.map(()=>new THREE.Vector3()); cnt=C.map(()=>0);
+    for(const p of pts){let bi=0,bd=1e9;C.forEach((c,i)=>{const d=p.distanceToSquared(c);if(d<bd){bd=d;bi=i;}});S[bi].add(p);cnt[bi]++;}
+    C.forEach((c,i)=>{if(cnt[i])c.copy(S[i].divideScalar(cnt[i]));});
+  }
+  return C.map((c,i)=>({c,n:cnt[i]/pts.length}));
+}
+function medianCol(px,uv,idx,flipY){
+  if(!idx.length)return null; const R=[],G=[],B=[]; const step=Math.max(1,Math.floor(idx.length/3000));
+  for(let k=0;k<idx.length;k+=step){const i=idx[k];let u=uv.array[i*2],v=uv.array[i*2+1];u=((u%1)+1)%1;v=((v%1)+1)%1;
+    const x=Math.min(px.W-1,Math.floor(u*px.W)),y=Math.min(px.H-1,Math.floor((flipY?1-v:v)*px.H));const o=(y*px.W+x)*4;R.push(px.d[o]);G.push(px.d[o+1]);B.push(px.d[o+2]);}
+  const med=a=>{a.sort((x,y)=>x-y);return a[a.length>>1];};
+  return new THREE.Vector3(lin(med(R)),lin(med(G)),lin(med(B)));
+}
+async function infoTenue(mesh){
+  const g=mesh.geometry; if(g.userData.tenue) return g.userData.tenue;
+  const names=mesh.skeleton.bones.map(b=>b.name.toLowerCase().replace(/[^a-z0-9]/g,''));
+  const cat=names.map(n=>/(hips|spine|spine1|spine2|leftshoulder|rightshoulder)$/.test(n)?0:/(leftarm|leftforearm)$/.test(n)?1:/(rightarm|rightforearm)$/.test(n)?2:/(leftleg|rightleg|leftupleg|rightupleg|neck|head)$/.test(n)?3:-1);
+  const si=g.attributes.skinIndex.array,sw=g.attributes.skinWeight.array,P=g.attributes.position.array,n=g.attributes.position.count;
+  const a=new Float32Array(n*3),torse=[],peau=[],brasL=[]; let cx=0,cz=0,ay=0;
+  for(let i=0;i<n;i++){let t=0,l=0,r=0,s=0;for(let k=0;k<4;k++){const c=cat[si[i*4+k]],w=sw[i*4+k];if(c===0)t+=w;else if(c===1)l+=w;else if(c===2)r+=w;else if(c===3)s+=w;}
+    a[i*3]=t;a[i*3+1]=l;a[i*3+2]=r; if(t>.85){torse.push(i);cx+=P[i*3];cz+=P[i*3+2];} if(s>.85)peau.push(i); if(l>.8){brasL.push(i);ay+=P[i*3+1];}}
+  g.setAttribute('aLeo',new THREE.BufferAttribute(a,3));
+  g.computeBoundingBox(); const bb=g.boundingBox;
+  const info={H:bb.max.y-bb.min.y,cx:torse.length?cx/torse.length:0,cz:torse.length?cz/torse.length:0,armY:brasL.length?ay/brasL.length:(bb.min.y+bb.max.y*.8),torse,peau,refs:new Map()};
+  return g.userData.tenue=info;
+}
+async function habiller(obj,out,bones){
+  const meshes=[]; obj.traverse(o=>{if(o.isSkinnedMesh)meshes.push(o);});
+  const pat=new THREE.CanvasTexture(leoCanvas(out)); pat.colorSpace=THREE.SRGBColorSpace; pat.wrapS=pat.wrapT=THREE.RepeatWrapping; pat.anisotropy=4;
+  const manL=out.manches==='deux'||out.manches==='gauche',manR=out.manches==='deux'||out.manches==='droite';
+  for(const m of meshes){
+    if(!m.geometry.attributes.skinIndex||!m.geometry.attributes.uv)continue;
+    const info=await infoTenue(m);
+    const mats=Array.isArray(m.material)?m.material:[m.material];
+    const nm=[];
+    for(const mat0 of mats){
+      const mat=mat0.clone(); nm.push(mat);
+      let leoRef=new THREE.Vector3(.8,.3,.1),skinRef=new THREE.Vector3(.7,.45,.35),clus=null,skins=null;
+      if(mat0.map){const k=mat0.map.uuid; let rf=info.refs.get(k);
+        if(!rf){const px=await texPixels(mat0.map); if(px){const uv=m.geometry.attributes.uv,fy=mat0.map.flipY;const s=medianCol(px,uv,info.peau,fy);
+          const sk=kmeans(sampleCols(px,uv,info.peau,fy),4).filter(o=>o.n>.04).map(o=>o.c);
+          const loin=c=>sk.every(x=>c.distanceTo(x)>.06);
+          const cl=kmeans(sampleCols(px,uv,info.torse,fy),6).filter(o=>o.n>.025&&loin(o.c)).sort((a,b)=>b.n-a.n).slice(0,4).map(o=>o.c);
+          rf={l:cl[0]||medianCol(px,uv,info.torse,fy),s,cl,sk};info.refs.set(k,rf);}}
+        if(rf&&rf.l)leoRef=rf.l; if(rf&&rf.s)skinRef=rf.s; if(rf&&rf.cl&&rf.cl.length)clus=rf.cl; if(rf&&rf.sk&&rf.sk.length)skins=rf.sk;}
+      const C4=[0,1,2,3].map(i=>(clus&&clus[i])?clus[i]:new THREE.Vector3(9,9,9)); if(!clus)C4[0]=leoRef;
+      const S4=[0,1,2,3].map(i=>(skins&&skins[i])?skins[i]:(i?new THREE.Vector3(-9,-9,-9):skinRef));
+      const U={uSkinC:{value:S4},uLeoC:{value:C4},uLeoMap:{value:pat},uLeoRef:{value:leoRef},uSkinRef:{value:skinRef},uSleeve:{value:new THREE.Vector2(manL?1:0,manR?1:0)},uCenter:{value:new THREE.Vector3(info.cx,info.armY,info.cz)},uH:{value:info.H}};
+      mat.onBeforeCompile=sh=>{
+        Object.assign(sh.uniforms,U);
+        sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute vec3 aLeo;\nvarying vec3 vLeo;\nvarying vec3 vBindPos;')
+          .replace('#include <begin_vertex>','#include <begin_vertex>\nvLeo=aLeo; vBindPos=position;');
+        sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vLeo;\nvarying vec3 vBindPos;\nuniform sampler2D uLeoMap;\nuniform vec3 uLeoRef,uSkinRef,uCenter;\nuniform vec3 uLeoC[4];\nuniform vec3 uSkinC[4];\nuniform vec2 uSleeve;\nuniform float uH;')
+          .replace('#include <map_fragment>',`#include <map_fragment>
+  {
+    vec3 orig=diffuseColor.rgb;
+    float dl=9.; vec3 cref=uLeoRef;
+    for(int i=0;i<4;i++){float d=distance(orig,uLeoC[i]); if(d<dl){dl=d;cref=uLeoC[i];}}
+    float ds=9.; for(int i=0;i<4;i++){ds=min(ds,distance(orig,uSkinC[i]));}
+    float estTissu=smoothstep(-.03,.03,ds-dl);
+    float arm=max(uSleeve.x*vLeo.y,uSleeve.y*vLeo.z);
+    float m=clamp(smoothstep(.15,.4,vLeo.x)*estTissu+smoothstep(.2,.45,arm),0.,1.);
+    vec3 p=vBindPos-uCenter;
+    vec2 uvC=vec2(atan(p.x,p.z)/6.2831853+.5, p.y/uH*3.8);
+    vec2 uvA=vec2(atan(p.y,p.z)/6.2831853+.5, p.x/uH*3.8);
+    vec2 uvL=arm>.5?uvA:uvC;
+    vec3 motif=texture2D(uLeoMap,uvL).rgb;
+    float lum=dot(orig,vec3(.299,.587,.114)), lref=max(.04,dot(arm>.5?uLeoRef:cref,vec3(.299,.587,.114)));
+    float ombre=clamp(lum/lref,.55,1.3);
+    diffuseColor.rgb=mix(orig,motif*ombre,m);
+  }`);
+      };
+      mat.customProgramCacheKey=()=>'tenue-rs';
+      mat.needsUpdate=true;
+    }
+    m.material=Array.isArray(m.material)?nm:nm[0];
+  }
+  if(out.jupe&&bones.hips){
+    obj.updateMatrixWorld(true); const ws=new THREE.Vector3(); bones.hips.getWorldScale(ws);
+    const jm=new THREE.MeshStandardMaterial({map:pat,side:THREE.DoubleSide,roughness:.4,metalness:.2,envMap:ENVTEX,envMapIntensity:.4});
+    const sk=new THREE.Mesh(new THREE.CylinderGeometry(.125,.2,.13,26,1,true),jm); sk.scale.set(1/ws.x,1/ws.y,.82/ws.z); sk.position.y=-.03/ws.y; bones.hips.add(sk);
+  }
 }
 
 /* ============================ Gymnaste ============================ */
@@ -839,8 +1008,8 @@ const IDLE={name:'idle',t0:0,dur:1};
 class Gymnast{
   constructor(leoId,engin,opt={}){
     this.root=new THREE.Group(); scene.add(this.root); this.opt=opt;
-    const L=leoDef(leoId); this.L=L;
-    this.proc=new ProcRig(L.kind==='proc'?L:LEOS[0]); this.root.add(this.proc.root);
+    const L=leoDef(leoId); this.L=L; if(L.outfit)L.kind='tripo';
+    this.proc=new ProcRig(L.kind==='proc'&&!L.src?L:(L.outfit||LEOS[0])); this.root.add(this.proc.root);
     this.custom=null;
     if(L.kind!=='proc'){ this.proc.root.visible=false;
       makeCustom(L).then(c=>{if(this.dead)return;this.custom=c;this.root.add(c.obj);}).catch(e=>{console.warn(e);this.proc.root.visible=true;if(opt.onErr)opt.onErr(e);}); }
@@ -1461,13 +1630,17 @@ function needNom(){if(S.nom)return true;alert('Écris d\'abord ton prénom 🙂'
 $('#inNom').value=S.nom; $('#inNom').addEventListener('input',e=>{S.nom=e.target.value.trim();saveS();});
 document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>{
   getAC(); const go=b.dataset.go;
-  if(go==='solo'){if(needNom())openReglage('solo');}
-  else if(go==='online'){if(needNom()){netStatus('');show('sOnline');}}
-  else if(go==='local'){renderLocal();show('sLocal');}
+  const premiere=f=>{if(store.get('rs_aide',0)){f();return;}store.set('rs_aide',1);AIDE_SUITE=f;show('sAide');};
+  if(go==='solo'){if(needNom())premiere(()=>openReglage('solo'));}
+  else if(go==='online'){if(needNom())premiere(()=>{netStatus('');show('sOnline');});}
+  else if(go==='local'){premiere(()=>{renderLocal();show('sLocal');});}
+  else if(go==='aide'){AIDE_SUITE=null;show('sAide');}
   else if(go==='vestiaire'){S.prevEngin=S.engin;renderVestiaire();show('sVestiaire');}
   else if(go==='regles')show('sRegles');
 }));
 $('#regRetour').onclick=goAccueil;
+let AIDE_SUITE=null;
+$('#aideOk').onclick=()=>{const f=AIDE_SUITE;AIDE_SUITE=null;if(f)f();else goAccueil();};
 function renderRecords(){
   const r=store.get('rs_rec',{}); const k=Object.keys(r); const box=$('#records');
   if(!k.length){box.style.display='none';return;}
@@ -1476,15 +1649,19 @@ function renderRecords(){
 }
 /* Vestiaire */
 function renderVestiaire(){
-  $('#vsList').innerHTML=allLeoIds().map(id=>`<div class="leo ${S.leo===id?'on':''}" data-id="${esc(id)}">${id[0]==='c'?'<span class="crea">✨</span>':''}<i style="background-image:url(${swatchURL(id)})"></i>${esc(leoDef(id).nom)}</div>`).join('');
-  $('#vsList').querySelectorAll('.leo').forEach(d=>d.onclick=()=>{S.leo=d.dataset.id;saveS();renderVestiaire();});
-  const isCrea=S.leo[0]==='c'&&creations().includes(S.leo);
+  composeLeo();
+  const corps=[{k:'mannequin',t:'🧍‍♀️ Mannequin'},...MODELES_TRIPO.map((m,i)=>({k:'t'+i,t:'✨ '+m.nom})),...(LOCAL_LEO?[{k:'local',t:'🧩 '+LOCAL_LEO.nom}]:[])];
+  chips($('#vsCorps'),corps,S.corps,k=>{S.corps=k;if(k!=='mannequin'&&S.tenue==='p0'&&!S._tenueChoisie)S.tenue='orig';saveS();renderVestiaire();});
+  $('#vsList').innerHTML=tenueIds().map(id=>{const sw=id==='orig'?swatchURL(S.corps):swatchURL(id);const nom=id==='orig'?'Tenue d\'origine':leoDef(id).nom;
+    return `<div class="leo ${S.tenue===id?'on':''}" data-id="${esc(id)}">${id[0]==='c'?'<span class="crea">✨</span>':''}<i style="background-image:url(${sw})"></i>${esc(nom)}</div>`;}).join('');
+  $('#vsList').querySelectorAll('.leo').forEach(d=>d.onclick=()=>{S.tenue=d.dataset.id;S._tenueChoisie=true;saveS();renderVestiaire();});
+  const isCrea=S.tenue[0]==='c'&&creations().includes(S.tenue);
   $('#vsCreaBtns').innerHTML=`<button class="big" id="vsNew" style="flex:1">✨ Créer un justaucorps</button>`+(isCrea?`<button id="vsEdit">✏️</button><button id="vsDel">🗑</button>`:'');
   $('#vsNew').onclick=()=>ouvrirCreatrice(null);
-  if(isCrea){$('#vsEdit').onclick=()=>ouvrirCreatrice(S.leo);
-    $('#vsDel').onclick=()=>{if(!confirm('Supprimer « '+leoDef(S.leo).nom+' » ?'))return;store.set('rs_crea',creations().filter(x=>x!==S.leo));S.leo='p0';saveS();renderVestiaire();};}
+  if(isCrea){$('#vsEdit').onclick=()=>ouvrirCreatrice(S.tenue);
+    $('#vsDel').onclick=()=>{if(!confirm('Supprimer « '+leoDef(S.tenue).nom+' » ?'))return;store.set('rs_crea',creations().filter(x=>x!==S.tenue));S.tenue='p0';saveS();renderVestiaire();};}
   chips($('#vsEngin'),Object.entries(ENGINS).map(([k,e])=>({k,t:e.ico+' '+e.nom})),S.prevEngin,k=>{S.prevEngin=k;renderVestiaire();});
-  $('#vsInfo').textContent=MODELES_TRIPO.length?'':'Tes modèles Tripo apparaîtront ici une fois déclarés dans le fichier.';
+  $('#vsInfo').textContent=S.corps!=='mannequin'?'Sur une gymnaste 3D, cheveux et peau restent ceux du modèle ; seul le justaucorps change.':(MODELES_TRIPO.length?'':'Tes modèles Tripo apparaîtront ici une fois déclarés dans le fichier.');
 }
 $('#vsOk').onclick=goAccueil;
 /* ---- Mes engins ---- */
@@ -1563,13 +1740,13 @@ $('#crRetour').onclick=()=>{renderVestiaire();show('sVestiaire');};
 $('#crSave').onclick=()=>{
   if(!CREA.n.trim())CREA.n='Ma création'; const id=encodeLeo(CREA); let list=creations();
   if(CREA_EDIT)list=list.map(x=>x===CREA_EDIT?id:x); else list.unshift(id);
-  store.set('rs_crea',list.slice(0,20)); S.leo=id; saveS(); renderVestiaire(); show('sVestiaire');
+  store.set('rs_crea',list.slice(0,20)); S.tenue=id; saveS(); renderVestiaire(); show('sVestiaire');
 };
 $('#vsFile').addEventListener('change',e=>{
   const f=e.target.files[0]; if(!f)return; e.target.value='';
   LOCAL_LEO={id:'local',kind:'file',nom:f.name.replace(/\.[^.]+$/,'').slice(0,16),src:f,color:'#ff4fa3',motif:'3d'}; delete TEXCACHE.local; delete SWCACHE.local;
-  S.leo='local'; $('#vsInfo').textContent='Chargement du modèle…';
-  loadAsset(f).then(()=>{PREVKEY='';renderVestiaire();$('#vsInfo').textContent='Modèle chargé ✓ (test sur ce téléphone uniquement)';}).catch(err=>{$('#vsInfo').textContent='Impossible de lire ce fichier : '+err.message;S.leo='p0';renderVestiaire();});
+  S.corps='local'; S.tenue='orig'; composeLeo(); $('#vsInfo').textContent='Chargement du modèle…';
+  loadAsset(f).then(()=>{PREVKEY='';renderVestiaire();$('#vsInfo').textContent='Modèle chargé ✓ (test sur ce téléphone uniquement)';}).catch(err=>{S.corps='mannequin';S.tenue='p0';composeLeo();renderVestiaire();$('#vsInfo').textContent='Impossible de lire ce fichier : '+err.message;});
 });
 function chips(box,items,cur,onPick){
   box.innerHTML=items.map(i=>`<button class="chip ${i.k===cur?'on':''}" data-k="${i.k}">${esc(i.t)}</button>`).join('');
@@ -1629,7 +1806,7 @@ $('#lbQuitter').onclick=()=>{if(!confirm('Quitter la salle ?'))return;resetNet()
 let PREV=null,PREVKEY='',PREVCH={};
 function previewChoreo(eng){return PREVCH[eng]||(PREVCH[eng]=genChoreo({seed:11,engin:eng,niv:'federale',bpm:100,offset:.3,dur:70,finAt:null}));}
 function ensurePreview(){
-  const vst=(VIEW==='sVestiaire'||VIEW==='sCreatrice'||VIEW==='sEngin'); const eng=vst?S.prevEngin:S.engin; const leo=VIEW==='sCreatrice'?CREA_ID:S.leo; const des=VIEW==='sEngin'?ENG_DRAFT[eng]:S.engDesign[eng]; const key=leo+'|'+eng+'|'+(LOCAL_LEO?LOCAL_LEO.nom:'')+'|'+JSON.stringify(des||0);
+  const vst=(VIEW==='sVestiaire'||VIEW==='sCreatrice'||VIEW==='sEngin'); const eng=vst?S.prevEngin:S.engin; const leo=VIEW==='sCreatrice'?(S.corps==='mannequin'?CREA_ID:S.corps+'|'+CREA_ID):S.leo; const des=VIEW==='sEngin'?ENG_DRAFT[eng]:S.engDesign[eng]; const key=leo+'|'+eng+'|'+(LOCAL_LEO?LOCAL_LEO.nom:'')+'|'+JSON.stringify(des||0);
   if(PREV&&PREVKEY===key)return;
   if(PREV)PREV.dispose();
   PREV=new Gymnast(leo,eng,{preview:true,design:des,previewYaw:T=>(VIEW==='sVestiaire'||VIEW==='sCreatrice'||VIEW==='sEngin')?T*.5:.35*Math.sin(T*.25)}); PREV.setTimeline(previewChoreo(eng)); PREVKEY=key;
