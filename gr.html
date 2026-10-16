@@ -331,7 +331,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
     <p><b>Note = D + A + E</b> (moins les pénalités).</p>
     <ul>
       <li><b>D (difficulté)</b> part de 0. Chaque élément réussi ajoute sa valeur (affichée sur l'étiquette). Il est raté s'il contient une seule note <i>Raté</i>.</li>
-      <li><b>E (exécution)</b> part de 10. À chaque note : Parfait 0 · Bien −0,10 · Juste −0,30 · Raté −0,50. Perte d'engin −0,70 ou −1,00.</li>
+      <li><b>E (exécution)</b> part de 10. À chaque note : Parfait 0 · Bien −0,10 · Juste −0,30 · Raté −0,50. Perte d'engin −0,70 ou −1,00. <b>Appui hors temps</b> (toucher l'écran alors qu'il n'y a rien à faire) : −0,10 à chaque fois, donc inutile de taper sans arrêt !</li>
       <li><b>A (artistique)</b> part de 10. On perd des points pour les notes <i>Juste</i> (rythme), les pas de danse ratés, une pose finale décalée ou une perte d'engin.</li>
     </ul>
     <p>Pour un gros score : vise les <b>Parfait</b> sur les éléments roses, jaunes et bleus (ils rapportent du D), et ne rate jamais un rattrapé.</p>
@@ -1355,7 +1355,7 @@ const hEls={T:$('#hT'),D:$('#hD'),A:$('#hA'),E:$('#hE'),Tot:$('#hTot'),Live:$('#
 const lane=$('#lane'),laneCtx=lane.getContext('2d'),fx=$('#fx'),fxCtx=fx.getContext('2d');
 function sizeCanvas(cv,ctx,w,h){const dpr=Math.min(2,window.devicePixelRatio||1);cv.width=Math.max(1,w*dpr);cv.height=Math.max(1,h*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);}
 function resizeHUD(){sizeCanvas(lane,laneCtx,lane.clientWidth||innerWidth,110);sizeCanvas(fx,fxCtx,innerWidth,innerHeight);}
-function newStats(){return {dedE:0,dedA:0,DB:[],R:[],DA:[],groups:new Set(),line:0,count:[0,0,0,0],combo:0,maxCombo:0,nb:0,fE:{p:0,m:0,g:0,pertes:0,sorties:0},fA:{rythme:0,pas:0,fin:0,cont:0,expr:0}};}
+function newStats(){return {dedE:0,dedA:0,DB:[],R:[],DA:[],groups:new Set(),line:0,count:[0,0,0,0],combo:0,maxCombo:0,nb:0,fE:{p:0,m:0,g:0,pertes:0,sorties:0},fA:{rythme:0,pas:0,fin:0,cont:0,expr:0,hors:0}};}
 const sum=a=>a.reduce((x,y)=>x+y,0);
 function computeD(st){return sum([...st.DB].sort((a,b)=>b-a).slice(0,8))+sum(st.R.slice(0,4))+sum(st.DA.slice(0,15));}
 function liveScores(){const g=GAME,st=g.st;const D=computeD(st),E=Math.max(0,10-st.dedE),A=Math.max(0,10-st.dedA);const T=gameTime();return {D,E,A,T:Math.max(0,D+E+A-st.line),prog:clamp((T-g.first)/(g.final-g.first),0,1)};}
@@ -1422,6 +1422,15 @@ function wins(){const f=NIVEAUX[GAME.niv].fen;return [.075*f,.14*f,.22*f];}
 function gradeFor(dt){const w=wins(),a=Math.abs(dt);return a<=w[0]?0:a<=w[1]?1:a<=w[2]?2:3;}
 const down=g=>Math.min(3,g+1);
 const PT=new Map();
+/* Appui hors temps (aucune note à toucher) : petite faute d'exécution, la série est cassée */
+function horsTemps(T){
+  const g=GAME; if(g.demo||T<g.first-1||T>g.final+1)return;
+  if(activeTrace(T)||activeTrace(T+.45))return;               // cercles / zigzags en cours ou imminents
+  if(g.notes.some(n=>Math.abs(T-n.t)<.35))return;             // juste un peu tôt / tard sur une note : déjà jugé par la note
+  if(g.notes.some(n=>n.started&&!n.judged))return;            // tenue ou glissé déjà commencé
+  const st=g.st; st.dedE+=.1; st.fE.p++; st.fA.hors++; st.combo=0;
+  popup('Hors temps','#ff9f6b','E −0,10');
+}
 function activeTrace(T){for(const n of GAME.notes){if(n.judged||TAPLIKE.has(n.g))continue;if(T>=n.t-.15&&T<=n.t+n.dur)return n;if(n.t-.15>T)break;}return null;}
 function rev(s,v){
   if(s.ext==null){s.ext=v;s.dir=0;return 0;}
@@ -1439,7 +1448,7 @@ jeuEl.addEventListener('pointerdown',e=>{
   if(dbl&&T-dbl.first<=.42){finalize(dbl,dbl.pend);return;}
   const w=wins()[2];
   const n=GAME.notes.find(n=>!n.judged&&!n.started&&TAPLIKE.has(n.g)&&Math.abs(T-n.t)<=w);
-  if(!n)return;
+  if(!n){horsTemps(T);return;}
   const gr=gradeFor(T-n.t);
   if(n.g==='tap')finalize(n,gr);
   else if(n.g==='double'){n.started=true;n.first=T;n.pend=gr;}
@@ -1585,7 +1594,7 @@ function judgesRow(j){
 function htmlResultat(r){
   const c=r.count||[0,0,0,0];
   const fa=[]; if(r.fA.rythme)fa.push(`Fautes de rythme : ${r.fA.rythme}`); if(r.fA.pas)fa.push(`Combinaisons de pas de danse ratées : ${r.fA.pas}`); if(r.fA.fin)fa.push(`Fin pas synchronisée avec la musique : −${fmt(r.fA.fin,2)}`); if(r.fA.cont)fa.push(`Interruptions de la continuité (pertes) : ${r.fA.cont}`); if(r.fA.expr)fa.push('Manque de fluidité / d\'expression : −0,30');
-  const fe=[`Petites fautes (0,10) : ${r.fE.p}`,`Fautes moyennes (0,30) : ${r.fE.m}`,`Grandes fautes (0,50) : ${r.fE.g}`]; if(r.fE.pertes)fe.push(`Pertes d'engin : ${r.fE.pertes}`);
+  const fe=[`Petites fautes (0,10) : ${r.fE.p}`,`Fautes moyennes (0,30) : ${r.fE.m}`,`Grandes fautes (0,50) : ${r.fE.g}`]; if(r.fE.pertes)fe.push(`Pertes d'engin : ${r.fE.pertes}`); if(r.fA.hors)fe.push(`dont appuis hors temps : ${r.fA.hors} (−0,10 chacun)`);
   return `<div class="card"><div class="score-big">${fmt(r.total)}</div>
   <div class="grid3"><div><small>Difficulté D</small><b>${fmt(r.D)}</b></div><div><small>Artistique A</small><b>${fmt(r.A)}</b></div><div><small>Exécution E</small><b>${fmt(r.E)}</b></div></div>
   ${r.pen>0?`<p class="pen">Pénalités : −${fmt(r.pen,2)}${r.penT?` (durée ${r.duree} s)`:''}${r.penL?` (ligne −${fmt(r.penL,2)})`:''}</p>`:''}
