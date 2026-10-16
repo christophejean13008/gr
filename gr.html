@@ -887,9 +887,16 @@ class Engin{
     if(type==='ballon'){this.ball=new THREE.Mesh(new THREE.SphereGeometry(.095,24,16),mat);this.g.add(this.ball);}
     if(type==='cerceau'){this.hoop=new THREE.Mesh(new THREE.TorusGeometry(.42,.016,8,56),mat);this.g.add(this.hoop);}
     if(type==='massues'){
-      // massue de GR (≈ 45 cm) : petite tête ronde dans la main, long col fin, corps fuselé étroit
-      const pts=[[0,-.032],[.01,-.03],[.0155,-.022],[.0175,-.012],[.0175,-.002],[.015,.007],[.0095,.014],[.0075,.022],[.007,.06],[.0072,.11],[.0088,.16],[.0118,.21],[.0155,.26],[.0192,.31],[.0215,.35],[.022,.385],[.0205,.415],[.0168,.44],[.0102,.458],[0,.467]].map(([r,y])=>new THREE.Vector2(r,y));
-      const geo=new THREE.LatheGeometry(pts,18); this.clubs=[new THREE.Mesh(geo,mat),new THREE.Mesh(geo,mat)]; this.clubs.forEach(c=>this.g.add(c));
+      // massue de GR (50 cm), d'après une vraie massue : boule au bout du manche, long col fin,
+      // corps court en caoutchouc avec une gorge. Boule + corps = couleur 1 (décor), col = couleur 2.
+      const V=a=>a.map(([r,y])=>new THREE.Vector2(r,y));
+      const boule=V([[0,-.031],[.0075,-.0292],[.0124,-.0245],[.0153,-.0175],[.0158,-.0125],[.0151,-.006],[.0124,-.0005],[.0085,.0025],[0,.0035]]);
+      const col=V([[0,.0],[.0064,.0],[.0062,.012],[.0068,.06],[.0075,.14],[.0083,.22],[.0092,.29],[.0102,.335],[.0118,.358],[.0148,.374],[.019,.39],[0,.39]]);
+      const corps=V([[0,.384],[.0205,.384],[.022,.392],[.0228,.405],[.0225,.418],[.0192,.424],[.019,.432],[.0262,.437],[.0272,.45],[.0262,.47],[.0242,.49],[.0228,.497],[.017,.5],[0,.5]]);
+      const mat2=mat.clone(); mat2.map=null; mat2.color=new THREE.Color(d.c2||'#9b59d0');
+      const gB=new THREE.LatheGeometry(boule,16),gC=new THREE.LatheGeometry(col,14),gK=new THREE.LatheGeometry(corps,20);
+      this.clubs=[0,1].map(()=>{const c=new THREE.Group();c.add(new THREE.Mesh(gB,mat),new THREE.Mesh(gC,mat2),new THREE.Mesh(gK,mat));return c;});
+      this.clubs.forEach(c=>this.g.add(c));
     }
     if(type==='ruban'){
       const sg=new THREE.CylinderGeometry(.006,.005,.6,6); sg.translate(0,.3,0);
