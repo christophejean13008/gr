@@ -1303,12 +1303,13 @@ async function infoTenue(mesh,qr){
   const names=mesh.skeleton.bones.map(b=>b.name.toLowerCase().replace(/[^a-z0-9]/g,''));
   const cat=names.map(n=>/(hips|spine|spine1|spine2|leftshoulder|rightshoulder)$/.test(n)?0:/(leftarm|leftforearm)$/.test(n)?1:/(rightarm|rightforearm)$/.test(n)?2:/(leftleg|rightleg|leftupleg|rightupleg|neck|head)$/.test(n)?3:-1);
   const si=g.attributes.skinIndex.array,sw=g.attributes.skinWeight.array,P=g.attributes.position.array,n=g.attributes.position.count;
-  const a=new Float32Array(n*3),torse=[],peau=[],brasL=[]; let cx=0,cz=0,ay=0,ymin=1e9,ymax=-1e9;
+  const cuis=names.map(n=>/upleg$/.test(n));
+  const a=new Float32Array(n*3),torse=[],peau=[],brasL=[],cuisse=[]; let cx=0,cz=0,ay=0,ymin=1e9,ymax=-1e9;
   for(let i=0;i<n;i++){let t=0,l=0,r=0,s=0;for(let k=0;k<4;k++){const c=cat[si[i*4+k]],w=sw[i*4+k];if(c===0)t+=w;else if(c===1)l+=w;else if(c===2)r+=w;else if(c===3)s+=w;}
     const q=rp(i); if(q.y<ymin)ymin=q.y; if(q.y>ymax)ymax=q.y;
-    a[i*3]=t;a[i*3+1]=l;a[i*3+2]=r; if(t>.85){torse.push(i);cx+=q.x;cz+=q.z;} if(s>.85)peau.push(i); if(l>.8){brasL.push(i);ay+=q.y;}}
+    a[i*3]=t;a[i*3+1]=l;a[i*3+2]=r; if(t>.85){torse.push(i);cx+=q.x;cz+=q.z;} if(s>.85)peau.push(i); {let cu=0;for(let k=0;k<4;k++)if(cuis[si[i*4+k]])cu+=sw[i*4+k]; if(cu>.9)cuisse.push(i);} if(l>.8){brasL.push(i);ay+=q.y;}}
   g.setAttribute('aLeo',new THREE.BufferAttribute(a,3));
-  const info={H:(ymax-ymin)||1,cx:torse.length?cx/torse.length:0,cz:torse.length?cz/torse.length:0,armY:brasL.length?ay/brasL.length:(ymin+(ymax-ymin)*.8),torse,peau,refs:new Map()};
+  const info={H:(ymax-ymin)||1,cx:torse.length?cx/torse.length:0,cz:torse.length?cz/torse.length:0,armY:brasL.length?ay/brasL.length:(ymin+(ymax-ymin)*.8),torse,peau,cuisse,refs:new Map()};
   return g.userData.tenue=info;
 }
 async function habiller(obj,out,bones){
@@ -1323,22 +1324,22 @@ async function habiller(obj,out,bones){
     const nm=[];
     for(const mat0 of mats){
       const mat=mat0.clone(); nm.push(mat);
-      let leoRef=new THREE.Vector3(.8,.3,.1),skinRef=new THREE.Vector3(.7,.45,.35),clus=null,skins=null;
+      let leoRef=new THREE.Vector3(.8,.3,.1),skinRef=new THREE.Vector3(.7,.45,.35),clus=null,skins=null,skinCu=null;
       if(mat0.map){const k=mat0.map.uuid; let rf=info.refs.get(k);
         if(!rf){const px=await texPixels(mat0.map); if(px){const uv=m.geometry.attributes.uv,fy=mat0.map.flipY;const s=medianCol(px,uv,info.peau,fy);
           const sk=kmeans(sampleCols(px,uv,info.peau,fy),4).filter(o=>o.n>.04).map(o=>o.c);
           const loin=c=>sk.every(x=>c.distanceTo(x)>.06);
           const cl=kmeans(sampleCols(px,uv,info.torse,fy),6).filter(o=>o.n>.025&&loin(o.c)).sort((a,b)=>b.n-a.n).slice(0,4).map(o=>o.c);
-          rf={l:cl[0]||medianCol(px,uv,info.torse,fy),s,cl,sk};info.refs.set(k,rf);}}
-        if(rf&&rf.l)leoRef=rf.l; if(rf&&rf.s)skinRef=rf.s; if(rf&&rf.cl&&rf.cl.length)clus=rf.cl; if(rf&&rf.sk&&rf.sk.length)skins=rf.sk;}
+          rf={l:cl[0]||medianCol(px,uv,info.torse,fy),s,cl,sk,cu:medianCol(px,uv,info.cuisse,fy)||s};info.refs.set(k,rf);}}
+        if(rf&&rf.l)leoRef=rf.l; if(rf&&rf.s)skinRef=rf.s; if(rf&&rf.cl&&rf.cl.length)clus=rf.cl; if(rf&&rf.sk&&rf.sk.length)skins=rf.sk; if(rf&&rf.cu)skinCu=rf.cu;}
       const C4=[0,1,2,3].map(i=>(clus&&clus[i])?clus[i]:new THREE.Vector3(9,9,9)); if(!clus)C4[0]=leoRef;
       const S4=[0,1,2,3].map(i=>(skins&&skins[i])?skins[i]:(i?new THREE.Vector3(-9,-9,-9):skinRef));
-      const U={uBindRot:{value:new THREE.Matrix3().setFromMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(qr))},uSkinC:{value:S4},uLeoC:{value:C4},uLeoMap:{value:pat},uLeoRef:{value:leoRef},uSkinRef:{value:skinRef},uSleeve:{value:new THREE.Vector2(manL?1:0,manR?1:0)},uCenter:{value:new THREE.Vector3(info.cx,info.armY,info.cz)},uH:{value:info.H}};
+      const U={uBindRot:{value:new THREE.Matrix3().setFromMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(qr))},uSkinC:{value:S4},uLeoC:{value:C4},uLeoMap:{value:pat},uLeoRef:{value:leoRef},uSkinRef:{value:skinRef},uSleeve:{value:new THREE.Vector2(manL?1:0,manR?1:0)},uCenter:{value:new THREE.Vector3(info.cx,info.armY,info.cz)},uH:{value:info.H},uSkinCu:{value:skinCu||skinRef}};
       mat.onBeforeCompile=sh=>{
         Object.assign(sh.uniforms,U);
         sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute vec3 aLeo;\nvarying vec3 vLeo;\nvarying vec3 vBindPos;\nuniform mat3 uBindRot;')
           .replace('#include <begin_vertex>','#include <begin_vertex>\nvLeo=aLeo; vBindPos=uBindRot*position;');
-        sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vLeo;\nvarying vec3 vBindPos;\nuniform sampler2D uLeoMap;\nuniform vec3 uLeoRef,uSkinRef,uCenter;\nuniform vec3 uLeoC[4];\nuniform vec3 uSkinC[4];\nuniform vec2 uSleeve;\nuniform float uH;')
+        sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vLeo;\nvarying vec3 vBindPos;\nuniform sampler2D uLeoMap;\nuniform vec3 uLeoRef,uSkinRef,uCenter;\nuniform vec3 uLeoC[4];\nuniform vec3 uSkinC[4];\nuniform vec2 uSleeve;\nuniform float uH;\nuniform vec3 uSkinCu;')
           .replace('#include <map_fragment>',`#include <map_fragment>
   {
     vec3 orig=diffuseColor.rgb;
@@ -1349,15 +1350,19 @@ async function habiller(obj,out,bones){
     float arm=max(uSleeve.x*vLeo.y,uSleeve.y*vLeo.z);
     vec3 p=vBindPos-uCenter;
     // sur les côtés (haut des cuisses), le poids du bassin vaut ~0,5 : on exige plus pour éviter les traînées sur les hanches
-    float seuil=mix(.15,.5,smoothstep(.03*uH,.055*uH,abs(p.x)));
-    float m=clamp(smoothstep(seuil,seuil+.14,vLeo.x)*estTissu+smoothstep(.2,.45,arm),0.,1.);
+    float cote=smoothstep(.018*uH,.04*uH,abs(p.x));
+    float seuil=mix(.15,.55,cote), dedans=smoothstep(seuil,seuil+.05,vLeo.x);
+    float m=clamp(dedans*estTissu+smoothstep(.2,.45,arm),0.,1.);
+    // bord de jambe sur les côtés : le tissu d'origine qui dépasse est repeint couleur peau (plus de petites taches)
+    float peau=0.;
     vec2 uvC=vec2(atan(p.x,p.z)/6.2831853+.5, p.y/uH*3.8);
     vec2 uvA=vec2(atan(p.y,p.z)/6.2831853+.5, p.x/uH*3.8);
     vec2 uvL=arm>.5?uvA:uvC;
     vec3 motif=texture2D(uLeoMap,uvL).rgb;
     float lum=dot(orig,vec3(.299,.587,.114)), lref=max(.04,dot(arm>.5?uLeoRef:cref,vec3(.299,.587,.114)));
     float ombre=clamp(lum/lref,.55,1.3);
-    diffuseColor.rgb=mix(orig,motif*ombre,m);
+    vec3 skin=uSkinCu*clamp(ombre,.8,1.15);
+    diffuseColor.rgb=mix(mix(orig,skin,peau),motif*ombre,m);
   }`);
       };
       mat.customProgramCacheKey=()=>'tenue-rs';
