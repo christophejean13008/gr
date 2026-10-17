@@ -1,0 +1,17 @@
+{
+  "name": "Rythmique Star",
+  "short_name": "Rythmique Star",
+  "description": "Le jeu de gymnastique rythmique",
+  "lang": "fr",
+  "start_url": "gr.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#12081f",
+  "theme_color": "#12081f",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
