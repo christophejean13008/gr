@@ -210,6 +210,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 #classement .cv{color:#ddd;font-weight:700}
 #classement.ferme .cb{display:none}
 @media (max-aspect-ratio:1/1){#sAccueil .brand{align-self:stretch;margin-top:0;padding-left:142px;min-height:228px;display:flex;flex-direction:column;justify-content:center}#sAccueil .brand h1{font-size:2.35rem;line-height:1.05}#sAccueil .brand .logo{font-size:2.6rem}#sAccueil .brand .sub{font-size:.85rem}}
+#version{position:absolute;top:calc(max(10px,env(safe-area-inset-top)) + 46px);right:12px;width:42px;text-align:center;font-size:.62rem;color:rgba(200,200,210,.6);z-index:3;pointer-events:none}
 #cadenas.tout{background:linear-gradient(135deg,#ffd166,#ffb703);box-shadow:0 0 14px rgba(255,209,102,.8)}
 #cadenas.edit{background:linear-gradient(135deg,#4cc9f0,#a24bff);box-shadow:0 0 14px rgba(76,201,240,.7)}
 .carte .clk{position:absolute;bottom:-9px;right:-9px;width:26px;height:26px;border-radius:50%;background:#2a1840;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:.8rem;box-shadow:0 2px 6px rgba(0,0,0,.4)}
@@ -237,6 +238,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <!-- ACCUEIL -->
 <div id="sAccueil" class="screen on">
   <button id="cadenas" title="Code">🔒</button>
+  <div id="version">v1.0</div>
   <div id="classement"><div class="ct">🏆 Classement ▾</div><div class="cb"></div></div>
   <div class="brand"><div class="soutien"><a class="pill" id="btMail" href="mailto:chris333j@yahoo.fr?subject=Rythmique%20Star">✉️ M'écrire</a><a class="pill" id="btInstall" href="#" style="display:none">📲 Installer l'appli</a><a class="pill cafe" id="btCafe" href="#" target="_blank" rel="noopener">☕ Offrir un café</a></div><div class="logo">🎀</div><h1>Rythmique <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
   <label class="field">Ton prénom<input id="inNom" maxlength="14" placeholder="Prénom" autocomplete="off"></label>
