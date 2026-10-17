@@ -2165,7 +2165,7 @@ function hostData(conn,d){
     case 'etat': {const p=NET.players.find(p=>p.pid===conn.peer);if(p){p.etat=String(d.e||'').slice(0,40);p.ping=d.ping|0;lobbyBientot();}return;}
     case 'need': if(NET.prep&&NET.musBytes&&Array.isArray(d.miss))envoyerMorceaux(conn,d.miss.slice(0,400).map(x=>x|0)); return;
     case 'hello': {const mx=NET.set&&NET.set.coop?5:6; if(NET.players.length>=mx||NET.inGame){conn.send({t:'refus',raison:NET.inGame?'Partie en cours, réessaie juste après.':`Salle pleine (${mx} gymnastes).`});return;}}
-      NET.players.push({pid:conn.peer,nom:String(d.nom||'Gymnaste').slice(0,14),leo:d.leo||'p0',eng:(d.eng&&typeof d.eng==='object')?d.eng:{},pret:false,deco:(d.deco&&typeof d.deco==='object')?d.deco:null}); broadcastLobby(); break;
+      NET.players.push({pid:conn.peer,nom:String(d.nom||'Gymnaste').slice(0,14),leo:d.leo||'p0',eng:(d.eng&&typeof d.eng==='object')?d.eng:{},pret:false,deco:(d.deco&&typeof d.deco==='object')?d.deco:null}); broadcastLobby(); sonArrivee(String(d.nom||'Gymnaste').slice(0,14)); break;
     case 'pret': {const p=NET.players.find(p=>p.pid===conn.peer);if(p){p.pret=true;p.etat='prête';}lobbyBientot();checkAllReady();break;}
     case 'perturb_claim': if(!NET.perturb&&!NET.inGame){NET.perturb=conn.peer;broadcastLobby();} break;
     case 'perturb_release': if(NET.perturb===conn.peer){NET.perturb=null;broadcastLobby();} break;
@@ -2174,7 +2174,7 @@ function hostData(conn,d){
   }
 }
 async function rejoindre(code){
-  await loadPeer();
+  await loadPeer(); NET.players=[];
   return new Promise((res,rej)=>{
     const peer=new Peer(PEER_OPT); let ok=false;
     peer.on('open',id=>{
@@ -2190,7 +2190,8 @@ async function rejoindre(code){
 }
 async function guestData(d){
   switch(d.t){
-    case 'lobby': NET.players=d.players;NET.set=d.set;NET.perturb=d.perturb||null;if(!GAME&&['sOnline','sLobby'].includes(VIEW)){renderLobby();show('sLobby');}else renderLobby();break;
+    case 'lobby': {const avant=new Set((NET.players||[]).map(p=>p.pid));if(avant.size&&!GAME)for(const p of d.players||[])if(!avant.has(p.pid)&&p.pid!==NET.me)sonArrivee(p.nom);}
+      NET.players=d.players;NET.set=d.set;NET.perturb=d.perturb||null;if(!GAME&&['sOnline','sLobby'].includes(VIEW)){renderLobby();show('sLobby');}else renderLobby();break;
     case 'refus': alert(d.raison);resetNet();show('sOnline');break;
     case 'pong': {const t=maint(),rtt=t-d.c; if(NET.rtt==null||rtt<=NET.rtt+5){NET.rtt=Math.min(NET.rtt==null?1e9:NET.rtt,rtt);NET.off=d.h+rtt/2-t;} break;}
     case 'hb': break;
@@ -2520,7 +2521,7 @@ $('#chJouer').onclick=()=>lancerChoreo(false);
 
 /* ============================== Écrans ============================== */
 let VIEW='sAccueil';
-function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id));VIEW=id;if(id==='sJeu')resizeHUD();}
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id));VIEW=id;try{veilleSalon(id==='sLobby'&&!!NET.peer);}catch(e){}if(id==='sJeu')resizeHUD();}
 /* ========================= Classement en ligne (Firebase Realtime Database) ========================= */
 // Adresse de la base Firebase (ex. https://rythmique-star-default-rtdb.europe-west1.firebasedatabase.app). Vide = classement de cet appareil seulement.
 const FB_URL='https://rythmique-star-default-rtdb.europe-west1.firebasedatabase.app';
@@ -3087,6 +3088,34 @@ function renderChat(){
   box.innerHTML=NET.chat.length?NET.chat.map(m=>`<div class="m ${m.pid===NET.me?'moi':''}"><b>${m.pid===NET.me?'Moi':nomHTML(m.nom,m.deco)}</b>${esc(m.txt)}</div>`).join(''):'<p class="hint">Les messages ne sont vus que par les joueuses de la salle et disparaissent quand on la quitte.</p>';
   box.scrollTop=box.scrollHeight;
 }
+/* ---- arrivée d'une joueuse dans le salon : carillon + vibration + bandeau ---- */
+function wavURL(f,dur,sr=22050){const n=Math.floor(dur*sr),b=new ArrayBuffer(44+n*2),v=new DataView(b),w=(o,t)=>{for(let i=0;i<t.length;i++)v.setUint8(o+i,t.charCodeAt(i));};
+  w(0,'RIFF');v.setUint32(4,36+n*2,true);w(8,'WAVEfmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,n*2,true);
+  for(let i=0;i<n;i++)v.setInt16(44+i*2,Math.max(-1,Math.min(1,f(i/sr)))*32767,true);return URL.createObjectURL(new Blob([b],{type:'audio/wav'}));}
+const SALON={veille:null,son:null,wl:null};
+function sonArrivee(nom){
+  try{navigator.vibrate&&navigator.vibrate([90,60,90,60,160]);}catch(e){}
+  if(!SALON.son){ // carillon « ding-ding-DING » montant (mi, sol, do aigu) avec une petite étincelle
+    const N=[[0,1319],[.13,1568],[.26,2093]];
+    SALON.son=new Audio(wavURL(t=>{let x=0;for(const [t0,f] of N){const u=t-t0;if(u>=0){const e=Math.exp(-u*(t0>.2?5:9));x+=e*(Math.sin(2*Math.PI*f*u)+.35*Math.sin(4*Math.PI*f*u)+.15*Math.sin(6.01*Math.PI*f*u));}}
+      const u=t-.32;if(u>0&&u<.25)x+=.12*Math.exp(-u*14)*Math.sin(2*Math.PI*3136*u)*Math.sin(2*Math.PI*21*u);return x*.32;},1.2));}
+  try{SALON.son.currentTime=0;const pr=SALON.son.play();if(pr)pr.catch(()=>{});}catch(e){}
+  const t=$('#toastChat');t.innerHTML=`👋 <b>${esc(nom)}</b> arrive dans le salon !`;t.classList.remove('on');void t.offsetWidth;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),3500);
+}
+/* Dans le salon : l'écran reste allumé, et un son muet en boucle garde la page active si le téléphone se met quand même en veille */
+function veilleSalon(on){
+  if(on){
+    if(navigator.wakeLock&&!SALON.wl)navigator.wakeLock.request('screen').then(l=>{SALON.wl=l;l.addEventListener('release',()=>{if(SALON.wl===l)SALON.wl=null;});}).catch(()=>{});
+    if(!SALON.veille){SALON.veille=new Audio(wavURL(()=>0,2,8000));SALON.veille.loop=true;
+      try{if('mediaSession' in navigator)navigator.mediaSession.metadata=new MediaMetadata({title:'Salon Rythmique Star',artist:'En attente des joueuses'});}catch(e){}}
+    if(SALON.veille.paused){const pr=SALON.veille.play();if(pr)pr.catch(()=>{});}
+  } else {
+    if(SALON.veille&&!SALON.veille.paused)SALON.veille.pause();
+    if(SALON.wl){SALON.wl.release().catch(()=>{});SALON.wl=null;}
+  }
+}
+document.addEventListener('pointerdown',()=>{if(VIEW==='sLobby'&&NET.peer)veilleSalon(true);},true);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&VIEW==='sLobby'&&NET.peer)veilleSalon(true);});
 function recevoirChat(m){
   NET.chat.push(m); if(NET.chat.length>80)NET.chat.shift(); renderChat();
   if(m.pid!==NET.me&&VIEW!=='sLobby'&&!GAME){const t=$('#toastChat');t.innerHTML=`💬 <b>${esc(m.nom)}</b> : ${esc(m.txt)}`;t.classList.remove('on');void t.offsetWidth;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),3500);}
