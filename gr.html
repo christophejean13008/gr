@@ -275,6 +275,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
   <div class="card"><div class="lbl">Salle de compétition</div><div class="chips" id="rgSalle"></div><p class="hint" id="rgSalleHint"></p></div>
   <div class="card"><div class="lbl">Niveau</div><div class="chips" id="rgNiv"></div><p class="hint" id="rgNivHint"></p></div>
   <div class="card"><div class="lbl">Musique</div><div class="chips" id="rgMus"></div>
+    <div class="lbl" style="margin:10px 0 6px">🎼 Musiques de gym</div><div class="chips" id="rgBib"></div>
     <label class="filebtn">📂 Importer ma musique (MP3, M4A…)<input type="file" id="rgFile" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,audio/mpeg,audio/mp4" hidden></label>
     <p class="hint" id="rgMusInfo"></p>
     <div class="row" id="rgBpmRow" style="display:none">Tempo :<button id="bpmM">−</button><b id="bpmV">100</b>bpm<button id="bpmP">+</button></div>
@@ -441,6 +442,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
     <h3>Le principe</h3>
     <p>La musique démarre, les <b>notes</b> arrivent de la droite sur la bande en bas de l'écran. Agis au moment où une note passe dans le <b>cercle blanc</b>, à gauche. Plus tu es pile dans le temps, meilleure est ta note.</p>
     <p>Au-dessus de la bande, une étiquette annonce l'élément qui arrive, sa valeur et le geste à faire.</p>
+    <p style="font-size:.8rem;opacity:.8">🎼 Musiques de gym : Kevin MacLeod (incompetech.com), licence Creative Commons BY 3.0.</p>
     <h3>Les gestes</h3>
     <div class="aide-l"><span class="pt" style="background:#ff4fa3">●</span><div><b>Touche</b> l'écran une fois.</div></div>
     <div class="aide-l"><span class="pt" style="background:#4cc9f0">●●</span><div><b>Touche 2 fois</b> rapidement.</div></div>
@@ -605,6 +607,26 @@ const MUSIQUES=[
   {id:'elan',nom:'Élan · 100 bpm',bpm:100,seed:7,prog:[[60,64,67],[55,59,62],[57,60,64],[53,57,60]]},
   {id:'petillante',nom:'Pétillante · 124 bpm',bpm:124,seed:21,prog:[[57,60,64],[53,57,60],[60,64,67],[55,59,62]]}
 ];
+/* Musiques libres de droit (Kevin MacLeod, incompetech.com, licence Creative Commons BY 3.0),
+   à déposer dans le dossier « musiques/ » du dépôt GitHub, à côté de gr.html */
+const BIBLIO=[
+  {id:'habanera',nom:'Habanera · Carmen (Bizet)',ico:'🌹',f:'habanera.mp3'},
+  {id:'fee',nom:'Fée Dragée · Casse-Noisette (Tchaïkovski)',ico:'🩰',f:'fee-dragee.mp3'},
+  {id:'beethoven',nom:'5ᵉ Symphonie (Beethoven)',ico:'⚡',f:'beethoven5.mp3'},
+  {id:'mozart',nom:'Divertimento (Mozart)',ico:'🎻',f:'mozart-divertimento.mp3'},
+  {id:'bach',nom:'Concerto brandebourgeois n°4 (Bach)',ico:'🎶',f:'bach-brandebourgeois.mp3'}
+];
+const CREDIT_BIB='Musique : Kevin MacLeod (incompetech.com) · Licence Creative Commons BY 3.0';
+const BIB={};
+async function chargerBiblio(id){
+  if(BIB[id]&&BIB[id].buffer)return BIB[id];
+  const M=BIBLIO.find(m=>m.id===id); if(!M)throw new Error('musique inconnue');
+  const r=await fetch('musiques/'+M.f); if(!r.ok)throw new Error(`fichier musiques/${M.f} introuvable sur le site`);
+  const bytes=await r.arrayBuffer(), buffer=await getAC().decodeAudioData(bytes.slice(0));
+  const on=analyseEnv(buffer); let {bpm,offset}=detectTempo(on);
+  const reg=store.get('rs_bibbpm',{})[id]; if(reg){bpm=reg;offset=gridScore(on,bpm).offset;}
+  return BIB[id]={id,nom:M.nom,bytes,buffer,bpm,offset,on,lib:id};
+}
 const CATCOL={PX:'#ff3b3b',DB:'#ff4fa3',R:'#ffd166',DA:'#4cc9f0',pas:'#b388ff',final:'#ffffff',acro:'#5be7a9',EX:'#ff9f43'};
 const CATLBL={PX:'😈',DB:'DB',R:'R',DA:'DA',pas:'Pas',final:'Fin',acro:'Acro',EX:'Échange'};
 const EXHINT={lancer:'Glisse vers le haut ⬆ pour lancer à ta partenaire !',tour:'Dessine un rond ↺ pour tourner !',rattraper:'Glisse vers le bas ⬇ pour rattraper !'};
@@ -1640,9 +1662,10 @@ function detectTempo(on){
 }
 async function getMusicSel(){
   if(S.musique==='custom'&&S.custom){const c=S.custom;return {buffer:c.buffer,bpm:c.bpm,offset:c.offset,dur:c.buffer.duration,finAt:null,nom:c.nom,id:'custom'};}
+  if(String(S.musique).startsWith('lib:')){const c=await chargerBiblio(S.musique.slice(4));return {buffer:c.buffer,bpm:c.bpm,offset:c.offset,dur:c.buffer.duration,finAt:null,nom:c.nom,id:S.musique,bytes:c.bytes};}
   return genMusic(S.musique);
 }
-function musName(){return S.musique==='custom'&&S.custom?S.custom.nom:(MUSIQUES.find(m=>m.id===S.musique)||MUSIQUES[0]).nom;}
+function musName(){if(String(S.musique).startsWith('lib:')){const M=BIBLIO.find(m=>'lib:'+m.id===S.musique);if(M)return M.nom;}return S.musique==='custom'&&S.custom?S.custom.nom:(MUSIQUES.find(m=>m.id===S.musique)||MUSIQUES[0]).nom;}
 
 /* =============================== Jeu =============================== */
 let GAME=null;
@@ -2199,7 +2222,11 @@ async function guestData(d){
     case 'troc': case 'trocRep': gererTroc(d); break;
     case 'exclu': NET.prep=null;NET.mus=null;NET.rx=null;$('#lbPret').style.display='none';netStatus('⏩ La partie a démarré sans toi (musique pas prête à temps). Tu joueras la suivante !');break;
     case 'prep': NET.prep=d;NET.finals=new Map();NET.musOk=false;NET.mus=null;netStatus('Préparation de la musique…');envoyerEtat('prépare la musique',true);syncHorloge(4);
-      if(d.musique!=='custom'){try{NET.mus=await genMusic(d.musique);musiquePrete();}catch(e){netStatus('Erreur musique : '+e.message);envoyerEtat('erreur musique',true);}}
+      if(String(d.musique).startsWith('lib:')){
+        try{const c=await chargerBiblio(d.musique.slice(4));NET.mus={buffer:c.buffer,bpm:d.bpm,offset:d.offset,dur:d.dur,finAt:d.finAt,nom:d.musNom};musiquePrete();}
+        catch(e){NET.rx={n:d.n,parts:new Array(d.n),got:0,last:maint()};const miss=[];for(let i=0;i<Math.min(400,d.n);i++)miss.push(i);try{NET.hostConn.send({t:'need',miss});}catch(_){}}
+      }
+      else if(d.musique!=='custom'){try{NET.mus=await genMusic(d.musique);musiquePrete();}catch(e){netStatus('Erreur musique : '+e.message);envoyerEtat('erreur musique',true);}}
       else NET.rx={n:d.n,parts:new Array(d.n),got:0,last:maint()};
       break;
     case 'm': {
@@ -2243,6 +2270,7 @@ async function lancerOnline(){
   try{
     getAC(); const mus=await getMusicSel(); NET.mus=mus; NET.finals=new Map(); NET.inGame=true;
     const prep={t:'prep',seed:Math.floor(Math.random()*1e9),engin:S.engin,niv:S.niv,bpm:mus.bpm,offset:mus.offset,dur:mus.dur,finAt:mus.finAt||null,musique:mus.id==='custom'?'custom':mus.id,musNom:mus.nom};
+    const estLib=String(mus.id).startsWith('lib:');
     prep.perturb=NET.perturb||null; prep.salle=S.salle||'star';
     if(NET.set&&NET.set.coop){prep.coop=true;prep.order=NET.players.filter(p=>p.pid!==NET.perturb).map(p=>p.pid);prep.design=S.engDesign[S.engin]||null;}
     NET.players.forEach(p=>p.pret=p.pid==='host');
@@ -2250,6 +2278,8 @@ async function lancerOnline(){
     if(prep.musique==='custom'){
       const bytes=new Uint8Array(S.custom.bytes),CH=16000,n=Math.ceil(bytes.length/CH); prep.n=n; NET.prep=prep; NET.musBytes=bytes; broadcast(prep);
       const idx=[...Array(n).keys()]; for(const c of NET.conns.values())envoyerMorceaux(c,idx);
+    } else if(estLib){ // les invitées téléchargent la musique sur le site (plus rapide) ; en secours, l'hôte l'envoie par morceaux
+      const bytes=new Uint8Array(mus.bytes),CH=16000; prep.n=Math.ceil(bytes.length/CH); NET.prep=prep; NET.musBytes=bytes; broadcast(prep);
     } else {NET.prep=prep;NET.musBytes=null;broadcast(prep);}
     lobbyBientot();
     netStatus('Les autres téléphones se préparent…'); renderLobby(); checkAllReady();
@@ -2425,13 +2455,14 @@ function buildChoreo(seq,engin,mus,niv){
   return {notes,els,acts,flights,B,first,final:finalT,engin,niv,cut};
 }
 const CH={nom:'',engin:S.engin,seq:[],cat:'saut'};
-function chMus(){return S.musique==='custom'&&S.custom?{bpm:S.custom.bpm,offset:S.custom.offset,dur:S.custom.buffer.duration}:{bpm:(MUSIQUES.find(m=>m.id===S.musique)||MUSIQUES[0]).bpm,offset:.3,dur:91.5};}
+function chMus(){const lb=String(S.musique).startsWith('lib:')&&BIB[S.musique.slice(4)];if(lb&&lb.buffer)return {bpm:lb.bpm,offset:lb.offset,dur:lb.buffer.duration};return S.musique==='custom'&&S.custom?{bpm:S.custom.bpm,offset:S.custom.offset,dur:S.custom.buffer.duration}:{bpm:(MUSIQUES.find(m=>m.id===S.musique)||MUSIQUES[0]).bpm,offset:.3,dur:91.5};}
 function ouvrirAtelier(){renderAtelier();show('sChoreo');}
 function renderAtelier(){
   $('#chNom').value=CH.nom;
   chips($('#chEngin'),Object.entries(ENGINS).map(([k,e])=>({k,t:e.ico+' '+e.nom})),CH.engin,k=>{CH.engin=k;CH.seq=CH.seq.filter(it=>it.c!=='DA');renderAtelier();});
   const mus=MUSIQUES.map(m=>({k:m.id,t:'🎵 '+m.nom})); if(S.custom)mus.push({k:'custom',t:'🎧 '+S.custom.nom});
-  chips($('#chMus'),mus,S.musique,k=>{S.musique=k;saveS();renderAtelier();});
+  for(const m of BIBLIO)mus.push({k:'lib:'+m.id,t:m.ico+' '+m.nom});
+  chips($('#chMus'),mus,S.musique,k=>{S.musique=k;saveS();renderAtelier();if(k.startsWith('lib:'))chargerBiblio(k.slice(4)).then(()=>{if(S.musique===k)renderAtelier();}).catch(e=>alert(e.message));});
   const liste=store.get('rs_choreos',[]);
   $('#chListe').innerHTML=liste.length?liste.map((c,i)=>`<option value="${i}">${esc(c.nom)} – ${ENGINS[c.engin].nom}</option>`).join(''):'<option value="">(aucune pour l\'instant)</option>';
   chips($('#chCat'),CH_CATS.map(([k,t])=>({k,t:k==='DA'?ENGINS[CH.engin].ico+' '+ENGINS[CH.engin].nom:t})),CH.cat,k=>{CH.cat=k;renderAtelier();});
@@ -2991,14 +3022,23 @@ function renderReglage(){
   $('#rgNivHint').textContent=NIVEAUX[S.niv].hint;
   const mus=MUSIQUES.map(m=>({k:m.id,t:'🎵 '+m.nom})); if(S.custom)mus.push({k:'custom',t:'🎧 '+S.custom.nom});
   chips($('#rgMus'),mus,S.musique,k=>{S.musique=k;saveS();renderReglage();});
-  const c=S.musique==='custom'&&S.custom;
+  const libId=String(S.musique).startsWith('lib:')?S.musique.slice(4):null;
+  chips($('#rgBib'),BIBLIO.map(m=>({k:'lib:'+m.id,t:m.ico+' '+m.nom})),S.musique,async k=>{
+    S.musique=k;saveS();renderReglage(); $('#rgMusInfo').textContent='⏳ Chargement de la musique…';
+    try{await chargerBiblio(k.slice(4));}catch(e){if(S.musique===k)$('#rgMusInfo').textContent='⚠️ '+e.message;return;}
+    if(S.musique===k){renderReglage();if(RG_MODE==='online'&&NET.host){hostSettings();broadcastLobby();}}
+  });
+  const c=S.musique==='custom'&&S.custom||(libId&&BIB[libId]&&BIB[libId].buffer?BIB[libId]:null);
   $('#rgBpmRow').style.display=c?'flex':'none';
   if(c){$('#bpmV').textContent=Math.round(c.bpm);const d=c.buffer.duration;$('#rgMusInfo').textContent=`Durée ${Math.floor(d/60)}:${String(Math.floor(d%60)).padStart(2,'0')} · tempo détecté. Si les notes ne tombent pas sur les temps, ajuste le tempo.${d<75?' ⚠️ Musique de moins de 1\'15" : pénalité de durée.':''}`;}
+  else if(libId)$('#rgMusInfo').textContent='⏳ Chargement de la musique…';
   else $('#rgMusInfo').textContent='Musiques du jeu, ou la tienne (celle de ta compétition !).';
+  if(c&&c.lib)$('#rgMusInfo').textContent+=' '+CREDIT_BIB+'.';
+  if(libId&&!c)chargerBiblio(libId).then(()=>{if(VIEW==='sReglage'&&S.musique==='lib:'+libId)renderReglage();}).catch(e=>{if(S.musique==='lib:'+libId)$('#rgMusInfo').textContent='⚠️ '+e.message;});
   $('#rgLat').value=S.latence; $('#rgLatV').textContent=S.latence+' ms';
 }
 $('#rgLat').addEventListener('input',e=>{S.latence=+e.target.value;$('#rgLatV').textContent=S.latence+' ms';saveS();});
-function bpmAdj(d){const c=S.custom;if(!c)return;c.bpm=Math.max(60,Math.min(190,Math.round(c.bpm)+d));c.offset=gridScore(c.on,c.bpm).offset;renderReglage();if(RG_MODE==='online'&&NET.host){hostSettings();broadcastLobby();}}
+function bpmAdj(d){const lib=String(S.musique).startsWith('lib:')?BIB[S.musique.slice(4)]:null,c=lib||S.custom;if(!c||!c.buffer)return;c.bpm=Math.max(60,Math.min(190,Math.round(c.bpm)+d));c.offset=gridScore(c.on,c.bpm).offset;if(lib){const o=store.get('rs_bibbpm',{});o[lib.id]=c.bpm;store.set('rs_bibbpm',o);}renderReglage();if(RG_MODE==='online'&&NET.host){hostSettings();broadcastLobby();}}
 $('#bpmM').onclick=()=>bpmAdj(-1); $('#bpmP').onclick=()=>bpmAdj(1);
 /* iPad / iPhone : le filtre « accept » grise souvent les MP3 et les FBX dans l'app Fichiers → on l'enlève */
 if(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1))
