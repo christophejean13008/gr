@@ -439,7 +439,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
     <div class="aide-l"><span class="pt" style="background:#ff4fa3">➜</span><div><b>Glisse</b> le doigt, dans n'importe quel sens (pivots).</div></div>
     <div class="aide-l"><span class="pt" style="background:#4cc9f0">↻</span><div><b>Dessine des cercles</b> avec le doigt tant que la barre passe. Une jauge verte montre où tu en es.</div></div>
     <div class="aide-l"><span class="pt" style="background:#4cc9f0">〰</span><div><b>Fais des zigzags</b> (serpentins du ruban).</div></div>
-    <div class="aide-l"><span class="pt" style="background:#ffd166">⬆</span><div><b>Lancer</b> : touche ⬆ pour lancer, ↺ à chaque tour sous l'engin, puis ⬇ pour <b>rattraper</b>. Rater le rattrapé = perte d'engin !</div></div>
+    <div class="aide-l"><span class="pt" style="background:#ffd166">⬆</span><div><b>Lancer</b> : <b>glisse le doigt vers le haut</b> ⬆ pour lancer (un simple appui ne suffit pas), ↺ à chaque tour sous l'engin, puis ⬇ pour <b>rattraper</b>. Rater le rattrapé = perte d'engin !</div></div>
     <div class="aide-l"><span class="pt" style="background:#ff9f43">🤝</span><div><b>Échange</b> (mode coopératif) : ⬆ pour lancer ton engin à ta partenaire, puis ⬇ pour rattraper celui qu'on t'envoie. Un lancer raté fait tomber l'engin : toute l'équipe perd des points !</div></div>
     <h3>Les couleurs</h3>
     <div class="aide-l"><span class="pt" style="background:#ff4fa3"></span><div><b>Rose – DB</b> : difficultés corporelles (sauts, équilibres, pivots).</div></div>
@@ -598,11 +598,11 @@ const MUSIQUES=[
 ];
 const CATCOL={PX:'#ff3b3b',DB:'#ff4fa3',R:'#ffd166',DA:'#4cc9f0',pas:'#b388ff',final:'#ffffff',acro:'#5be7a9',EX:'#ff9f43'};
 const CATLBL={PX:'😈',DB:'DB',R:'R',DA:'DA',pas:'Pas',final:'Fin',acro:'Acro',EX:'Échange'};
-const EXHINT={lancer:'Lance à ta partenaire !',tour:'Tourne sous l\'engin !',rattraper:'Rattrape l\'engin de ta partenaire !'};
+const EXHINT={lancer:'Glisse vers le haut ⬆ pour lancer à ta partenaire !',tour:'Tourne sous l\'engin !',rattraper:'Rattrape l\'engin de ta partenaire !'};
 const ICON={tap:'●',double:'●●',hold:'▬',swipe:'➜',circle:'↻',zigzag:'〰'};
 const ROLEICON={lancer:'⬆',tour:'↺',rattraper:'⬇'};
 const GHINT={tap:'Touche',double:'Touche 2 fois',hold:'Maintiens appuyé',swipe:'Glisse le doigt',circle:'Dessine des cercles',zigzag:'Fais des zigzags'};
-const ROLEHINT={lancer:'Lance !',tour:'Tourne sous l\'engin !',rattraper:'Rattrape !'};
+const ROLEHINT={lancer:'Glisse vers le haut ⬆ pour lancer !',tour:'Tourne sous l\'engin !',rattraper:'Rattrape !'};
 const ETAB={PX:[0,0,0,0],EX:[0,.1,.3,.5],acro:[0,.1,.3,.5],DB:[0,.1,.3,.5],R:[0,.1,.3,.5],DA:[0,.1,.3,.5],pas:[0,0,.1,.1],final:[0,.1,.2,.3]};
 const GRADES=[{t:'Parfait !',c:'#5be7a9'},{t:'Bien',c:'#9be15d'},{t:'Juste',c:'#ffd166'},{t:'Raté',c:'#ff6b6b'}];
 
@@ -1347,8 +1347,10 @@ async function habiller(obj,out,bones){
     float ds=9.; for(int i=0;i<4;i++){ds=min(ds,distance(orig,uSkinC[i]));}
     float estTissu=smoothstep(-.03,.03,ds-dl);
     float arm=max(uSleeve.x*vLeo.y,uSleeve.y*vLeo.z);
-    float m=clamp(smoothstep(.15,.4,vLeo.x)*estTissu+smoothstep(.2,.45,arm),0.,1.);
     vec3 p=vBindPos-uCenter;
+    // sur les côtés (haut des cuisses), le poids du bassin vaut ~0,5 : on exige plus pour éviter les traînées sur les hanches
+    float seuil=mix(.15,.5,smoothstep(.03*uH,.055*uH,abs(p.x)));
+    float m=clamp(smoothstep(seuil,seuil+.14,vLeo.x)*estTissu+smoothstep(.2,.45,arm),0.,1.);
     vec2 uvC=vec2(atan(p.x,p.z)/6.2831853+.5, p.y/uH*3.8);
     vec2 uvA=vec2(atan(p.y,p.z)/6.2831853+.5, p.x/uH*3.8);
     vec2 uvL=arm>.5?uvA:uvC;
@@ -1503,7 +1505,7 @@ function genChoreo({seed,engin,niv,bpm,offset,dur,finAt,coop=0}){
     else if(type==='EX'){
       const dir=nEx%2?-1:1,cb=nR+2,v=.2+.1*nR;
       els.push({type:'EX',nom:'Échange'+(nR?` + ${nR} tour${nR>1?'s':''} sous l'engin`:'')+(coop>2?(dir>0?' (vers la droite)':' (vers la gauche)'):''),v});
-      note({t:at(0),g:'tap',cat:'EX',role:'lancer',el:ei,ex:nEx});
+      note({t:at(0),g:'swipe',dir:'up',cat:'EX',role:'lancer',el:ei,ex:nEx});
       for(let i=1;i<=nR;i++) note({t:at(i),g:'tap',cat:'EX',role:'tour',el:ei,ex:nEx});
       note({t:at(cb),g:'tap',cat:'EX',role:'rattraper',el:ei,ex:nEx});
       acts.push({name:'lancer',t0:at(0)-.05,dur:.5*B+.1});
@@ -1514,7 +1516,7 @@ function genChoreo({seed,engin,niv,bpm,offset,dur,finAt,coop=0}){
     else if(type==='R'){
       const crit=li===2,v=.2+.1*(nR-2)+(crit?.1:0);
       els.push({type:'R',nom:'R'+nR+' · lancer + '+nR+' tours'+(crit?' + rattrapé hors champ visuel':''),v});
-      note({t:at(0),g:'tap',cat:'R',role:'lancer',el:ei});
+      note({t:at(0),g:'swipe',dir:'up',cat:'R',role:'lancer',el:ei});
       for(let i=1;i<=nR;i++) note({t:at(i),g:'tap',cat:'R',role:'tour',el:ei});
       note({t:at(nR+1),g:'tap',cat:'R',role:'rattraper',el:ei});
       acts.push({name:'lancer',t0:at(0)-.05,dur:.5*B+.1});
@@ -1743,7 +1745,8 @@ const PT=new Map();
 function horsTemps(T){
   const g=GAME; if(g.demo||T<g.first-1||T>g.final+1)return;
   if(activeTrace(T)||activeTrace(T+.45))return;               // cercles / zigzags en cours ou imminents
-  if(g.notes.some(n=>Math.abs(T-n.t)<.35))return;             // juste un peu tôt / tard sur une note : déjà jugé par la note
+  if(g.notes.some(n=>!n.judged&&Math.abs(T-n.t)<.35))return;   // juste un peu tôt sur une note pas encore jugée
+  if(g.notes.some(n=>n.judged&&n.jt!=null&&T-n.jt>=0&&T-n.jt<.12))return; // rebond du doigt juste après un appui réussi
   if(g.notes.some(n=>n.started&&!n.judged))return;            // tenue ou glissé déjà commencé
   const st=g.st; st.dedE+=.1; st.fE.p++; st.fA.hors++; st.combo=0;
   popup('Hors temps','#ff9f6b','E −0,10');
@@ -1776,7 +1779,7 @@ jeuEl.addEventListener('pointerdown',e=>{
 jeuEl.addEventListener('pointermove',e=>{
   if(!GAME||GAME.done)return; const p=PT.get(e.pointerId); if(!p)return;
   const T=gameTime(),x=e.clientX,y=e.clientY; addTrail(e.pointerId,x,y);
-  for(const n of GAME.notes){if(n.g==='swipe'&&n.started&&!n.judged&&n.pid===e.pointerId&&Math.hypot(x-n.sx,y-n.sy)>=45)finalize(n,n.pend);}
+  for(const n of GAME.notes){if(n.g==='swipe'&&n.started&&!n.judged&&n.pid===e.pointerId&&swipeOk(n,x,y))finalize(n,n.pend);}
   const tn=activeTrace(T);
   if(tn){
     if(p.tn!==tn){p.tn=tn;p.cx=x;p.cy=y;p.ang=null;p.zx={};p.zy={};}
@@ -1788,13 +1791,14 @@ jeuEl.addEventListener('pointermove',e=>{
   }
   p.lx=x;p.ly=y;
 });
+const swipeOk=(n,x,y)=>n.dir==='up'?(n.sy-y>=45&&n.sy-y>Math.abs(x-n.sx)*.8):Math.hypot(x-n.sx,y-n.sy)>=45;
 function onUp(e){
   if(!GAME||GAME.done){PT.delete(e.pointerId);return;}
   const T=gameTime();
   for(const n of GAME.notes){
     if(n.judged||!n.started||n.pid!==e.pointerId)continue;
     if(n.g==='hold'){const f=(T-n.t)/n.dur;finalize(n,f>=.85?n.pend:f>=.55?down(n.pend):3);}
-    else if(n.g==='swipe')finalize(n,down(n.pend));
+    else if(n.g==='swipe')finalize(n,swipeOk(n,e.clientX,e.clientY)?n.pend:3); // simple appui sans glisser = raté
   }
   PT.delete(e.pointerId);
 }
@@ -1815,7 +1819,7 @@ function tick(T,dt){
       if(!n.started&&T>n.t+w2)finalize(n,3);
       else if(n.g==='double'&&n.started&&T-n.first>.42)finalize(n,down(n.pend));
       else if(n.g==='hold'&&n.started&&T>=n.t+n.dur)finalize(n,n.pend);
-      else if(n.g==='swipe'&&n.started&&T-n.st>.5)finalize(n,down(n.pend));
+      else if(n.g==='swipe'&&n.started&&T-n.st>.5)finalize(n,3);
     } else if(T>n.t+n.dur+.05){const r=(n.acc||0)/n.need;finalize(n,r>=1?0:r>=.7?1:r>=.4?2:3);}
   }
   // HUD
@@ -2374,7 +2378,7 @@ function buildChoreo(seq,engin,mus,niv){
       acts.push({name:'acro',variant:f.var,t0:at(0),dur:(len-.4)*B});
     } else if(f.cat==='R'){
       els.push({type:'R',nom:f.nom,v:f.v});
-      note({t:at(0),g:'tap',cat:'R',role:'lancer',el:ei});
+      note({t:at(0),g:'swipe',dir:'up',cat:'R',role:'lancer',el:ei});
       for(let i=1;i<=f.n;i++)note({t:at(i),g:'tap',cat:'R',role:'tour',el:ei});
       note({t:at(f.n+1),g:'tap',cat:'R',role:'rattraper',el:ei});
       acts.push({name:'lancer',t0:at(0)-.05,dur:.5*B+.1});
