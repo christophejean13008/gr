@@ -170,6 +170,10 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 #trocModal .card{max-height:85vh;overflow:auto}
 .mini-cartes{display:flex;gap:8px;flex-wrap:wrap}.mini-cartes .carte{width:74px;height:100px;font-size:.58rem}.mini-cartes .carte .ce{font-size:1.9rem}.mini-cartes .carte.sel{outline:3px solid #ff4fa3;outline-offset:2px}
 #cadenas{position:absolute;top:max(10px,env(safe-area-inset-top));right:12px;width:42px;height:42px;padding:0;border-radius:50%;font-size:1.25rem;background:rgba(40,22,66,.7);border:1px solid rgba(255,255,255,.25);z-index:3}
+.soutien{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:6px}
+.soutien .pill{display:inline-block;text-decoration:none;color:#fff;font-weight:700;font-size:.8rem;padding:6px 12px;border-radius:999px;background:rgba(40,22,66,.75);border:1.5px solid rgba(255,255,255,.35);box-shadow:0 3px 10px rgba(0,0,0,.35);white-space:nowrap}
+.soutien .pill.cafe{background:linear-gradient(135deg,#ffb703,#ff7a59);border-color:rgba(255,255,255,.6)}
+.soutien .pill:active{transform:scale(.95)}
 #classement{position:absolute;top:max(10px,env(safe-area-inset-top));left:10px;z-index:3;width:138px;padding:6px 8px 7px;border:1.5px solid rgba(200,200,210,.65);border-radius:12px;background:transparent;font-size:.68rem;line-height:1.25;text-shadow:0 1px 3px rgba(0,0,0,.9);pointer-events:auto}
 #classement .ct{font-weight:800;font-size:.74rem;text-align:center;margin-bottom:2px;cursor:pointer}
 #classement .cp{color:#ffd166;font-weight:800;margin-top:3px}
@@ -206,7 +210,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <div id="sAccueil" class="screen on">
   <button id="cadenas" title="Code">🔒</button>
   <div id="classement"><div class="ct">🏆 Classement ▾</div><div class="cb"></div></div>
-  <div class="brand"><div class="logo">🎀</div><h1>Rythmique <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
+  <div class="brand"><div class="soutien"><a class="pill" id="btMail" href="mailto:chris333j@yahoo.fr?subject=Rythmique%20Star">✉️ M'écrire</a><a class="pill cafe" id="btCafe" href="#" target="_blank" rel="noopener">☕ Offrir un café</a></div><div class="logo">🎀</div><h1>Rythmique <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
   <label class="field">Ton prénom<input id="inNom" maxlength="14" placeholder="Prénom" autocomplete="off"></label>
   <div id="rdvBox" class="card rdv" style="display:none"></div>
   <div class="acc3">
@@ -2633,6 +2637,9 @@ let VIEW='sAccueil';
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id));VIEW=id;try{veilleSalon(id==='sLobby'&&!!NET.peer);}catch(e){}if(id==='sJeu')resizeHUD();}
 /* ========================= Classement en ligne (Firebase Realtime Database) ========================= */
 // Adresse de la base Firebase (ex. https://rythmique-star-default-rtdb.europe-west1.firebasedatabase.app). Vide = classement de cet appareil seulement.
+/* Lien de soutien « offrir un café » (Ko-fi, Buy Me a Coffee, PayPal.me…). Vide = message d'attente. */
+const SOUTIEN_URL='https://ko-fi.com/christophejean13008';
+if(SOUTIEN_URL)$('#btCafe').href=SOUTIEN_URL; else $('#btCafe').onclick=e=>{e.preventDefault();alert('☕ Merci ! Le lien pour offrir un café arrive bientôt.');};
 const FB_URL='https://rythmique-star-default-rtdb.europe-west1.firebasedatabase.app';
 const PERIODES=[['total','Depuis toujours'],['mois','Ce mois-ci'],['sem','Cette semaine'],['jour','Aujourd\'hui']];
 function clesPeriode(d=new Date()){
