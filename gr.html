@@ -135,6 +135,12 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 #hLive{position:absolute;top:calc(max(8px,env(safe-area-inset-top)) + 50px);right:8px;font-size:.78rem;pointer-events:none;background:rgba(18,8,31,.55);border-radius:10px;padding:4px 8px;display:none}
 #hLive div{display:flex;gap:10px;justify-content:space-between}#hLive .moi{color:var(--accent2)}
 #hCount{position:absolute;top:30%;left:0;right:0;text-align:center;font-size:5rem;font-weight:900;pointer-events:none;text-shadow:0 4px 18px #000}
+#hVies{position:absolute;top:calc(max(10px,env(safe-area-inset-top)) + 58px);left:12px;z-index:5;font-size:1.5rem;letter-spacing:2px;display:none;text-shadow:0 2px 8px rgba(0,0,0,.8);pointer-events:none}
+#hVies small{display:block;font-size:.75rem;font-weight:800;color:#ffb38a;letter-spacing:0}
+#hVies.perd{animation:viePerd .5s}
+@keyframes viePerd{0%,100%{transform:scale(1)}30%{transform:scale(1.5) rotate(-8deg)}60%{transform:scale(.9) rotate(6deg)}}
+.chip.survie{color:#ff7a45;border:2px solid #ff7a45;font-weight:800}
+.chip.survie.on{background:linear-gradient(135deg,#ff7a45,#d4145a);color:#fff;border-color:#ffd166}
 #hJudge{position:absolute;top:24%;left:0;right:0;text-align:center;font-size:2rem;font-weight:900;pointer-events:none;opacity:0;text-shadow:0 3px 12px rgba(0,0,0,.8)}
 #hJudge small{display:block;font-size:.95rem;font-weight:700}
 #bonus{position:absolute;z-index:6;width:78px;height:78px;margin:-39px 0 0 -39px;display:none;touch-action:none;filter:drop-shadow(0 0 12px rgba(255,209,102,.9))}
@@ -438,6 +444,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
   <div id="hLive"></div>
   <div id="hCount"></div>
   <div id="hJudge"></div>
+  <div id="hVies"></div>
   <div id="bonus"><svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="36"/></svg><div class="forme"></div><div class="ico"></div></div>
   <div id="hPrompt"></div>
   <div id="hElem"></div>
@@ -699,7 +706,7 @@ const GRADES=[{t:'Parfait !',c:'#5be7a9'},{t:'Bien',c:'#9be15d'},{t:'Juste',c:'#
 
 /* ============================ Réglages ============================ */
 const S=Object.assign({nom:'',leo:'p0',engin:'ruban',niv:'federale',latence:0,musique:'elan'},store.get('rs_cfg',{}));
-S.custom=null; S.prevEngin=S.engin;
+S.custom=null; S.prevEngin=S.engin; S.survie=!!store.get('rs_survie_on',false);
 if(!S.corps){if(S.leo&&S.leo[0]==='t'&&!S.leo.includes('|')){S.corps=S.leo;S.tenue='orig';}else{S.corps='mannequin';S.tenue=S.leo||'p0';}}
 if(S.leo&&S.leo.includes('|')){const [cb,ct]=S.leo.split('|');S.corps=cb;S.tenue=ct;} S.engDesign=store.get('rs_eng',{}); if(S.musique==='custom') S.musique='elan';
 function composeLeo(){if(S.corps!=='mannequin'&&!leoDefBody(S.corps))S.corps='mannequin';if(S.corps==='mannequin'&&MODELES_TRIPO.length){S.corps='t0';if(S.tenue==='p0'&&!S._tenueChoisie)S.tenue='orig';}if(S.corps==='mannequin'&&S.tenue==='orig')S.tenue='p0';S.leo=S.corps==='mannequin'?S.tenue:S.corps+'|'+S.tenue;}
@@ -1763,7 +1770,7 @@ function newStats(){return {dedE:0,dedA:0,DB:[],R:[],DA:[],groups:new Set(),line
 const sum=a=>a.reduce((x,y)=>x+y,0);
 function computeD(st){return sum([...st.DB].sort((a,b)=>b-a).slice(0,8))+sum(st.R.slice(0,4))+sum(st.DA.slice(0,15))+sum(st.EX||[]);}
 function liveScores(){const g=GAME,st=g.st;const D=computeD(st),E=Math.max(0,10-st.dedE),A=Math.max(0,10-st.dedA);const T=gameTime();return {D,E,A,T:Math.max(0,D+E+A-st.line)+(st.bonus||0),prog:clamp((T-g.first)/(g.final-g.first),0,1)};}
-function gameTime(){if(!GAME)return 0;return AC.currentTime-GAME.startAt-S.latence/1000-(AC.outputLatency||0);}
+function gameTime(){if(!GAME)return 0;const v=GAME.surv;if(v)return v.m0+(AC.currentTime-v.w0)*v.r-S.latence/1000-(AC.outputLatency||0);return AC.currentTime-GAME.startAt-S.latence/1000-(AC.outputLatency||0);}
 
 function lancerPartie({choreo,music,nom,leo,design=null,opponents=[],online=false,demo=false,retour=null,coop=null,perturb=false,vue=null,debut=null,onFin}){
   if(PREV){PREV.dispose();PREV=null;PREVKEY='';}
@@ -1964,7 +1971,7 @@ bnEl.addEventListener('pointermove',e=>{
 });
 const bnUp=e=>{if(BNP.delete(e.pointerId))e.stopPropagation();};
 bnEl.addEventListener('pointerup',bnUp); bnEl.addEventListener('pointercancel',bnUp);
-function finirJeu(){const g=GAME;if(!g)return;fxReset();bonusCacher();publicFin();try{g.wl&&g.wl.release();}catch(e){}clearInterval(g.liveTimer);g.main.dispose();for(const v of g.ghosts.values())v.gym.dispose();GAME=null;}
+function finirJeu(){const g=GAME;if(!g)return;$('#hVies').style.display='none';fxReset();bonusCacher();publicFin();try{g.wl&&g.wl.release();}catch(e){}clearInterval(g.liveTimer);g.main.dispose();for(const v of g.ghosts.values())v.gym.dispose();GAME=null;}
 
 function finalize(n,gr){
   const g=GAME,st=g.st,el=g.els[n.el],T=gameTime();
@@ -1975,6 +1982,7 @@ function finalize(n,gr){
     return;}
   if(gr<=1){st.combo++;st.maxCombo=Math.max(st.maxCombo,st.combo);}else st.combo=0;
   ambianceNote(g,gr,st.combo);
+  if(g.surv&&gr===3)survieRate(g);
   let e=ETAB[n.cat][gr],sub='';
   if(n.cat==='EX'&&gr===3&&(n.role==='rattraper'||n.role==='lancer')){e=0;exPerte(n,n.role);}
   else if(n.role==='rattraper'&&gr===3){e=0;perte(n);}
@@ -2102,7 +2110,7 @@ function tick(T,dt){
       else if(n.g==='swipe'&&n.started&&T-n.st>(n.dir==='rond'?1.1:.5))finalize(n,3);
     } else if(T>n.t+n.dur+.05){const r=(n.acc||0)/n.need;finalize(n,r>=1?0:r>=.7?1:r>=.4?2:3);}
   }
-  bonusFrame(T); publicFrame(T,dt);
+  bonusFrame(T); publicFrame(T,dt); if(g.surv)survieFrame(g);
   // HUD
   hEls.Count.textContent=T<0?Math.ceil(-T):'';
   const tn=activeTrace(T);
@@ -2294,6 +2302,70 @@ function showResult(res,{titre,actions,avant=''}={}){
 }
 
 /* ========================= Modes de jeu ========================= */
+/* ================= Mode survie : 3 cœurs, la musique accélère ================= */
+function genSurvie(mus,engin){
+  const L=mus.finAt-mus.offset, base=Math.floor(Math.random()*1e9), out={notes:[],els:[],acts:[],flights:[],B:0,first:0,final:0,engin,niv:'federale'};
+  for(let k=0;k<14;k++){
+    const c=genChoreo({seed:base+k*7919,engin,niv:'federale',bpm:mus.bpm,offset:mus.offset,dur:mus.dur,finAt:mus.finAt}),sh=k*L,e0=out.els.length;
+    if(!k){out.B=c.B;out.first=c.first;}
+    for(const n of c.notes){if(n.cat==='final')continue;out.notes.push(Object.assign({},n,{t:n.t+sh,el:n.el+e0}));}
+    out.els.push(...c.els);
+    for(const a of c.acts){if(a.name==='final')continue;out.acts.push(Object.assign({},a,{t0:a.t0+sh}));}
+    for(const f of c.flights)out.flights.push(Object.assign({},f,{t0:f.t0+sh,t1:f.t1+sh,el:f.el+e0}));
+    out.final=c.final+sh;
+  }
+  out.final+=1e6; return out;
+}
+async function demarrerSurvie(){
+  const btn=$('#rgGo'); btn.disabled=true; btn.textContent='Préparation…';
+  try{
+    getAC(); const mus=await genMusic(MUSIQUES.some(m=>m.id===S.musique)?S.musique:'elan');
+    const ch=genSurvie(mus,S.engin);
+    lancerPartie({choreo:ch,music:mus,nom:S.nom||'Moi',leo:S.leo,design:S.engDesign[S.engin],onFin:()=>{}});
+    const g=GAME; if(g){
+      g.modeNom='Survie'; g.classe=false; g.surv={m0:0,w0:g.startAt,r:1,vies:3,next:g.startAt+20,palier:0};
+      try{g.src.loop=true;g.src.loopStart=mus.offset;g.src.loopEnd=mus.finAt;}catch(e){}
+      afficherVies(g);
+    }
+  }catch(e){alert('Problème : '+e.message);}
+  btn.disabled=false; btn.textContent='C\'est parti !';
+}
+function afficherVies(g,perdu){const v=g.surv,el=$('#hVies');el.style.display='block';el.innerHTML='❤️'.repeat(v.vies)+'🖤'.repeat(3-v.vies)+`<small>⚡ vitesse ×${v.r.toFixed(2).replace('.',',')}</small>`;if(perdu){el.classList.remove('perd');void el.offsetWidth;el.classList.add('perd');}}
+function survieFrame(g){
+  const v=g.surv,now=AC.currentTime; if(g.done||now<v.next)return;
+  const m=v.m0+(now-v.w0)*v.r; v.m0=m; v.w0=now; v.r=Math.min(1.6,v.r+.06); v.next=now+20; v.palier++;
+  try{g.src.playbackRate.setValueAtTime(v.r,now);}catch(e){}
+  afficherVies(g); popup('⚡ Ça accélère !','#ff7a45','vitesse ×'+v.r.toFixed(2).replace('.',','));
+  dire(alea(['Ça accélère !','Attention, la musique s\'emballe !','Encore plus vite !']),1);
+}
+function survieRate(g){
+  const v=g.surv; if(g.done||v.vies<=0)return; v.vies--; afficherVies(g,true);
+  try{navigator.vibrate&&navigator.vibrate(120);}catch(e){}
+  if(v.vies>0){dire(v.vies===2?'Plus que deux cœurs !':'Dernier cœur, concentration !',1);return;}
+  setTimeout(()=>finSurvie(g),350);
+}
+function finSurvie(g){
+  if(GAME!==g||g.done)return; g.done=true; stopAudio(g,1.2);
+  const tenu=Math.max(0,AC.currentTime-g.startAt), st=g.st, ok=st.count[0]+st.count[1]+st.count[2], parf=st.count[0];
+  const recs=store.get('rs_survie_rec',{}),k=cleNom(g.nom||'Moi'),old=recs[k],nouveau=!old||tenu>old.t;
+  if(nouveau){recs[k]={t:tenu,n:ok,v:g.surv.r};store.set('rs_survie_rec',recs);}
+  journaliser(g,{total:null});
+  const vit=g.surv.r, nom=g.nom; DERNIER=null;
+  hEls.Elem.innerHTML=''; hEls.Prompt.innerHTML='';
+  applaudir(Math.min(1,.3+tenu/240)); dire(`Fin de la survie ! Tu as tenu ${dureeTxt(Math.round(tenu)).replace(' min ',' minutes ').replace(/ s$/,' secondes')}.`,2);
+  setTimeout(()=>{
+    finirJeu();
+    $('#reTitre').textContent='💀 Mode survie – '+nom;
+    $('#reCorps').innerHTML=`<div class="card">${nouveau?'<p class="ok" style="text-align:center;font-weight:800">🏆 Nouveau record de survie !</p>':''}
+      <div class="score-big">${dureeTxt(Math.round(tenu))}</div>
+      <div class="grid3"><div><small>Notes réussies</small><b>${ok}</b></div><div><small>Parfaits</small><b>${parf}</b></div><div><small>Vitesse atteinte</small><b>×${vit.toFixed(2).replace('.',',')}</b></div></div>
+      <p class="hint" style="text-align:center">Meilleure série : ${st.maxCombo}${old&&!nouveau?` · Ton record : ${dureeTxt(Math.round(old.t))}`:''}</p></div>`;
+    const box=$('#reActions');box.innerHTML='';
+    for(const a of [{t:'Accueil',f:goAccueil},{t:'Réglages',f:()=>openReglage('solo')},{t:'💀 Rejouer',big:true,f:demarrerSurvie}]){const b=document.createElement('button');b.textContent=a.t;if(a.big)b.className='big';b.onclick=a.f;box.appendChild(b);}
+    show('sResultat');
+    reveler(gagnerPoints(nom,8+Math.round(tenu/6),'entr'),'💀 Survie');
+  },1300);
+}
 async function demarrerSolo(){
   const btn=$('#rgGo'); btn.disabled=true; btn.textContent='Préparation…';
   try{
@@ -3357,8 +3429,11 @@ function renderReglage(){
   chips($('#rgEngin'),Object.entries(ENGINS).map(([k,e])=>({k,t:e.ico+' '+e.nom})),S.engin,k=>{S.engin=k;saveS();renderReglage();});
   chips($('#rgSalle'),Object.entries(SALLES).map(([k,v])=>({k,t:v.nom})),S.salle||'star',k=>{S.salle=k;saveS();construireSalle(k);renderReglage();if(RG_MODE==='online'&&NET.host){hostSettings();broadcastLobby();}});
   $('#rgSalleHint').textContent=(SALLES[S.salle]||SALLES.star).lieu;
-  chips($('#rgNiv'),Object.entries(NIVEAUX).map(([k,n])=>({k,t:n.nom})),S.niv,k=>{S.niv=k;saveS();renderReglage();});
-  $('#rgNivHint').textContent=NIVEAUX[S.niv].hint;
+  const survieOk=RG_MODE==='solo'; if(!survieOk)S.survie=false;
+  chips($('#rgNiv'),[...Object.entries(NIVEAUX).map(([k,n])=>({k,t:n.nom})),...(survieOk?[{k:'survie',t:'💀 Survie'}]:[])],S.survie?'survie':S.niv,k=>{if(k==='survie'){S.survie=true;}else{S.survie=false;S.niv=k;saveS();}store.set('rs_survie_on',S.survie);renderReglage();});
+  {const b=$('#rgNiv').querySelector('[data-k=survie]');if(b)b.classList.add('survie');}
+  if(S.survie){const rec=store.get('rs_survie_rec',{})[cleNom(S.nom||'Moi')];$('#rgNivHint').innerHTML=`<b style="color:#ff7a45">Mode survie</b> : 3 cœurs ❤️❤️❤️, chaque raté en coûte un. La musique accélère toutes les 20 secondes : tiens le plus longtemps possible !${rec?` · Ton record : <b>${dureeTxt(Math.round(rec.t))}</b>`:''}`;}
+  else $('#rgNivHint').textContent=NIVEAUX[S.niv].hint;
   const mus=MUSIQUES.map(m=>({k:m.id,t:'🎵 '+m.nom})); if(S.custom)mus.push({k:'custom',t:'🎧 '+S.custom.nom});
   chips($('#rgMus'),mus,S.musique,k=>{S.musique=k;saveS();renderReglage();});
   const libId=String(S.musique).startsWith('lib:')?S.musique.slice(4):null;
@@ -3394,7 +3469,7 @@ $('#rgFile').addEventListener('change',async e=>{
   }catch(err){$('#rgMusInfo').textContent='Impossible de lire cette musique : '+((err&&err.message)||'format non reconnu (essaie un MP3 ou M4A)');}
 });
 $('#rgRetour').onclick=()=>{if(RG_MODE==='online'){renderLobby();show('sLobby');}else if(RG_MODE==='local')show('sLocal');else goAccueil();};
-$('#rgGo').onclick=()=>{if(RG_MODE==='solo')demarrerSolo();else if(RG_MODE==='local')demarrerLocal();else{hostSettings();broadcastLobby();show('sLobby');}};
+$('#rgGo').onclick=()=>{if(RG_MODE==='solo'&&S.survie)demarrerSurvie();else if(RG_MODE==='solo')demarrerSolo();else if(RG_MODE==='local')demarrerLocal();else{hostSettings();broadcastLobby();show('sLobby');}};
 /* Tour de rôle */
 $('#lcAdd').onclick=()=>{const n=$('#lcNom').value.trim();if(!n)return;if(LOCAL.joueuses.length>=8){alert('8 gymnastes maximum.');return;}LOCAL.joueuses.push({nom:n,leo:$('#lcLeo').value});$('#lcNom').value='';renderLocal();};
 $('#lcRetour').onclick=goAccueil;
