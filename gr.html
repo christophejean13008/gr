@@ -448,7 +448,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
     <div class="aide-l"><span class="pt" style="background:#ff4fa3">➜</span><div><b>Glisse</b> le doigt, dans n'importe quel sens (pivots).</div></div>
     <div class="aide-l"><span class="pt" style="background:#4cc9f0">↻</span><div><b>Dessine des cercles</b> avec le doigt tant que la barre passe. Une jauge verte montre où tu en es.</div></div>
     <div class="aide-l"><span class="pt" style="background:#4cc9f0">〰</span><div><b>Fais des zigzags</b> (serpentins du ruban).</div></div>
-    <div class="aide-l"><span class="pt" style="background:#ffd166">⬆</span><div><b>Lancer</b> : <b>glisse le doigt vers le haut</b> ⬆ pour lancer (un simple appui ne suffit pas), <b>dessine un rond complet</b> ↺ à chaque tour sous l'engin, puis <b>glisse vers le bas</b> ⬇ pour <b>rattraper</b>. Un simple appui ne valide rien. Rater le rattrapé = perte d'engin !</div></div>
+    <div class="aide-l"><span class="pt" style="background:#ffd166">⬆</span><div><b>Lancer</b> : <b>glisse le doigt vers le haut</b> ⬆ pour lancer (un simple appui ne suffit pas), <b>dessine un rond</b> (les ¾ suffisent) ↺ à chaque tour sous l'engin, puis <b>glisse vers le bas</b> ⬇ pour <b>rattraper</b>. Un simple appui ne valide rien. Rater le rattrapé = perte d'engin !</div></div>
     <div class="aide-l"><span class="pt" style="background:#ff9f43">🤝</span><div><b>Échange</b> (mode coopératif) : ⬆ pour lancer ton engin à ta partenaire, puis ⬇ pour rattraper celui qu'on t'envoie. Un lancer raté fait tomber l'engin : toute l'équipe perd des points !</div></div>
     <h3>Les couleurs</h3>
     <div class="aide-l"><span class="pt" style="background:#ff4fa3"></span><div><b>Rose – DB</b> : difficultés corporelles (sauts, équilibres, pivots).</div></div>
@@ -607,11 +607,11 @@ const MUSIQUES=[
 ];
 const CATCOL={PX:'#ff3b3b',DB:'#ff4fa3',R:'#ffd166',DA:'#4cc9f0',pas:'#b388ff',final:'#ffffff',acro:'#5be7a9',EX:'#ff9f43'};
 const CATLBL={PX:'😈',DB:'DB',R:'R',DA:'DA',pas:'Pas',final:'Fin',acro:'Acro',EX:'Échange'};
-const EXHINT={lancer:'Glisse vers le haut ⬆ pour lancer à ta partenaire !',tour:'Dessine un rond complet ↺ pour tourner !',rattraper:'Glisse vers le bas ⬇ pour rattraper !'};
+const EXHINT={lancer:'Glisse vers le haut ⬆ pour lancer à ta partenaire !',tour:'Dessine un rond ↺ pour tourner !',rattraper:'Glisse vers le bas ⬇ pour rattraper !'};
 const ICON={tap:'●',double:'●●',hold:'▬',swipe:'➜',circle:'↻',zigzag:'〰'};
 const ROLEICON={lancer:'⬆',tour:'↺',rattraper:'⬇'};
 const GHINT={tap:'Touche',double:'Touche 2 fois',hold:'Maintiens appuyé',swipe:'Glisse le doigt',circle:'Dessine des cercles',zigzag:'Fais des zigzags'};
-const ROLEHINT={lancer:'Glisse vers le haut ⬆ pour lancer !',tour:'Dessine un rond complet ↺ !',rattraper:'Glisse vers le bas ⬇ pour rattraper !'};
+const ROLEHINT={lancer:'Glisse vers le haut ⬆ pour lancer !',tour:'Dessine un rond ↺ !',rattraper:'Glisse vers le bas ⬇ pour rattraper !'};
 const ETAB={PX:[0,0,0,0],EX:[0,.1,.3,.5],acro:[0,.1,.3,.5],DB:[0,.1,.3,.5],R:[0,.1,.3,.5],DA:[0,.1,.3,.5],pas:[0,0,.1,.1],final:[0,.1,.2,.3]};
 const GRADES=[{t:'Parfait !',c:'#5be7a9'},{t:'Bien',c:'#9be15d'},{t:'Juste',c:'#ffd166'},{t:'Raté',c:'#ff6b6b'}];
 
@@ -1665,6 +1665,7 @@ function lancerPartie({choreo,music,nom,leo,design=null,opponents=[],online=fals
     nom,leo,design,music,rec:{wobs:[],drops:[],grades:[]},online,onFin,st:newStats(),ghosts:new Map(),live:{},running:true,done:false,speed:NIVEAUX[choreo.niv].vit,flash:null,lastHud:0,trails:new Map(),rnd:mulberry32(Date.now()&0xffffff)};
   for(const n of g.notes){const e=g.els[n.el];e.total=(e.total||0)+1;}
   g.classe=!demo&&!perturb&&!retour;
+  g.t0=Date.now(); g.modeNom=perturb?'Perturbatrice':coop?'Coopératif':online?'Compétition':retour?'Ma chorégraphie':(LOCAL.ch===choreo?'À tour de rôle':'Solo');
   if(coop){
     // Mode coopératif : formation en cercle, même engin pour toute l'équipe
     const n=coop.order.length,pos=formation(n); g.coop=true; g.teamPids=coop.order; g.tidx=coop.order.indexOf(coop.me); g.team=new Array(n).fill(null); g.design=design=coop.design||design;
@@ -1806,11 +1807,11 @@ jeuEl.addEventListener('pointermove',e=>{
   }
   p.lx=x;p.ly=y;
 });
-const swipeOk=(n,x,y)=>n.dir==='up'?(n.sy-y>=60&&n.sy-y>Math.abs(x-n.sx)*1.5):n.dir==='down'?(y-n.sy>=60&&y-n.sy>Math.abs(x-n.sx)*1.5):n.dir==='rond'?(Math.abs(n.rot||0)>=5.3&&n.bx1-n.bx0>=35&&n.by1-n.by0>=35):Math.hypot(x-n.sx,y-n.sy)>=45;
+const swipeOk=(n,x,y)=>n.dir==='up'?(n.sy-y>=60&&n.sy-y>Math.abs(x-n.sx)*1.5):n.dir==='down'?(y-n.sy>=60&&y-n.sy>Math.abs(x-n.sx)*1.5):n.dir==='rond'?(Math.abs(n.rot||0)>=3.9&&n.bx1-n.bx0>=14&&n.by1-n.by0>=14):Math.hypot(x-n.sx,y-n.sy)>=45;
 /* mauvais sens (descendre au lieu de monter et inversement) = raté tout de suite */
 const swipeFaux=(n,x,y)=>n.dir==='up'?y-n.sy>25:n.dir==='down'?n.sy-y>25:false;
 /* petit rond : on cumule la rotation de la direction du doigt (≈ 240° suffisent) */
-function suivreRond(n,x,y){const dx=x-n.lx,dy=y-n.ly;n.bx0=Math.min(n.bx0,x);n.bx1=Math.max(n.bx1,x);n.by0=Math.min(n.by0,y);n.by1=Math.max(n.by1,y);if(Math.hypot(dx,dy)<8)return;const h=Math.atan2(dy,dx);if(n.hd!=null){let d=h-n.hd;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;if(Math.abs(d)<2.2)n.rot=(n.rot||0)+d;}n.hd=h;n.lx=x;n.ly=y;}
+function suivreRond(n,x,y){const dx=x-n.lx,dy=y-n.ly;n.bx0=Math.min(n.bx0,x);n.bx1=Math.max(n.bx1,x);n.by0=Math.min(n.by0,y);n.by1=Math.max(n.by1,y);if(Math.hypot(dx,dy)<4)return;const h=Math.atan2(dy,dx);if(n.hd!=null){let d=h-n.hd;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;if(Math.abs(d)<2.2)n.rot=(n.rot||0)+d;}n.hd=h;n.lx=x;n.ly=y;}
 function onUp(e){
   if(!GAME||GAME.done){PT.delete(e.pointerId);return;}
   const T=gameTime();
@@ -1824,7 +1825,7 @@ function onUp(e){
 jeuEl.addEventListener('pointerup',onUp); jeuEl.addEventListener('pointercancel',onUp);
 $('#hQuit').addEventListener('click',()=>{
   if(!GAME)return; if(!confirm('Quitter l\'enchaînement ?'))return;
-  const g=GAME; stopAudio(g,.3); g.done=true;
+  const g=GAME; stopAudio(g,.3); g.done=true; if(!g.demo)journaliser(g,{abandon:true});
   if(g.online){const r={nom:g.nom,leo:g.leo,total:0,D:0,A:0,E:0,pen:0,abandon:true};NET.finals.set(NET.me,r);sendNet({t:'final',res:r});if(NET.host)checkPodium();}
   finirJeu(); if(g.online&&NET.peer){renderLobby();show('sLobby');} else if(g.retour)g.retour(); else goAccueil();
 });
@@ -1990,6 +1991,7 @@ function finPartie(){
   const g=GAME; if(g.done)return; g.done=true; stopAudio(g,1.5); GAME_ST_PX=g.st;
   const res=computeFinal(g);
   if(g.classe&&!res.abandon&&isFinite(res.total)&&res.total>0)envoyerScore(g.nom||'Moi',res.total);
+  if(!g.demo)journaliser(g,res);
   DERNIER={choreo:g.choreo,buffer:g.music.buffer,leo:g.leo,design:g.design,deco:g.main.deco,rec:g.rec,els:g.els,nom:g.nom,coop:g.coop?{n:g.team.length,ti:g.tidx,ox:g.main.opt.ox,oz:g.main.opt.oz}:null,ghosts:[...g.ghosts.values()].map((v,i)=>({leo:v.gym.leoId,design:v.gym.opt.design,drops:v.drops||[],nom:v.nom,ox:v.gym.opt.ox,oz:v.gym.opt.oz,ti:v.gym.opt.ti,deco:v.gym.deco}))};
   hEls.Elem.innerHTML=''; hEls.Prompt.innerHTML='';
   setTimeout(()=>{const cb=g.onFin;finirJeu();cb(res);},400);
@@ -2535,8 +2537,21 @@ async function fbMeilleur(per,nom,v){
   const old=await (await fetch(u)).json();
   if(old==null||v>old){const r=await fetch(u,{method:'PUT',body:JSON.stringify(v)});if(!r.ok)throw new Error('fb '+r.status);}
 }
+/* ---- journal des parties (qui, quand, combien de temps) ---- */
+function journaliser(g,res){
+  const e={nom:cleNom(g.nom||'Moi'),ts:g.t0||Date.now(),dur:Math.round((Date.now()-(g.t0||Date.now()))/1000),mode:g.modeNom||'',engin:g.engin||'',niv:g.niv||'',total:res&&isFinite(res.total)&&!res.abandon?Math.round(res.total*1000)/1000:null,ab:!!(res&&res.abandon),id:Math.random().toString(36).slice(2)};
+  const loc=store.get('rs_log_loc',[]); loc.push(e); store.set('rs_log_loc',loc.slice(-300));
+  if(FB_URL){const q=store.get('rs_log_q',[]);q.push(e);store.set('rs_log_q',q.slice(-100));viderFile();}
+}
+async function viderJournal(){
+  if(!FB_URL)return;
+  for(;;){const q=store.get('rs_log_q',[]); if(!q.length)return; const it=q[0];
+    const {id,...data}=it; const r=await fetch(`${FB_URL}/rs_log/${encodeURIComponent(it.ts+'_'+id)}.json`,{method:'PUT',body:JSON.stringify(data)});
+    if(!r.ok)throw new Error('fb '+r.status);
+    store.set('rs_log_q',store.get('rs_log_q',[]).filter(x=>x.id!==id));}
+}
 let FILE_P=Promise.resolve();
-function viderFile(){FILE_P=FILE_P.then(viderFile1).catch(()=>{});return FILE_P;}   // envois l'un après l'autre
+function viderFile(){const avant=store.get('rs_top_q',[]).length;FILE_P=FILE_P.then(viderFile1).catch(()=>{}).then(viderJournal).catch(()=>{}).then(()=>{if(avant){CLS_CACHE=null;if(VIEW==='sAccueil')renderClassement();}});return FILE_P;}   // envois l'un après l'autre
 async function viderFile1(){
   if(!FB_URL)return;
   for(;;){
@@ -2552,7 +2567,7 @@ function envoyerScore(nom,total){
   for(const [p] of PERIODES){const t=loc[k[p]]||(loc[k[p]]={});if(!(t[n]>=v))t[n]=v;}
   for(const c of Object.keys(loc))if(!Object.values(k).includes(c))delete loc[c];
   store.set('rs_top_loc',loc);
-  if(FB_URL){const q=store.get('rs_top_q',[]);q.push({nom:n,v,ts:Date.now(),id:Math.random().toString(36).slice(2)});store.set('rs_top_q',q.slice(-30));viderFile().then(()=>{CLS_CACHE=null;if(VIEW==='sAccueil')renderClassement();});}
+  if(FB_URL){const q=store.get('rs_top_q',[]);q.push({nom:n,v,ts:Date.now(),id:Math.random().toString(36).slice(2)});store.set('rs_top_q',q.slice(-30));viderFile();}
 }
 let CLS_CACHE=null,CLS_T=0;
 async function lireClassement(){
@@ -2766,21 +2781,70 @@ function renderVestiaire(){
 $('#vsOk').onclick=goAccueil;
 $('#carRetour').onclick=goAccueil;
 /* ---- cadenas à code (accueil) ---- */
-function majCadenas(){const m=modeCode(),b=$('#cadenas');b.textContent=m?'🔓':'🔒';b.className=m;b.title=m==='tout'?'Tout est débloqué (toucher pour tout remettre à zéro)':m==='edit'?'Mode modification (toucher pour terminer)':'Code';}
+function majCadenas(){const m=modeCode(),b=$('#cadenas');b.textContent=m?'🔓':'🔒';b.className=m;b.title=m==='tout'?'Espace administrateur':m==='edit'?'Mode modification (toucher pour terminer)':'Code';}
 function toutDebloquer(){const p=getProf(S.nom||'Moi');for(const id of Object.keys(CARTES)){if(id!=='cle')p.cartes[id]=Math.max(1,p.cartes[id]||0);if(CARTES[id].or)p.actifs[id]=true;}
   p.cles=Math.max(p.cles,20);p.cartes.cle=p.cles;p.total=Math.max(p.total,6000);p.pts=Math.max(p.pts,6000);saveProf(p);}
 function codeModal(){
   $('#tmCorps').innerHTML=`<div class="lbl" style="text-align:center">🔒 Entre le code</div><input id="codeIn" class="code-in" inputmode="numeric" maxlength="4" type="password" autocomplete="off"><p class="hint" id="codeMsg" style="text-align:center"></p><div class="actions"><button id="tmNon">Annuler</button><button class="big" id="tmOui">Valider</button></div>`;
   $('#trocModal').classList.add('on'); setTimeout(()=>$('#codeIn').focus(),50);
   const ok=()=>{const c=$('#codeIn').value.trim();
-    if(c==='0308'){store.set('rs_admin','tout');toutDebloquer();fermerTroc();majCadenas();renderRecords();PREVKEY='';alert('🔓 Tout est débloqué pour '+(S.nom||'Moi')+' : cartes, bonus dorés, personnages et points.');}
+    if(c==='0308'){store.set('rs_admin','tout');toutDebloquer();majCadenas();renderRecords();PREVKEY='';adminModal();alert('🔓 Tout est débloqué pour '+(S.nom||'Moi')+' : cartes, bonus dorés, personnages et points.');}
     else if(c==='0208'){store.set('rs_admin','edit');fermerTroc();majCadenas();alert('✏️ Mode modification : dans Carrière & cartes → Mon classeur, touche une carte pour l\'ajouter ou la retirer.');}
     else {$('#codeMsg').textContent='Code incorrect';$('#codeIn').value='';}};
   $('#tmOui').onclick=ok; $('#codeIn').onkeydown=e=>{if(e.key==='Enter')ok();}; $('#tmNon').onclick=fermerTroc;
 }
+const dureeTxt=s=>s>=3600?Math.floor(s/3600)+' h '+String(Math.floor(s%3600/60)).padStart(2,'0'):s>=60?Math.floor(s/60)+' min '+String(s%60).padStart(2,'0'):s+' s';
+async function lireJournal(){
+  if(FB_URL){try{const r=await fetch(`${FB_URL}/rs_log.json?orderBy=%22$key%22&limitToLast=300`);if(r.ok){const o=await r.json()||{};return {L:Object.values(o),src:'tous les téléphones'};}}catch(e){}}
+  return {L:store.get('rs_log_loc',[]),src:'cet appareil seulement'};
+}
+async function adminModal(vue='menu'){
+  const C=$('#tmCorps'); $('#trocModal').classList.add('on');
+  if(vue==='menu'){
+    C.innerHTML=`<div class="lbl" style="text-align:center">🔓 Espace administrateur</div>
+      <div class="menu col" style="gap:8px;max-width:none">
+        <button class="big" id="adJournal">📋 Qui a joué ? (journal des parties)</button>
+        <div class="lbl" style="margin:8px 0 0">🏆 Remettre le classement à zéro</div>
+        <div class="chips" style="justify-content:center">${PERIODES.map(([p,l])=>`<button class="chip" data-raz="${p}">${l}</button>`).join('')}</div>
+        <div class="lbl" style="margin:8px 0 0">⚙️ Progression</div>
+        <button id="adProg">♻️ Remettre la progression de ${esc(S.nom||'Moi')} à zéro</button>
+        <button id="adFerme">🔒 Refermer le cadenas</button>
+        <button id="tmNon">Fermer</button>
+      </div><p class="hint" id="adMsg" style="text-align:center"></p>`;
+    $('#tmNon').onclick=fermerTroc; $('#adJournal').onclick=()=>adminModal('journal');
+    $('#adFerme').onclick=()=>{store.set('rs_admin','');majCadenas();fermerTroc();};
+    $('#adProg').onclick=()=>{if(confirm('Remettre TOUTE la progression de '+(S.nom||'Moi')+' à zéro ?\n(points, cartes, bonus, personnages)')){try{localStorage.removeItem(cleProf(S.nom||'Moi'));}catch(e){}store.set('rs_admin','');majCadenas();renderRecords();PREVKEY='';fermerTroc();alert('Progression remise à zéro.');}};
+    C.querySelectorAll('[data-raz]').forEach(b=>b.onclick=async()=>{
+      const p=b.dataset.raz,lib=PERIODES.find(x=>x[0]===p)[1],cle=clesPeriode()[p];
+      if(!confirm(`Effacer le classement « ${lib} » pour tout le monde ?`))return;
+      const loc=store.get('rs_top_loc',{});delete loc[cle];store.set('rs_top_loc',loc);
+      let ok=true;
+      if(FB_URL){try{const r=await fetch(`${FB_URL}/rs_top/${encodeURIComponent(cle)}.json?shallow=true`);const o=await r.json()||{};const z={};for(const k of Object.keys(o))z[k]=null;
+        if(Object.keys(z).length){const w=await fetch(`${FB_URL}/rs_top/${encodeURIComponent(cle)}.json`,{method:'PATCH',body:JSON.stringify(z)});ok=w.ok;}}catch(e){ok=false;}}
+      CLS_CACHE=null; renderClassement();
+      $('#adMsg').textContent=ok?`✅ Classement « ${lib} » remis à zéro.`:'⚠️ Pas de connexion à la base : réessaie plus tard.';
+    });
+    return;
+  }
+  C.innerHTML=`<div class="lbl" style="text-align:center">📋 Journal des parties</div><p class="hint" style="text-align:center">⏳ Chargement…</p>`;
+  const {L,src}=await lireJournal(); L.sort((a,b)=>b.ts-a.ts);
+  const par={}; for(const e of L){const t=par[e.nom]||(par[e.nom]={n:0,d:0,der:0,best:null});t.n++;t.d+=e.dur||0;t.der=Math.max(t.der,e.ts);if(e.total!=null&&(t.best==null||e.total>t.best))t.best=e.total;}
+  const dt=ts=>new Date(ts).toLocaleString('fr-FR',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  const th='style="text-align:left;padding:3px 5px;border-bottom:1px solid rgba(255,255,255,.2)"',td='style="padding:3px 5px;border-bottom:1px solid rgba(255,255,255,.08);white-space:nowrap"';
+  C.innerHTML=`<div class="lbl" style="text-align:center">📋 Journal des parties</div><p class="hint" style="text-align:center;margin-top:0">${L.length} partie(s) · ${src}</p>
+    <div class="lbl" style="margin-top:6px">Par joueuse</div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.8rem"><tr><th ${th}>Pseudo</th><th ${th}>Parties</th><th ${th}>Temps total</th><th ${th}>Meilleur</th><th ${th}>Dernière fois</th></tr>
+    ${Object.entries(par).sort((a,b)=>b[1].der-a[1].der).map(([n,t])=>`<tr><td ${td}><b>${esc(n)}</b></td><td ${td}>${t.n}</td><td ${td}>${dureeTxt(t.d)}</td><td ${td}>${t.best!=null?fmt(t.best,2):'—'}</td><td ${td}>${dt(t.der)}</td></tr>`).join('')||`<tr><td ${td}>—</td></tr>`}</table></div>
+    <div class="lbl" style="margin-top:10px">Toutes les parties</div>
+    <div style="overflow:auto;max-height:42vh"><table style="width:100%;border-collapse:collapse;font-size:.78rem"><tr><th ${th}>Quand</th><th ${th}>Pseudo</th><th ${th}>Mode</th><th ${th}>Engin</th><th ${th}>Durée</th><th ${th}>Score</th></tr>
+    ${L.map(e=>`<tr><td ${td}>${dt(e.ts)}</td><td ${td}><b>${esc(e.nom)}</b></td><td ${td}>${esc(e.mode||'')}</td><td ${td}>${ENGINS[e.engin]?ENGINS[e.engin].ico+' '+ENGINS[e.engin].nom:esc(e.engin||'')}${NIVEAUX[e.niv]?' · '+NIVEAUX[e.niv].nom:''}</td><td ${td}>${dureeTxt(e.dur||0)}</td><td ${td}>${e.ab?'abandon':e.total!=null?fmt(e.total,2):'—'}</td></tr>`).join('')}</table></div>
+    <div class="actions"><button id="adRet">← Retour</button><button class="big" id="tmNon">Fermer</button></div>`;
+  $('#adRet').onclick=()=>adminModal('menu'); $('#tmNon').onclick=fermerTroc;
+}
 $('#cadenas').onclick=()=>{
   const m=modeCode();
-  if(m==='tout'){if(confirm('Remettre TOUTE la progression de '+(S.nom||'Moi')+' à zéro ?\n(points, cartes, bonus, personnages)')){store.set(cleProf(S.nom||'Moi'),null);try{localStorage.removeItem(cleProf(S.nom||'Moi'));}catch(e){}store.set('rs_admin','');majCadenas();renderRecords();PREVKEY='';alert('Progression remise à zéro.');}}
+  if(m==='tout'){adminModal();}
+  else if(false){if(confirm('Remettre TOUTE la progression de '+(S.nom||'Moi')+' à zéro ?\n(points, cartes, bonus, personnages)')){store.set(cleProf(S.nom||'Moi'),null);try{localStorage.removeItem(cleProf(S.nom||'Moi'));}catch(e){}store.set('rs_admin','');majCadenas();renderRecords();PREVKEY='';alert('Progression remise à zéro.');}}
   else if(m==='edit'){store.set('rs_admin','');majCadenas();alert('Mode modification terminé : la progression reste comme tu l\'as réglée.');}
   else codeModal();
 };
