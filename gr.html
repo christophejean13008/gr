@@ -151,6 +151,11 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 #trocModal{position:fixed;inset:0;z-index:55;background:rgba(10,4,20,.85);display:none;align-items:center;justify-content:center;padding:16px}#trocModal.on{display:flex}
 #trocModal .card{max-height:85vh;overflow:auto}
 .mini-cartes{display:flex;gap:8px;flex-wrap:wrap}.mini-cartes .carte{width:74px;height:100px;font-size:.58rem}.mini-cartes .carte .ce{font-size:1.9rem}.mini-cartes .carte.sel{outline:3px solid #ff4fa3;outline-offset:2px}
+#cadenas{position:absolute;top:max(10px,env(safe-area-inset-top));right:12px;width:42px;height:42px;padding:0;border-radius:50%;font-size:1.25rem;background:rgba(40,22,66,.7);border:1px solid rgba(255,255,255,.25);z-index:3}
+#cadenas.tout{background:linear-gradient(135deg,#ffd166,#ffb703);box-shadow:0 0 14px rgba(255,209,102,.8)}
+#cadenas.edit{background:linear-gradient(135deg,#4cc9f0,#a24bff);box-shadow:0 0 14px rgba(76,201,240,.7)}
+.carte .clk{position:absolute;bottom:-9px;right:-9px;width:26px;height:26px;border-radius:50%;background:#2a1840;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:.8rem;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+.code-in{font:inherit;font-size:2rem;letter-spacing:.5em;text-align:center;width:100%;padding:10px;border-radius:14px;border:2px solid rgba(255,255,255,.3);background:rgba(0,0,0,.3);color:#fff}
 #hFlash{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(circle at 50% 78%,#fff 0%,#fff 35%,rgba(255,255,255,.85) 60%,rgba(255,240,180,.4) 100%)}
 #hFlash.on{animation:pxflash 1.3s ease-out forwards}@keyframes pxflash{0%{opacity:1}55%{opacity:.95}100%{opacity:0}}
 #hPx{position:absolute;top:calc(max(8px,env(safe-area-inset-top)) + 52px);left:8px;font-size:.85rem;font-weight:800;color:#ff6b6b;background:rgba(18,8,31,.7);border-radius:10px;padding:4px 10px;pointer-events:none;display:none}
@@ -163,6 +168,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 
 <!-- ACCUEIL -->
 <div id="sAccueil" class="screen on">
+  <button id="cadenas" title="Code">🔒</button>
   <div class="brand"><div class="logo">🎀</div><h1>Rythmique <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
   <label class="field">Ton prénom<input id="inNom" maxlength="14" placeholder="Prénom" autocomplete="off"></label>
   <div class="acc3">
@@ -2519,7 +2525,8 @@ function decoDe(nom){const p=getProf(nom),t=titreDe(p),on=id=>aC(p,id)&&p.actifs
   return {or:on('or'),flammes:on('flammes'),aura:on('aura'),magiques:['cerceau','ballon','massues','ruban','corde'].filter(e=>on('magique_'+e)),titre:t[1]+' '+t[2]};}
 function nomHTML(nom,deco){return `<span class="${deco&&deco.or?'pseudo-or':''}">${esc(nom)}</span>${deco&&deco.titre?` <small class="titre">${esc(deco.titre.split(' ')[0])}</small>`:''}`;}
 /* personnages spéciaux : 3 essais puis clé dorée */
-function persoEtat(nom,id){const p=getProf(nom);const libre=p.libres.includes(id);const u=p.essais[id]||0;return {libre,u,reste:Math.max(0,ESSAIS_PERSO-u),bloque:!libre&&u>=ESSAIS_PERSO,cles:p.cles};}
+const modeCode=()=>store.get('rs_admin','');
+function persoEtat(nom,id){const p=getProf(nom);const libre=p.libres.includes(id)||modeCode()==='tout';const u=p.essais[id]||0;return {libre,u,reste:Math.max(0,ESSAIS_PERSO-u),bloque:!libre&&u>=ESSAIS_PERSO,cles:p.cles};}
 function compterEssai(nom,leo){const id=String(leo||'').split('|')[0];if(id[0]!=='s')return leo;const e=persoEtat(nom,id);
   if(e.bloque)return MODELES_TRIPO.length?'t0|orig':'p0';
   if(!e.libre){const p=getProf(nom);p.essais[id]=(p.essais[id]||0)+1;saveProf(p);} return leo;}
@@ -2582,8 +2589,12 @@ function ouvrirClasseur(){
   const t=THEMES.find(x=>x.id===CL_TAB), n=t.cartes.filter(id=>aC(p,id)).length;
   $('#clTitre').textContent=`${t.ico} ${t.nom} — ${n}/6`;
   $('#clHint').textContent=aC(p,t.or.id)?'Thème complet : carte dorée gagnée !':`Encore ${6-n} carte(s) pour la carte dorée « ${t.or.nom} ».`;
-  $('#clPage').innerHTML=t.cartes.map(id=>aC(p,id)?carteHTML(id,p.cartes[id]):`<div class="carte vide" style="--th:${t.coul}"><span class="cn">n°${CARTES[id].num}</span><div class="ce">${CARTES[id].emo}</div>?</div>`).join('')
-    +(aC(p,t.or.id)?carteHTML(t.or.id,1):`<div class="carte vide" style="--th:#ffb703"><div class="ce">✨</div>Carte dorée<br>${esc(t.or.nom)}</div>`);
+  const ed=modeCode()==='edit', ck=id=>ed?`<span class="clk">${aC(p,id)?'🔓':'🔒'}</span>`:'';
+  $('#clPage').innerHTML=t.cartes.map(id=>(aC(p,id)?carteHTML(id,p.cartes[id]):`<div class="carte vide" data-c="${id}" style="--th:${t.coul}"><span class="cn">n°${CARTES[id].num}</span><div class="ce">${CARTES[id].emo}</div>?</div>`).replace(/<\/div>$/,ck(id)+'</div>')).join('')
+    +(aC(p,t.or.id)?carteHTML(t.or.id,1):`<div class="carte vide" data-c="${t.or.id}" style="--th:#ffb703"><div class="ce">✨</div>Carte dorée<br>${esc(t.or.nom)}</div>`).replace(/<\/div>$/,ck(t.or.id)+'</div>');
+  if(ed){$('#clHint').textContent='✏️ Mode modification : touche une carte pour l\'ajouter 🔓 ou la retirer 🔒 (les cartes dorées activent leur bonus).';
+    $('#clPage').querySelectorAll('.carte[data-c]').forEach(c=>c.onclick=()=>{const q=getProf(S.nom||'Moi'),id=c.dataset.c;
+      if(aC(q,id))q.cartes[id]=0;else{q.cartes[id]=1;if(CARTES[id].or)q.actifs[id]=true;} saveProf(q);PREVKEY='';ouvrirClasseur();});}
   show('sClasseur');
 }
 /* échange sur le même téléphone */
@@ -2647,7 +2658,27 @@ function renderVestiaire(){
   $('#vsInfo').textContent=spe?'':S.corps!=='mannequin'?'Sur une gymnaste 3D, cheveux et peau restent ceux du modèle ; seul le justaucorps change.':(MODELES_TRIPO.length?'':'Tes modèles Tripo apparaîtront ici une fois déclarés dans le fichier.');
 }
 $('#vsOk').onclick=goAccueil;
-$('#carRetour').onclick=goAccueil; $('#carClasseur').onclick=ouvrirClasseur; $('#clRetour').onclick=ouvrirCarriere; $('#carTroc').onclick=()=>{TR.moi=TR.eux=null;ouvrirTroc();};
+$('#carRetour').onclick=goAccueil;
+/* ---- cadenas à code (accueil) ---- */
+function majCadenas(){const m=modeCode(),b=$('#cadenas');b.textContent=m?'🔓':'🔒';b.className=m;b.title=m==='tout'?'Tout est débloqué (toucher pour tout remettre à zéro)':m==='edit'?'Mode modification (toucher pour terminer)':'Code';}
+function toutDebloquer(){const p=getProf(S.nom||'Moi');for(const id of Object.keys(CARTES)){if(id!=='cle')p.cartes[id]=Math.max(1,p.cartes[id]||0);if(CARTES[id].or)p.actifs[id]=true;}
+  p.cles=Math.max(p.cles,20);p.cartes.cle=p.cles;p.total=Math.max(p.total,6000);p.pts=Math.max(p.pts,6000);saveProf(p);}
+function codeModal(){
+  $('#tmCorps').innerHTML=`<div class="lbl" style="text-align:center">🔒 Entre le code</div><input id="codeIn" class="code-in" inputmode="numeric" maxlength="4" type="password" autocomplete="off"><p class="hint" id="codeMsg" style="text-align:center"></p><div class="actions"><button id="tmNon">Annuler</button><button class="big" id="tmOui">Valider</button></div>`;
+  $('#trocModal').classList.add('on'); setTimeout(()=>$('#codeIn').focus(),50);
+  const ok=()=>{const c=$('#codeIn').value.trim();
+    if(c==='0308'){store.set('rs_admin','tout');toutDebloquer();fermerTroc();majCadenas();renderRecords();PREVKEY='';alert('🔓 Tout est débloqué pour '+(S.nom||'Moi')+' : cartes, bonus dorés, personnages et points.');}
+    else if(c==='0208'){store.set('rs_admin','edit');fermerTroc();majCadenas();alert('✏️ Mode modification : dans Carrière & cartes → Mon classeur, touche une carte pour l\'ajouter ou la retirer.');}
+    else {$('#codeMsg').textContent='Code incorrect';$('#codeIn').value='';}};
+  $('#tmOui').onclick=ok; $('#codeIn').onkeydown=e=>{if(e.key==='Enter')ok();}; $('#tmNon').onclick=fermerTroc;
+}
+$('#cadenas').onclick=()=>{
+  const m=modeCode();
+  if(m==='tout'){if(confirm('Remettre TOUTE la progression de '+(S.nom||'Moi')+' à zéro ?\n(points, cartes, bonus, personnages)')){store.set(cleProf(S.nom||'Moi'),null);try{localStorage.removeItem(cleProf(S.nom||'Moi'));}catch(e){}store.set('rs_admin','');majCadenas();renderRecords();PREVKEY='';alert('Progression remise à zéro.');}}
+  else if(m==='edit'){store.set('rs_admin','');majCadenas();alert('Mode modification terminé : la progression reste comme tu l\'as réglée.');}
+  else codeModal();
+};
+majCadenas(); $('#carClasseur').onclick=ouvrirClasseur; $('#clRetour').onclick=ouvrirCarriere; $('#carTroc').onclick=()=>{TR.moi=TR.eux=null;ouvrirTroc();};
 $('#trRetour').onclick=ouvrirCarriere; $('#rvOk').onclick=revSuivant;
 $('#trOk').onclick=()=>{const A=getProf(S.nom||'Moi'),B=getProf(TR.avec);const r=echangerCartes(A,TR.moi,B,TR.eux);if(!r){alert('Échange impossible.');return;}
   const m=TR.moi,e=TR.eux; TR.moi=TR.eux=null; ouvrirTroc(); reveler({nom:A.nom,pts:0,gains:r[0],reste:A.reste},`🔁 ${A.nom} reçoit`); reveler({nom:B.nom,pts:0,gains:r[1],reste:B.reste},`🔁 ${B.nom} reçoit`);};
