@@ -1882,6 +1882,13 @@ function banderole(txt,c1,c2){
 function publicInit(g){
   publicFin(); PUB.hype=.15; g.ditDebut=false;
   if(g.demo)return; const P=foulePoints(); P.P.visible=true;
+  // annonce d'entrée sur le praticable, dès le début du décompte
+  setTimeout(()=>{if(GAME!==g||g.done)return;
+    const autres=[...g.ghosts.values()].map(v=>v.nom).filter(Boolean), noms=g.perturbMode?autres:[g.nom,...autres];
+    const liste=noms.length>1?noms.slice(0,-1).join(', ')+' et '+noms[noms.length-1]:noms[0]||'';
+    if(!liste)return; applaudir(.3);
+    dire(noms.length>1?alea([`Place aux gymnastes : ${liste} !`,`${liste} entrent sur le praticable !`,`Silence dans la salle, voici ${liste} !`]):alea([`À vous, ${liste} !`,`Place à ${liste} !`,`${liste} entre sur le praticable.`,`Silence dans la salle, voici ${liste}.`]),2);
+  },0);
   const nom=String(g.nom||'').toUpperCase().slice(0,12);
   if(nom){const L=[[`ALLEZ ${nom} !`,'#ff4fa3','#a24bff',-3.7,2.3,-14.6],[`⭐ ${nom} ⭐`,'#00b4d8','#5be7a9',3.9,3.2,-14.6]];
     for(const [t,c1,c2,x,y,z] of L){const b=banderole(t,c1,c2);b.position.set(x,y,z);b.userData.ph=Math.random()*6;scene.add(b);PUB.ban.push(b);}}
@@ -1889,7 +1896,7 @@ function publicInit(g){
 function publicFin(){for(const b of PUB.ban){scene.remove(b);b.geometry.dispose();b.material.map.dispose();b.material.dispose();}PUB.ban=[];if(PUB.pts)PUB.pts.P.visible=false;}
 function publicFrame(T,dt){
   const g=GAME; if(!g||g.demo)return;
-  if(!g.ditDebut&&T>g.first-2.2&&T<g.first){g.ditDebut=true;applaudir(.35);if(!g.perturbMode)dire(alea([`À vous, ${g.nom} !`,`Place à ${g.nom} !`,`${g.nom} entre sur le praticable.`,`Silence dans la salle, voici ${g.nom}.`]),1);}
+  if(!g.ditDebut&&T>g.first-2.2&&T<g.first){g.ditDebut=true;applaudir(.35);}
   PUB.hype=Math.max(.08,PUB.hype-dt*.05);
   const P=PUB.pts; if(!P)return; const rate=1+PUB.hype*22; let k=Math.floor(rate*dt+(Math.random()<(rate*dt)%1?1:0));
   while(k-->0){const i=Math.floor(Math.random()*P.N);P.life[i]=1;}
