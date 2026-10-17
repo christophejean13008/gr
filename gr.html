@@ -152,6 +152,14 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 #trocModal .card{max-height:85vh;overflow:auto}
 .mini-cartes{display:flex;gap:8px;flex-wrap:wrap}.mini-cartes .carte{width:74px;height:100px;font-size:.58rem}.mini-cartes .carte .ce{font-size:1.9rem}.mini-cartes .carte.sel{outline:3px solid #ff4fa3;outline-offset:2px}
 #cadenas{position:absolute;top:max(10px,env(safe-area-inset-top));right:12px;width:42px;height:42px;padding:0;border-radius:50%;font-size:1.25rem;background:rgba(40,22,66,.7);border:1px solid rgba(255,255,255,.25);z-index:3}
+#classement{position:absolute;top:max(10px,env(safe-area-inset-top));left:10px;z-index:3;width:138px;padding:6px 8px 7px;border:1.5px solid rgba(200,200,210,.65);border-radius:12px;background:transparent;font-size:.68rem;line-height:1.25;text-shadow:0 1px 3px rgba(0,0,0,.9);pointer-events:auto}
+#classement .ct{font-weight:800;font-size:.74rem;text-align:center;margin-bottom:2px;cursor:pointer}
+#classement .cp{color:#ffd166;font-weight:800;margin-top:3px}
+#classement .cl{display:flex;justify-content:space-between;gap:4px;white-space:nowrap}
+#classement .cl span{overflow:hidden;text-overflow:ellipsis}
+#classement .cv{color:#ddd;font-weight:700}
+#classement.ferme .cb{display:none}
+@media (max-aspect-ratio:1/1){#sAccueil .brand{align-self:stretch;margin-top:0;padding-left:142px;min-height:228px;display:flex;flex-direction:column;justify-content:center}#sAccueil .brand h1{font-size:2.35rem;line-height:1.05}#sAccueil .brand .logo{font-size:2.6rem}#sAccueil .brand .sub{font-size:.85rem}}
 #cadenas.tout{background:linear-gradient(135deg,#ffd166,#ffb703);box-shadow:0 0 14px rgba(255,209,102,.8)}
 #cadenas.edit{background:linear-gradient(135deg,#4cc9f0,#a24bff);box-shadow:0 0 14px rgba(76,201,240,.7)}
 .carte .clk{position:absolute;bottom:-9px;right:-9px;width:26px;height:26px;border-radius:50%;background:#2a1840;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:.8rem;box-shadow:0 2px 6px rgba(0,0,0,.4)}
@@ -179,6 +187,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <!-- ACCUEIL -->
 <div id="sAccueil" class="screen on">
   <button id="cadenas" title="Code">🔒</button>
+  <div id="classement"><div class="ct">🏆 Classement ▾</div><div class="cb"></div></div>
   <div class="brand"><div class="logo">🎀</div><h1>Rythmique <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
   <label class="field">Ton prénom<input id="inNom" maxlength="14" placeholder="Prénom" autocomplete="off"></label>
   <div id="rdvBox" class="card rdv" style="display:none"></div>
@@ -439,7 +448,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
     <div class="aide-l"><span class="pt" style="background:#ff4fa3">➜</span><div><b>Glisse</b> le doigt, dans n'importe quel sens (pivots).</div></div>
     <div class="aide-l"><span class="pt" style="background:#4cc9f0">↻</span><div><b>Dessine des cercles</b> avec le doigt tant que la barre passe. Une jauge verte montre où tu en es.</div></div>
     <div class="aide-l"><span class="pt" style="background:#4cc9f0">〰</span><div><b>Fais des zigzags</b> (serpentins du ruban).</div></div>
-    <div class="aide-l"><span class="pt" style="background:#ffd166">⬆</span><div><b>Lancer</b> : <b>glisse le doigt vers le haut</b> ⬆ pour lancer (un simple appui ne suffit pas), <b>dessine un petit rond</b> ↺ à chaque tour sous l'engin, puis <b>glisse vers le bas</b> ⬇ pour <b>rattraper</b>. Un simple appui ne valide rien. Rater le rattrapé = perte d'engin !</div></div>
+    <div class="aide-l"><span class="pt" style="background:#ffd166">⬆</span><div><b>Lancer</b> : <b>glisse le doigt vers le haut</b> ⬆ pour lancer (un simple appui ne suffit pas), <b>dessine un rond complet</b> ↺ à chaque tour sous l'engin, puis <b>glisse vers le bas</b> ⬇ pour <b>rattraper</b>. Un simple appui ne valide rien. Rater le rattrapé = perte d'engin !</div></div>
     <div class="aide-l"><span class="pt" style="background:#ff9f43">🤝</span><div><b>Échange</b> (mode coopératif) : ⬆ pour lancer ton engin à ta partenaire, puis ⬇ pour rattraper celui qu'on t'envoie. Un lancer raté fait tomber l'engin : toute l'équipe perd des points !</div></div>
     <h3>Les couleurs</h3>
     <div class="aide-l"><span class="pt" style="background:#ff4fa3"></span><div><b>Rose – DB</b> : difficultés corporelles (sauts, équilibres, pivots).</div></div>
@@ -598,11 +607,11 @@ const MUSIQUES=[
 ];
 const CATCOL={PX:'#ff3b3b',DB:'#ff4fa3',R:'#ffd166',DA:'#4cc9f0',pas:'#b388ff',final:'#ffffff',acro:'#5be7a9',EX:'#ff9f43'};
 const CATLBL={PX:'😈',DB:'DB',R:'R',DA:'DA',pas:'Pas',final:'Fin',acro:'Acro',EX:'Échange'};
-const EXHINT={lancer:'Glisse vers le haut ⬆ pour lancer à ta partenaire !',tour:'Dessine un petit rond ↺ pour tourner !',rattraper:'Glisse vers le bas ⬇ pour rattraper !'};
+const EXHINT={lancer:'Glisse vers le haut ⬆ pour lancer à ta partenaire !',tour:'Dessine un rond complet ↺ pour tourner !',rattraper:'Glisse vers le bas ⬇ pour rattraper !'};
 const ICON={tap:'●',double:'●●',hold:'▬',swipe:'➜',circle:'↻',zigzag:'〰'};
 const ROLEICON={lancer:'⬆',tour:'↺',rattraper:'⬇'};
 const GHINT={tap:'Touche',double:'Touche 2 fois',hold:'Maintiens appuyé',swipe:'Glisse le doigt',circle:'Dessine des cercles',zigzag:'Fais des zigzags'};
-const ROLEHINT={lancer:'Glisse vers le haut ⬆ pour lancer !',tour:'Dessine un petit rond ↺ !',rattraper:'Glisse vers le bas ⬇ pour rattraper !'};
+const ROLEHINT={lancer:'Glisse vers le haut ⬆ pour lancer !',tour:'Dessine un rond complet ↺ !',rattraper:'Glisse vers le bas ⬇ pour rattraper !'};
 const ETAB={PX:[0,0,0,0],EX:[0,.1,.3,.5],acro:[0,.1,.3,.5],DB:[0,.1,.3,.5],R:[0,.1,.3,.5],DA:[0,.1,.3,.5],pas:[0,0,.1,.1],final:[0,.1,.2,.3]};
 const GRADES=[{t:'Parfait !',c:'#5be7a9'},{t:'Bien',c:'#9be15d'},{t:'Juste',c:'#ffd166'},{t:'Raté',c:'#ff6b6b'}];
 
@@ -1655,6 +1664,7 @@ function lancerPartie({choreo,music,nom,leo,design=null,opponents=[],online=fals
   const g={choreo,notes:choreo.notes.map(n=>Object.assign({},n)),els:choreo.els.map(e=>Object.assign({},e)),niv:choreo.niv,engin:choreo.engin,B:choreo.B,first:choreo.first,final:choreo.final,
     nom,leo,design,music,rec:{wobs:[],drops:[],grades:[]},online,onFin,st:newStats(),ghosts:new Map(),live:{},running:true,done:false,speed:NIVEAUX[choreo.niv].vit,flash:null,lastHud:0,trails:new Map(),rnd:mulberry32(Date.now()&0xffffff)};
   for(const n of g.notes){const e=g.els[n.el];e.total=(e.total||0)+1;}
+  g.classe=!demo&&!perturb&&!retour;
   if(coop){
     // Mode coopératif : formation en cercle, même engin pour toute l'équipe
     const n=coop.order.length,pos=formation(n); g.coop=true; g.teamPids=coop.order; g.tidx=coop.order.indexOf(coop.me); g.team=new Array(n).fill(null); g.design=design=coop.design||design;
@@ -1779,12 +1789,12 @@ jeuEl.addEventListener('pointerdown',e=>{
   if(n.g==='tap')finalize(n,gr);
   else if(n.g==='double'){n.started=true;n.first=T;n.pend=gr;}
   else if(n.g==='hold'){n.started=true;n.pid=e.pointerId;n.pend=gr;}
-  else {n.started=true;n.pid=e.pointerId;n.pend=gr;n.sx=n.lx=x;n.sy=n.ly=y;n.st=T;n.rot=0;n.hd=null;}
+  else {n.started=true;n.pid=e.pointerId;n.pend=gr;n.sx=n.lx=x;n.sy=n.ly=y;n.st=T;n.rot=0;n.hd=null;n.bx0=n.bx1=x;n.by0=n.by1=y;}
 });
 jeuEl.addEventListener('pointermove',e=>{
   if(!GAME||GAME.done)return; const p=PT.get(e.pointerId); if(!p)return;
   const T=gameTime(),x=e.clientX,y=e.clientY; addTrail(e.pointerId,x,y);
-  for(const n of GAME.notes){if(n.g==='swipe'&&n.started&&!n.judged&&n.pid===e.pointerId){if(n.dir==='rond')suivreRond(n,x,y);if(swipeOk(n,x,y))finalize(n,n.pend);}}
+  for(const n of GAME.notes){if(n.g==='swipe'&&n.started&&!n.judged&&n.pid===e.pointerId){if(n.dir==='rond')suivreRond(n,x,y);if(swipeFaux(n,x,y))finalize(n,3);else if(swipeOk(n,x,y))finalize(n,n.pend);}}
   const tn=activeTrace(T);
   if(tn){
     if(p.tn!==tn){p.tn=tn;p.cx=x;p.cy=y;p.ang=null;p.zx={};p.zy={};}
@@ -1796,9 +1806,11 @@ jeuEl.addEventListener('pointermove',e=>{
   }
   p.lx=x;p.ly=y;
 });
-const swipeOk=(n,x,y)=>n.dir==='up'?(n.sy-y>=45&&n.sy-y>Math.abs(x-n.sx)*.8):n.dir==='down'?(y-n.sy>=45&&y-n.sy>Math.abs(x-n.sx)*.8):n.dir==='rond'?Math.abs(n.rot||0)>=4.2:Math.hypot(x-n.sx,y-n.sy)>=45;
+const swipeOk=(n,x,y)=>n.dir==='up'?(n.sy-y>=60&&n.sy-y>Math.abs(x-n.sx)*1.5):n.dir==='down'?(y-n.sy>=60&&y-n.sy>Math.abs(x-n.sx)*1.5):n.dir==='rond'?(Math.abs(n.rot||0)>=5.3&&n.bx1-n.bx0>=35&&n.by1-n.by0>=35):Math.hypot(x-n.sx,y-n.sy)>=45;
+/* mauvais sens (descendre au lieu de monter et inversement) = raté tout de suite */
+const swipeFaux=(n,x,y)=>n.dir==='up'?y-n.sy>25:n.dir==='down'?n.sy-y>25:false;
 /* petit rond : on cumule la rotation de la direction du doigt (≈ 240° suffisent) */
-function suivreRond(n,x,y){const dx=x-n.lx,dy=y-n.ly;if(Math.hypot(dx,dy)<6)return;const h=Math.atan2(dy,dx);if(n.hd!=null){let d=h-n.hd;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;if(Math.abs(d)<2.2)n.rot=(n.rot||0)+d;}n.hd=h;n.lx=x;n.ly=y;}
+function suivreRond(n,x,y){const dx=x-n.lx,dy=y-n.ly;n.bx0=Math.min(n.bx0,x);n.bx1=Math.max(n.bx1,x);n.by0=Math.min(n.by0,y);n.by1=Math.max(n.by1,y);if(Math.hypot(dx,dy)<8)return;const h=Math.atan2(dy,dx);if(n.hd!=null){let d=h-n.hd;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;if(Math.abs(d)<2.2)n.rot=(n.rot||0)+d;}n.hd=h;n.lx=x;n.ly=y;}
 function onUp(e){
   if(!GAME||GAME.done){PT.delete(e.pointerId);return;}
   const T=gameTime();
@@ -1826,7 +1838,7 @@ function tick(T,dt){
       if(!n.started&&T>n.t+w2)finalize(n,3);
       else if(n.g==='double'&&n.started&&T-n.first>.42)finalize(n,down(n.pend));
       else if(n.g==='hold'&&n.started&&T>=n.t+n.dur)finalize(n,n.pend);
-      else if(n.g==='swipe'&&n.started&&T-n.st>(n.dir==='rond'?.9:.5))finalize(n,3);
+      else if(n.g==='swipe'&&n.started&&T-n.st>(n.dir==='rond'?1.1:.5))finalize(n,3);
     } else if(T>n.t+n.dur+.05){const r=(n.acc||0)/n.need;finalize(n,r>=1?0:r>=.7?1:r>=.4?2:3);}
   }
   // HUD
@@ -1977,6 +1989,7 @@ function gagnantsDe(list){const L=list.filter(r=>!r.perturb&&isFinite(r.total));
 function finPartie(){
   const g=GAME; if(g.done)return; g.done=true; stopAudio(g,1.5); GAME_ST_PX=g.st;
   const res=computeFinal(g);
+  if(g.classe&&!res.abandon&&isFinite(res.total)&&res.total>0)envoyerScore(g.nom||'Moi',res.total);
   DERNIER={choreo:g.choreo,buffer:g.music.buffer,leo:g.leo,design:g.design,deco:g.main.deco,rec:g.rec,els:g.els,nom:g.nom,coop:g.coop?{n:g.team.length,ti:g.tidx,ox:g.main.opt.ox,oz:g.main.opt.oz}:null,ghosts:[...g.ghosts.values()].map((v,i)=>({leo:v.gym.leoId,design:v.gym.opt.design,drops:v.drops||[],nom:v.nom,ox:v.gym.opt.ox,oz:v.gym.opt.oz,ti:v.gym.opt.ti,deco:v.gym.deco}))};
   hEls.Elem.innerHTML=''; hEls.Prompt.innerHTML='';
   setTimeout(()=>{const cb=g.onFin;finirJeu();cb(res);},400);
@@ -2506,7 +2519,68 @@ $('#chJouer').onclick=()=>lancerChoreo(false);
 /* ============================== Écrans ============================== */
 let VIEW='sAccueil';
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id));VIEW=id;if(id==='sJeu')resizeHUD();}
-function goAccueil(){renderRecords();construireSalle(S.salle||'star');show('sAccueil');}
+/* ========================= Classement en ligne (Firebase Realtime Database) ========================= */
+// Adresse de la base Firebase (ex. https://rythmique-star-default-rtdb.europe-west1.firebasedatabase.app). Vide = classement de cet appareil seulement.
+const FB_URL='https://rythmique-star-default-rtdb.europe-west1.firebasedatabase.app';
+const PERIODES=[['total','Depuis toujours'],['mois','Ce mois-ci'],['sem','Cette semaine'],['jour','Aujourd\'hui']];
+function clesPeriode(d=new Date()){
+  const z=n=>String(n).padStart(2,'0'),j=`${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`;
+  const t=new Date(d.getFullYear(),d.getMonth(),d.getDate()),dw=(t.getDay()+6)%7; t.setDate(t.getDate()-dw+3);
+  const a=new Date(t.getFullYear(),0,4),w=1+Math.round(((t-a)/864e5-3+((a.getDay()+6)%7))/7);
+  return {total:'total',mois:'m'+j.slice(0,7),sem:`s${t.getFullYear()}-${z(w)}`,jour:'j'+j};
+}
+const cleNom=n=>String(n).trim().slice(0,20).replace(/[.$#\[\]\/]/g,'_')||'Moi';
+async function fbMeilleur(per,nom,v){
+  const u=`${FB_URL}/rs_top/${encodeURIComponent(per)}/${encodeURIComponent(nom)}.json`;
+  const old=await (await fetch(u)).json();
+  if(old==null||v>old){const r=await fetch(u,{method:'PUT',body:JSON.stringify(v)});if(!r.ok)throw new Error('fb '+r.status);}
+}
+let FILE_P=Promise.resolve();
+function viderFile(){FILE_P=FILE_P.then(viderFile1).catch(()=>{});return FILE_P;}   // envois l'un après l'autre
+async function viderFile1(){
+  if(!FB_URL)return;
+  for(;;){
+    const q=store.get('rs_top_q',[]); if(!q.length)return; const it=q[0];
+    const k=clesPeriode(new Date(it.ts));
+    for(const [p] of PERIODES)await fbMeilleur(k[p],it.nom,it.v);   // erreur = on garde la file pour plus tard
+    store.set('rs_top_q',store.get('rs_top_q',[]).filter(x=>x.id!==it.id));
+  }
+}
+function envoyerScore(nom,total){
+  const v=Math.round(total*1000)/1000,n=cleNom(nom),k=clesPeriode();
+  const loc=store.get('rs_top_loc',{});           // copie locale (affichée si pas d'internet / pas de base)
+  for(const [p] of PERIODES){const t=loc[k[p]]||(loc[k[p]]={});if(!(t[n]>=v))t[n]=v;}
+  for(const c of Object.keys(loc))if(!Object.values(k).includes(c))delete loc[c];
+  store.set('rs_top_loc',loc);
+  if(FB_URL){const q=store.get('rs_top_q',[]);q.push({nom:n,v,ts:Date.now(),id:Math.random().toString(36).slice(2)});store.set('rs_top_q',q.slice(-30));viderFile().then(()=>{CLS_CACHE=null;if(VIEW==='sAccueil')renderClassement();});}
+}
+let CLS_CACHE=null,CLS_T=0;
+async function lireClassement(){
+  const k=clesPeriode(),out={};
+  await Promise.all(PERIODES.map(async([p])=>{
+    const r=await fetch(`${FB_URL}/rs_top/${encodeURIComponent(k[p])}.json?orderBy=%22$value%22&limitToLast=3`);
+    if(!r.ok)throw new Error('fb '+r.status); out[p]=Object.entries(await r.json()||{});
+  }));
+  return out;
+}
+async function renderClassement(){
+  const box=$('#classement'); if(!box)return; const cb=box.querySelector('.cb');
+  const k=clesPeriode(); let data=null,src='';
+  if(FB_URL){
+    try{ if(!CLS_CACHE||Date.now()-CLS_T>20000){CLS_CACHE=await lireClassement();CLS_T=Date.now();} data=CLS_CACHE; }catch(e){src='hors ligne';}
+  }
+  if(!data){const loc=store.get('rs_top_loc',{});data={};for(const [p] of PERIODES)data[p]=Object.entries(loc[k[p]]||{});if(!FB_URL)src='cet appareil';}
+  const med=['🥇','🥈','🥉'];
+  cb.innerHTML=PERIODES.map(([p,lib])=>{
+    const L=(data[p]||[]).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    return `<div class="cp">${lib}</div>`+(L.length?L.map(([n,v],i)=>`<div class="cl"><span>${med[i]} ${esc(n)}</span><b class="cv">${fmt(v,2)}</b></div>`).join(''):'<div class="cl"><span style="opacity:.6">—</span></div>');
+  }).join('')+(src?`<div style="opacity:.55;text-align:center;margin-top:3px">(${src})</div>`:'');
+}
+$('#classement .ct').onclick=()=>{const b=$('#classement');b.classList.toggle('ferme');store.set('rs_cls_ferme',b.classList.contains('ferme'));};
+if(store.get('rs_cls_ferme',false))$('#classement').classList.add('ferme');
+viderFile().catch(()=>{}); renderClassement();
+
+function goAccueil(){renderRecords();renderClassement();construireSalle(S.salle||'star');show('sAccueil');}
 function ecranEnLigne(c){NET.coopMode=c;$('#onTitre').textContent=c?'🤝 Mode coopératif':'Compétition en ligne';$('#onCoopInfo').style.display=c?'':'none';$('#onCreerHint').textContent=c?'Tu obtiens un code à 4 lettres à donner à tes coéquipières (2 à 5 gymnastes).':'Tu obtiens un code à 4 lettres à donner à tes amies (jusqu\'à 6 gymnastes).';netStatus('');show('sOnline');}
 function needNom(){if(S.nom)return true;alert('Écris d\'abord ton prénom 🙂');$('#inNom').focus();return false;}
 $('#inNom').value=S.nom; $('#inNom').addEventListener('input',e=>{S.nom=e.target.value.trim();saveS();});
