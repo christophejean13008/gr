@@ -281,7 +281,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
     <div id="vsPersoBox" style="display:none"><div class="lbl" style="margin-top:12px">🎭 Personnages spéciaux</div>
     <div class="leos" id="vsPersos"></div>
     <p class="hint" id="vsPersoInfo" style="margin-top:2px"></p></div>
-    <label class="filebtn">🧩 Tester un modèle 3D (GLB / FBX)<input type="file" id="vsFile" accept=".glb,.gltf,.fbx" hidden></label>
+    <label class="filebtn" id="vsFileBox" style="display:none">🧩 Tester un modèle 3D (GLB / FBX)<input type="file" id="vsFile" accept=".glb,.gltf,.fbx" hidden></label>
     <p class="hint" id="vsInfo"></p>
   <div class="actions"><button class="big" id="vsOk">Valider</button></div>
   </div>
@@ -3166,6 +3166,7 @@ function echangerCartes(pA,donneA,pB,donneB){
 
 /* Vestiaire */
 function renderVestiaire(){
+  $('#vsFileBox').style.display=modeCode()==='tout'?'':'none';
   composeLeo();
   const corps=[...(MODELES_TRIPO.length?[]:[{k:'mannequin',t:'🧍‍♀️ Gymnaste du jeu'}]),...MODELES_TRIPO.map((m,i)=>({k:'t'+i,t:'✨ '+m.nom})),...(LOCAL_LEO?[{k:'local',t:'🧩 '+LOCAL_LEO.nom}]:[])];
   $('#vsCorpsBox').style.display=corps.length>1?'':'none';
