@@ -445,7 +445,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
     <p style="font-size:.8rem;opacity:.8">🎼 Musiques de gym : Kevin MacLeod (incompetech.com), licence Creative Commons BY 3.0.</p>
     <h3>Les gestes</h3>
     <div class="aide-l"><span class="pt" style="background:#ff4fa3">●</span><div><b>Touche</b> l'écran une fois.</div></div>
-    <div class="aide-l"><span class="pt" style="background:#4cc9f0">●●</span><div><b>Touche 2 fois</b> rapidement.</div></div>
+    <div class="aide-l"><span class="pt" style="background:#4cc9f0">●●</span><div><b>Touche 2 fois</b> rapidement (un seul appui = raté).</div></div>
     <div class="aide-l"><span class="pt barre" style="background:#ff4fa3">▬</span><div><b>Maintiens</b> le doigt appuyé jusqu'au bout de la barre (équilibres).</div></div>
     <div class="aide-l"><span class="pt" style="background:#ff4fa3">➜</span><div><b>Glisse</b> le doigt, dans n'importe quel sens (pivots).</div></div>
     <div class="aide-l"><span class="pt" style="background:#4cc9f0">↻</span><div><b>Dessine des cercles</b> avec le doigt tant que la barre passe. Une jauge verte montre où tu en es.</div></div>
@@ -1860,7 +1860,7 @@ function tick(T,dt){
     if(n.judged)continue; if(n.t-.5>T&&!n.started)break;
     if(TAPLIKE.has(n.g)){
       if(!n.started&&T>n.t+w2)finalize(n,3);
-      else if(n.g==='double'&&n.started&&T-n.first>.42)finalize(n,down(n.pend));
+      else if(n.g==='double'&&n.started&&T-n.first>.42)finalize(n,3); // un seul appui au lieu de deux = raté
       else if(n.g==='hold'&&n.started&&T>=n.t+n.dur)finalize(n,n.pend);
       else if(n.g==='swipe'&&n.started&&T-n.st>(n.dir==='rond'?1.1:.5))finalize(n,3);
     } else if(T>n.t+n.dur+.05){const r=(n.acc||0)/n.need;finalize(n,r>=1?0:r>=.7?1:r>=.4?2:3);}
