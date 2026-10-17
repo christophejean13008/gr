@@ -115,6 +115,24 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 #hCount{position:absolute;top:30%;left:0;right:0;text-align:center;font-size:5rem;font-weight:900;pointer-events:none;text-shadow:0 4px 18px #000}
 #hJudge{position:absolute;top:24%;left:0;right:0;text-align:center;font-size:2rem;font-weight:900;pointer-events:none;opacity:0;text-shadow:0 3px 12px rgba(0,0,0,.8)}
 #hJudge small{display:block;font-size:.95rem;font-weight:700}
+#bonus{position:absolute;z-index:6;width:78px;height:78px;margin:-39px 0 0 -39px;display:none;touch-action:none;filter:drop-shadow(0 0 12px rgba(255,209,102,.9))}
+#bonus.on{display:block;animation:bnIn .22s ease-out}
+#bonus.etoile{width:104px;height:104px;margin:-52px 0 0 -52px}
+#bonus svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);pointer-events:none}
+#bonus svg circle{fill:none;stroke:#fff3b0;stroke-width:4;stroke-linecap:round;stroke-dasharray:226;stroke-dashoffset:0}
+#bonus.on svg circle{animation:bnTemps var(--bn-d,2s) linear forwards}
+#bonus .forme{position:absolute;inset:9px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fffbe0,#ffd166 38%,#e0a100 72%,#9c6500)}
+#bonus.etoile .forme{inset:4px;border-radius:0;clip-path:polygon(50% 0,61.5% 35%,98% 35.5%,68.5% 57%,79.5% 92%,50% 71%,20.5% 92%,31.5% 57%,2% 35.5%,38.5% 35%)}
+#bonus .ico{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding-top:8px;font-size:1.7rem;font-weight:900;color:#6b3f00;pointer-events:none}
+#bonus.etoile .ico{padding-top:14px}
+#bonus.ok{animation:bnOk .35s ease-out forwards}
+#bonus.rate{animation:bnRate .35s ease-in forwards}
+.bnPlus{position:absolute;z-index:7;pointer-events:none;font-weight:900;color:#ffd166;font-size:1.25rem;text-shadow:0 2px 8px rgba(0,0,0,.9);transform:translate(-50%,-50%);animation:bnMonte 1s ease-out forwards;white-space:nowrap}
+@keyframes bnIn{from{transform:scale(.2);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes bnTemps{to{stroke-dashoffset:226}}
+@keyframes bnOk{to{transform:scale(1.7);opacity:0}}
+@keyframes bnRate{to{transform:scale(.3);opacity:0}}
+@keyframes bnMonte{from{opacity:1;margin-top:0}to{opacity:0;margin-top:-60px}}
 #hJudge.pop{animation:pop .75s ease-out forwards}
 @keyframes pop{0%{opacity:0;transform:scale(.6)}15%{opacity:1;transform:scale(1.12)}30%{transform:scale(1)}75%{opacity:1}100%{opacity:0;transform:translateY(-14px)}}
 #hPrompt{position:absolute;top:40%;left:0;right:0;text-align:center;font-size:1.5rem;font-weight:800;pointer-events:none;text-shadow:0 3px 12px #000}
@@ -380,6 +398,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
   <div id="hLive"></div>
   <div id="hCount"></div>
   <div id="hJudge"></div>
+  <div id="bonus"><svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="36"/></svg><div class="forme"></div><div class="ico"></div></div>
   <div id="hPrompt"></div>
   <div id="hElem"></div>
   <canvas id="lane"></canvas>
@@ -444,6 +463,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
     <p>Au-dessus de la bande, une étiquette annonce l'élément qui arrive, sa valeur et le geste à faire.</p>
     <p style="font-size:.8rem;opacity:.8">🎼 Musiques de gym : Kevin MacLeod (incompetech.com), licence Creative Commons BY 3.0.</p>
     <h3>Les gestes</h3>
+    <div class="aide-l"><span class="pt" style="background:#ffd166">✨</span><div><b>Bonus main gauche</b> (Fédérale et Élite) : un <b>rond d'or</b> apparaît en haut à gauche de la gymnaste, touche-le avec la main gauche avant qu'il disparaisse. En <b>Élite</b>, c'est une <b>étoile</b> : fais le geste dessiné dedans (↻ ⬆ ⬇ ⬅ ➡) en partant de l'étoile. Plus tu réussis, plus ils viennent souvent et vite, et une série rapporte de plus en plus.</div></div>
     <div class="aide-l"><span class="pt" style="background:#ff4fa3">●</span><div><b>Touche</b> l'écran une fois.</div></div>
     <div class="aide-l"><span class="pt" style="background:#4cc9f0">●●</span><div><b>Touche 2 fois</b> rapidement (un seul appui = raté).</div></div>
     <div class="aide-l"><span class="pt barre" style="background:#ff4fa3">▬</span><div><b>Maintiens</b> le doigt appuyé jusqu'au bout de la barre (équilibres).</div></div>
@@ -1676,7 +1696,7 @@ function resizeHUD(){sizeCanvas(lane,laneCtx,lane.clientWidth||innerWidth,110);s
 function newStats(){return {dedE:0,dedA:0,DB:[],R:[],DA:[],groups:new Set(),line:0,count:[0,0,0,0],combo:0,maxCombo:0,nb:0,fE:{p:0,m:0,g:0,pertes:0,sorties:0},fA:{rythme:0,pas:0,fin:0,cont:0,expr:0,hors:0},EX:[],exRates:0};}
 const sum=a=>a.reduce((x,y)=>x+y,0);
 function computeD(st){return sum([...st.DB].sort((a,b)=>b-a).slice(0,8))+sum(st.R.slice(0,4))+sum(st.DA.slice(0,15))+sum(st.EX||[]);}
-function liveScores(){const g=GAME,st=g.st;const D=computeD(st),E=Math.max(0,10-st.dedE),A=Math.max(0,10-st.dedA);const T=gameTime();return {D,E,A,T:Math.max(0,D+E+A-st.line),prog:clamp((T-g.first)/(g.final-g.first),0,1)};}
+function liveScores(){const g=GAME,st=g.st;const D=computeD(st),E=Math.max(0,10-st.dedE),A=Math.max(0,10-st.dedA);const T=gameTime();return {D,E,A,T:Math.max(0,D+E+A-st.line)+(st.bonus||0),prog:clamp((T-g.first)/(g.final-g.first),0,1)};}
 function gameTime(){if(!GAME)return 0;return AC.currentTime-GAME.startAt-S.latence/1000-(AC.outputLatency||0);}
 
 function lancerPartie({choreo,music,nom,leo,design=null,opponents=[],online=false,demo=false,retour=null,coop=null,perturb=false,vue=null,debut=null,onFin}){
@@ -1714,6 +1734,7 @@ function lancerPartie({choreo,music,nom,leo,design=null,opponents=[],online=fals
   g.demo=demo; g.retour=retour; lane.style.display=demo?'none':''; hEls.Judge.style.display=demo?'none':'';
   hEls.Live.style.display=online?'block':'none'; hEls.Elem.innerHTML=''; hEls.Prompt.innerHTML='';
   g.perturbMode=perturb; g.pfx={}; fxReset();
+  bonusInit(g);
   for(const G of [g.main,...[...g.ghosts.values()].map(v=>v.gym)])G.flammesJusqua=choreo.first+.6;
   if(online&&!perturb) g.liveTimer=setInterval(()=>{if(GAME===g&&!g.done)sendNet(Object.assign({t:'live'},liveScores()));},350);
 }
@@ -1730,7 +1751,62 @@ function exPerte(n,kind){
   popup(kind==='lancer'?'Lancer raté !':'Échange raté !','#ff6b6b','E −0,70 · A −0,30');
   if(g.online)sendNet({t:'xfail',k:n.ex,kind});
 }
-function finirJeu(){const g=GAME;if(!g)return;fxReset();try{g.wl&&g.wl.release();}catch(e){}clearInterval(g.liveTimer);g.main.dispose();for(const v of g.ghosts.values())v.gym.dispose();GAME=null;}
+/* ================= Bonus main gauche (Fédérale : rond d'or · Élite : étoile avec un geste) ================= */
+const BN_GESTES=[['rond','↻'],['haut','⬆'],['bas','⬇'],['gauche','⬅'],['droite','➡']];
+const bnEl=$('#bonus'), _bnV=new THREE.Vector3();
+function bonusInit(g){
+  bonusCacher();
+  g.bn=(!g.demo&&!g.perturbMode&&(g.niv==='federale'||g.niv==='elite'))?{kind:g.niv==='elite'?'etoile':'rond',lvl:0,serie:0,best:0,ok:0,tot:0,cur:null,next:g.first+3+Math.random()*3}:null;
+}
+function bonusCacher(){bnEl.className='';bnEl.style.display='none';}
+function bnGap(bn){const b=bn.kind==='etoile'?7:6.5,m=bn.kind==='etoile'?2.4:1.8;return Math.max(m,b*Math.pow(.86,bn.lvl))*(.7+.6*Math.random());}
+function bnFenetre(bn){return bn.kind==='etoile'?Math.max(1.15,2.9*Math.pow(.88,bn.lvl)):Math.max(.6,2.1*Math.pow(.86,bn.lvl));}
+function bonusFrame(T){
+  const g=GAME,bn=g&&g.bn; if(!bn||g.done)return;
+  if(bn.cur){if(T>bn.cur.t1)bonusFin(false);return;}
+  if(T<bn.next||T>g.final-2.5)return;
+  // position : en haut à gauche de la gymnaste
+  const W=innerWidth,H=innerHeight; g.main.root.getWorldPosition(_bnV); _bnV.y+=1.65; _bnV.project(camera);
+  const sx=(_bnV.x*.5+.5)*W, sy=(-_bnV.y*.5+.5)*H;
+  const x=clamp(sx-W*(.14+Math.random()*.2),56,W*.48), y=clamp(sy-H*(.02+Math.random()*.16),110,H*.56);
+  const win=bnFenetre(bn), ge=bn.kind==='etoile'?BN_GESTES[Math.floor(Math.random()*BN_GESTES.length)]:null;
+  bn.cur={t0:T,t1:T+win,g:ge&&ge[0],x,y}; bn.tot++;
+  bnEl.className=''; void bnEl.offsetWidth; bnEl.className='on'+(bn.kind==='etoile'?' etoile':'');
+  bnEl.style.display='block'; bnEl.style.left=x+'px'; bnEl.style.top=y+'px'; bnEl.style.setProperty('--bn-d',win+'s');
+  bnEl.querySelector('.ico').textContent=ge?ge[1]:'';
+}
+function bonusFin(ok){
+  const g=GAME,bn=g&&g.bn; if(!bn||!bn.cur)return; const c=bn.cur; bn.cur=null; const T=gameTime();
+  if(ok){
+    bn.ok++; bn.serie++; bn.best=Math.max(bn.best,bn.serie); bn.lvl++;
+    const mult=Math.min(3,1+.25*(bn.serie-1)), pts=(bn.kind==='etoile'?.08:.05)*mult;
+    g.st.bonus=(g.st.bonus||0)+pts;
+    const f=document.createElement('div'); f.className='bnPlus'; f.style.left=c.x+'px'; f.style.top=c.y+'px';
+    f.textContent=`+${fmt(pts,2)}${bn.serie>1?' · série ×'+bn.serie:''}`; jeuEl.appendChild(f); setTimeout(()=>f.remove(),1000);
+    try{const ac=getAC(),t=ac.currentTime;[1568,2093].forEach((fr,i)=>{const o=ac.createOscillator(),v=ac.createGain();o.type='triangle';o.frequency.value=fr;v.gain.setValueAtTime(.0001,t+i*.07);v.gain.exponentialRampToValueAtTime(.18,t+i*.07+.01);v.gain.exponentialRampToValueAtTime(.0001,t+i*.07+.25);o.connect(v);v.connect(ac.destination);o.start(t+i*.07);o.stop(t+i*.07+.3);});}catch(e){}
+  } else { bn.serie=0; bn.lvl=Math.max(0,bn.lvl-1); }
+  bnEl.className=(ok?'ok':'rate')+(bn.kind==='etoile'?' etoile':''); setTimeout(()=>{if(!bn.cur&&GAME===g)bnEl.style.display='none';},360);
+  bn.next=T+bnGap(bn);
+}
+const BNP=new Map();
+bnEl.addEventListener('pointerdown',e=>{
+  e.stopPropagation(); e.preventDefault(); const g=GAME,bn=g&&g.bn; if(!bn||!bn.cur)return;
+  if(AC&&AC.state!=='running')AC.resume();
+  if(!bn.cur.g){bonusFin(true);return;}
+  try{bnEl.setPointerCapture(e.pointerId);}catch(_){}
+  BNP.set(e.pointerId,{sx:e.clientX,sy:e.clientY,lx:e.clientX,ly:e.clientY,rot:0,hd:null,bx0:e.clientX,bx1:e.clientX,by0:e.clientY,by1:e.clientY});
+});
+bnEl.addEventListener('pointermove',e=>{
+  const n=BNP.get(e.pointerId),bn=GAME&&GAME.bn; if(!n||!bn||!bn.cur)return; e.stopPropagation();
+  const x=e.clientX,y=e.clientY,dx=x-n.sx,dy=y-n.sy,G=bn.cur.g; let ok=false;
+  if(G==='rond'){suivreRond(n,x,y);ok=Math.abs(n.rot)>=3.9&&n.bx1-n.bx0>=14&&n.by1-n.by0>=14;}
+  else if(G==='haut')ok=-dy>=45&&-dy>Math.abs(dx)*1.5; else if(G==='bas')ok=dy>=45&&dy>Math.abs(dx)*1.5;
+  else if(G==='gauche')ok=-dx>=45&&-dx>Math.abs(dy)*1.5; else if(G==='droite')ok=dx>=45&&dx>Math.abs(dy)*1.5;
+  if(ok){BNP.delete(e.pointerId);bonusFin(true);}
+});
+const bnUp=e=>{if(BNP.delete(e.pointerId))e.stopPropagation();};
+bnEl.addEventListener('pointerup',bnUp); bnEl.addEventListener('pointercancel',bnUp);
+function finirJeu(){const g=GAME;if(!g)return;fxReset();bonusCacher();try{g.wl&&g.wl.release();}catch(e){}clearInterval(g.liveTimer);g.main.dispose();for(const v of g.ghosts.values())v.gym.dispose();GAME=null;}
 
 function finalize(n,gr){
   const g=GAME,st=g.st,el=g.els[n.el],T=gameTime();
@@ -1865,6 +1941,7 @@ function tick(T,dt){
       else if(n.g==='swipe'&&n.started&&T-n.st>(n.dir==='rond'?1.1:.5))finalize(n,3);
     } else if(T>n.t+n.dur+.05){const r=(n.acc||0)/n.need;finalize(n,r>=1?0:r>=.7?1:r>=.4?2:3);}
   }
+  bonusFrame(T);
   // HUD
   hEls.Count.textContent=T<0?Math.ceil(-T):'';
   const tn=activeTrace(T);
@@ -1948,8 +2025,8 @@ function computeFinal(g){
   let dedA=st.dedA; if(st.nb>0&&st.maxCombo<.25*st.nb){dedA+=.3;st.fA.expr=1;}
   const jA=jury(Math.min(10,dedA)),jE=jury(Math.min(10,st.dedE));
   const duree=Math.round(g.final-g.first+1.5); let penT=0; if(duree<75)penT=(75-duree)*.05; else if(duree>90)penT=(duree-90)*.05;
-  const pen=penT+st.line; const total=Math.max(0,D+jA.score+jE.score-pen);
-  return {nom:g.nom,leo:g.leo,engin:g.engin,niv:g.niv,D,Ddb,Dr,Dda,nDB:Math.min(8,st.DB.length),nR:st.R.length,nDA:st.DA.length,Dex,nEX:(st.EX||[]).length,exRates:st.exRates||0,coop:!!g.coop,manque,A:jA.score,E:jE.score,jA,jE,pen,penT,penL:st.line,duree,total,fE:st.fE,fA:st.fA,count:st.count,maxCombo:st.maxCombo,nb:st.nb};
+  const pen=penT+st.line, bonus=Math.round((st.bonus||0)*1000)/1000; const total=Math.max(0,D+jA.score+jE.score-pen)+bonus;
+  return {nom:g.nom,leo:g.leo,engin:g.engin,niv:g.niv,D,Ddb,Dr,Dda,nDB:Math.min(8,st.DB.length),nR:st.R.length,nDA:st.DA.length,Dex,nEX:(st.EX||[]).length,exRates:st.exRates||0,coop:!!g.coop,manque,A:jA.score,E:jE.score,jA,jE,pen,penT,penL:st.line,duree,total,bonus,bn:g.bn?{ok:g.bn.ok,tot:g.bn.tot,best:g.bn.best,kind:g.bn.kind}:null,fE:st.fE,fA:st.fA,count:st.count,maxCombo:st.maxCombo,nb:st.nb};
 }
 let GAME_ST_PX=null;
 /* ================= Écran de victoire (parties en opposition) ================= */
@@ -2029,6 +2106,7 @@ function htmlResultat(r){
   const fe=[`Petites fautes (0,10) : ${r.fE.p}`,`Fautes moyennes (0,30) : ${r.fE.m}`,`Grandes fautes (0,50) : ${r.fE.g}`]; if(r.fE.pertes)fe.push(`Pertes d'engin : ${r.fE.pertes}`); if(r.fA.hors)fe.push(`dont appuis hors temps : ${r.fA.hors} (−0,10 chacun)`);
   return `<div class="card"><div class="score-big">${fmt(r.total)}</div>
   <div class="grid3"><div><small>Difficulté D</small><b>${fmt(r.D)}</b></div><div><small>Artistique A</small><b>${fmt(r.A)}</b></div><div><small>Exécution E</small><b>${fmt(r.E)}</b></div></div>
+  ${r.bn&&r.bn.tot?`<p style="text-align:center;color:#ffd166;font-weight:800;margin:.3em 0">${r.bn.kind==='etoile'?'⭐':'🟡'} Bonus : +${fmt(r.bonus||0,2)} · ${r.bn.ok}/${r.bn.tot} attrapé${r.bn.ok>1?'s':''} · meilleure série ${r.bn.best}</p>`:''}
   ${r.pen>0?`<p class="pen">Pénalités : −${fmt(r.pen,2)}${r.penT?` (durée ${r.duree} s)`:''}${r.penL?` (ligne −${fmt(r.penL,2)})`:''}</p>`:''}
   <p class="hint" style="text-align:center">Parfait ${c[0]} · Bien ${c[1]} · Juste ${c[2]} · Raté ${c[3]} · meilleure série ${r.maxCombo}</p>
   <details><summary>Jury D – Difficulté</summary><ul>
