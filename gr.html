@@ -156,6 +156,16 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 #cadenas.edit{background:linear-gradient(135deg,#4cc9f0,#a24bff);box-shadow:0 0 14px rgba(76,201,240,.7)}
 .carte .clk{position:absolute;bottom:-9px;right:-9px;width:26px;height:26px;border-radius:50%;background:#2a1840;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:.8rem;box-shadow:0 2px 6px rgba(0,0,0,.4)}
 .code-in{font:inherit;font-size:2rem;letter-spacing:.5em;text-align:center;width:100%;padding:10px;border-radius:14px;border:2px solid rgba(255,255,255,.3);background:rgba(0,0,0,.3);color:#fff}
+/* tchat & rendez-vous */
+.chatlog{max-height:190px;overflow-y:auto;display:flex;flex-direction:column;gap:5px;padding:4px 2px;font-size:.92rem;touch-action:pan-y}
+.chatlog .m{background:rgba(255,255,255,.08);border-radius:12px 12px 12px 4px;padding:5px 10px;align-self:flex-start;max-width:88%}
+.chatlog .m.moi{background:linear-gradient(135deg,rgba(255,79,163,.55),rgba(162,75,255,.55));border-radius:12px 12px 4px 12px;align-self:flex-end}
+.chatlog .m b{font-size:.78rem;display:block;opacity:.85}
+#chatRapide button{padding:5px 10px;font-size:.85rem}
+#toastChat{position:fixed;left:50%;bottom:max(18px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:58;background:rgba(32,15,56,.96);border:2px solid #ff8fc8;border-radius:16px;padding:8px 14px;max-width:88vw;display:none;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+#toastChat.on{display:block;animation:pop .4s ease-out}
+.rdv{border:2px solid transparent;background:linear-gradient(180deg,rgba(52,28,90,.96),rgba(30,14,54,.96)) padding-box,linear-gradient(135deg,#4cc9f0,#ff8fc8) border-box;text-align:center}
+.rdv .row{justify-content:center}
 #hFlash{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(circle at 50% 78%,#fff 0%,#fff 35%,rgba(255,255,255,.85) 60%,rgba(255,240,180,.4) 100%)}
 #hFlash.on{animation:pxflash 1.3s ease-out forwards}@keyframes pxflash{0%{opacity:1}55%{opacity:.95}100%{opacity:0}}
 #hPx{position:absolute;top:calc(max(8px,env(safe-area-inset-top)) + 52px);left:8px;font-size:.85rem;font-weight:800;color:#ff6b6b;background:rgba(18,8,31,.7);border-radius:10px;padding:4px 10px;pointer-events:none;display:none}
@@ -171,6 +181,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
   <button id="cadenas" title="Code">🔒</button>
   <div class="brand"><div class="logo">🎀</div><h1>Rythmique <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
   <label class="field">Ton prénom<input id="inNom" maxlength="14" placeholder="Prénom" autocomplete="off"></label>
+  <div id="rdvBox" class="card rdv" style="display:none"></div>
   <div class="acc3">
     <div class="menu col">
       <button class="big" data-go="solo">▶ Jouer en solo</button>
@@ -288,6 +299,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
   <div class="card"><div class="lbl">Rejoindre une salle</div>
     <div class="row"><input id="onCode" maxlength="4" placeholder="CODE" autocomplete="off" style="text-transform:uppercase;letter-spacing:5px;text-align:center;font-size:1.3rem"><button class="big" id="onRejoindre">Rejoindre</button></div></div>
   <p class="hint" id="onStatut"></p>
+  <button id="onInviter" style="width:100%;max-width:460px;margin-top:12px">📅 Inviter à une partie (date, heure, lien)</button>
   <div class="actions"><button id="onRetour">← Retour</button></div>
 </div>
 <div id="sLobby" class="screen">
@@ -298,6 +310,11 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
     <button id="lbModif" style="width:100%;margin-top:10px">Modifier les réglages</button></div>
   <div class="card"><div class="lbl">😈 Perturbatrice</div><p class="hint" style="margin-top:2px">Une seule joueuse peut la jouer : au lieu de faire la chorégraphie, elle réussit des gestes qui gênent les autres (accélération, flash, brouillard, secousses).</p>
     <button id="lbPerturb" style="width:100%;margin-top:8px"></button></div>
+  <div class="card"><div class="lbl">💬 Discussion de la salle</div>
+    <div id="chatLog" class="chatlog"><p class="hint">Les messages ne sont vus que par les joueuses de la salle et disparaissent quand on la quitte.</p></div>
+    <div class="chips" id="chatRapide" style="margin-top:6px"></div>
+    <div class="row" style="margin-top:6px"><input id="chatIn" maxlength="120" placeholder="Écris un message…" autocomplete="off" style="flex:1"><button class="big" id="chatEnv" style="padding:10px 14px">➤</button></div></div>
+  <button id="lbInviter" style="width:100%;max-width:440px;margin:0 auto 8px">📤 Inviter une amie dans cette salle</button>
   <p class="hint" id="lbStatut"></p>
   <button class="big" id="lbPret" style="display:none;width:100%;max-width:440px;margin:0 auto 8px">✋ Je suis prête !</button>
   <button id="lbTroc" style="width:100%;max-width:440px;margin:0 auto 8px">🔁 Échanger mes cartes en double</button>
@@ -329,6 +346,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
   <div class="actions"><button id="trRetour">← Retour</button><button class="big" id="trOk">Échanger</button></div>
 </div>
 <div id="revele"><h2 id="rvTitre"></h2><p id="rvSous" class="hint" style="max-width:420px"></p><div class="barre" style="width:min(320px,80vw)"><i id="rvBarre"></i></div><p class="hint" id="rvProchaine"></p><div class="zone" id="rvZone"></div><button class="big" id="rvOk" style="min-width:200px">Super !</button></div>
+<div id="toastChat"></div>
 <div id="trocModal"><div class="card" id="tmCorps"></div></div>
 
 <!-- VICTOIRE -->
@@ -2092,14 +2110,14 @@ function loadPeer(){
 function code4(){const L='ABCDEFGHJKLMNPQRSTUVWXYZ';let s='';for(let i=0;i<4;i++)s+=L[Math.floor(Math.random()*L.length)];return s;}
 function netStatus(t){$('#onStatut').textContent=t;$('#lbStatut').textContent=t;}
 function hostSettings(){NET.set={engin:S.engin,niv:S.niv,mus:musName(),coop:!!NET.coopMode,salle:S.salle||'star'};}
-async function creerSalle(){
+async function creerSalle(codeFixe){
   await loadPeer(); hostSettings();
   return new Promise((res,rej)=>{
     const essai=n=>{
-      const code=code4(); const peer=new Peer(PREFIX+code,PEER_OPT);
+      const code=codeFixe||code4(); const peer=new Peer(PREFIX+code,PEER_OPT);
       peer.on('open',()=>{NET.peer=peer;NET.host=true;NET.code=code;NET.me='host';NET.seen={};NET.players=[{pid:'host',nom:S.nom||'Hôte',leo:netLeo(),eng:S.engDesign,pret:true,deco:decoDe(S.nom||'Hôte')}];demarrerVeille();res(code);});
       peer.on('disconnected',()=>{try{if(NET.peer===peer)peer.reconnect();}catch(e){}});
-      peer.on('error',err=>{if(err.type==='unavailable-id'&&n<4){peer.destroy();essai(n+1);}else if(!NET.peer)rej(new Error('Réseau : '+err.type));else netStatus('Souci réseau : '+err.type);});
+      peer.on('error',err=>{if(err.type==='unavailable-id'&&n<4&&!codeFixe){peer.destroy();essai(n+1);}else if(!NET.peer)rej(new Error('Réseau : '+err.type));else netStatus('Souci réseau : '+err.type);});
       peer.on('connection',conn=>{
         conn.on('open',()=>{NET.conns.set(conn.peer,conn);NET.seen[conn.peer]=maint();});
         conn.on('data',d=>{NET.seen[conn.peer]=maint();hostData(conn,d);});
@@ -2115,6 +2133,7 @@ function sendNet(msg){if(!NET.peer)return;if(NET.host)broadcast(Object.assign({}
 function hostData(conn,d){
   switch(d.t){
     case 'ping': conn.send({t:'pong',c:d.c,h:maint()}); return;
+    case 'chat': {const p=NET.players.find(p=>p.pid===conn.peer);if(!p)return;const m={t:'chat',pid:conn.peer,nom:p.nom,deco:p.deco,txt:String(d.txt||'').slice(0,120)};if(!m.txt.trim())return;broadcast(m);recevoirChat(m);return;}
     case 'troc': case 'trocRep': {if(d.to==='host'||!d.to)gererTroc(Object.assign({},d,{from:conn.peer}));else{const c=NET.conns.get(d.to);if(c&&c.open)c.send(Object.assign({},d,{from:conn.peer}));}return;}
     case 'hb': return;
     case 'etat': {const p=NET.players.find(p=>p.pid===conn.peer);if(p){p.etat=String(d.e||'').slice(0,40);p.ping=d.ping|0;lobbyBientot();}return;}
@@ -2138,9 +2157,9 @@ async function rejoindre(code){
       conn.on('open',()=>{ok=true;NET.lastHb=maint();conn.send({t:'hello',nom:S.nom||'Gymnaste',leo:netLeo(),eng:S.engDesign,deco:decoDe(S.nom||'Gymnaste')});demarrerVeille();syncHorloge();res();});
       conn.on('data',d=>{NET.lastHb=maint();guestData(d);});
       conn.on('close',()=>{if(NET.peer){alert('La salle a été fermée.');resetNet();if(GAME){stopAudio(GAME,.2);finirJeu();}goAccueil();}});
-      setTimeout(()=>{if(!ok){rej(new Error('Salle introuvable : vérifie le code.'));try{peer.destroy();}catch(e){}NET.peer=null;}},10000);
+      setTimeout(()=>{if(!ok){rej(new Error('Salle introuvable : vérifie le code.'));try{peer.destroy();}catch(e){}if(NET.peer===peer)NET.peer=null;}},10000);
     });
-    peer.on('error',e=>{if(!ok){rej(new Error(e.type==='peer-unavailable'?'Salle introuvable : vérifie le code.':'Réseau : '+e.type));try{peer.destroy();}catch(x){}NET.peer=null;}});
+    peer.on('error',e=>{if(!ok){ok=true;rej(new Error(e.type==='peer-unavailable'?'Salle introuvable : vérifie le code.':'Réseau : '+e.type));try{peer.destroy();}catch(x){}if(NET.peer===peer)NET.peer=null;}});
   });
 }
 async function guestData(d){
@@ -2149,6 +2168,7 @@ async function guestData(d){
     case 'refus': alert(d.raison);resetNet();show('sOnline');break;
     case 'pong': {const t=maint(),rtt=t-d.c; if(NET.rtt==null||rtt<=NET.rtt+5){NET.rtt=Math.min(NET.rtt==null?1e9:NET.rtt,rtt);NET.off=d.h+rtt/2-t;} break;}
     case 'hb': break;
+    case 'chat': recevoirChat(d); break;
     case 'troc': case 'trocRep': gererTroc(d); break;
     case 'exclu': NET.prep=null;NET.mus=null;NET.rx=null;$('#lbPret').style.display='none';netStatus('⏩ La partie a démarré sans toi (musique pas prête à temps). Tu joueras la suivante !');break;
     case 'prep': NET.prep=d;NET.finals=new Map();NET.musOk=false;NET.mus=null;netStatus('Préparation de la musique…');envoyerEtat('prépare la musique',true);syncHorloge(4);
@@ -2297,7 +2317,7 @@ function renderLobby(){
   $('#lbInfo').innerHTML=NET.host?`Donne le code <b>${NET.code}</b> à tes amies : elles choisissent « Rejoindre »${coop?' dans le mode coopératif':''}. Tout le monde passe en même temps sur la même musique.${coop?' Les engins de l\'équipe prennent tes couleurs.':''}`:coop?'🤝 Mode coopératif : la créatrice de la salle va lancer la chorégraphie d\'équipe.':'La créatrice de la salle va lancer la compétition.';
   $('#lbLancer').textContent=coop?'Lancer l\'équipe !':'Lancer !';
 }
-function resetNet(){NET.perturb=null;clearInterval(NET.hbTimer);NET.rtt=null;NET.off=0;NET.pids=null;$('#lbPret').style.display='none';$('#lbForce').style.display='none';try{if(NET.peer)NET.peer.destroy();}catch(e){}Object.assign(NET,{peer:null,host:false,conns:new Map(),hostConn:null,players:[],me:null,code:null,set:null,prep:null,mus:null,finals:new Map(),rx:null,inGame:false});clearTimeout(NET.podTimer);NET.podTimer=null;}
+function resetNet(){NET.perturb=null;NET.chat=[];renderChat();clearInterval(NET.hbTimer);NET.rtt=null;NET.off=0;NET.pids=null;$('#lbPret').style.display='none';$('#lbForce').style.display='none';try{if(NET.peer)NET.peer.destroy();}catch(e){}Object.assign(NET,{peer:null,host:false,conns:new Map(),hostConn:null,players:[],me:null,code:null,set:null,prep:null,mus:null,finals:new Map(),rx:null,inGame:false});clearTimeout(NET.podTimer);NET.podTimer=null;}
 
 /* ======================= Atelier de chorégraphie ======================= */
 /* Difficultés corporelles : valeurs du Code de pointage FIG 2025-2028 (brochure officielle) */
@@ -2476,13 +2496,14 @@ $('#chJouer').onclick=()=>lancerChoreo(false);
 let VIEW='sAccueil';
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id));VIEW=id;if(id==='sJeu')resizeHUD();}
 function goAccueil(){renderRecords();construireSalle(S.salle||'star');show('sAccueil');}
+function ecranEnLigne(c){NET.coopMode=c;$('#onTitre').textContent=c?'🤝 Mode coopératif':'Compétition en ligne';$('#onCoopInfo').style.display=c?'':'none';$('#onCreerHint').textContent=c?'Tu obtiens un code à 4 lettres à donner à tes coéquipières (2 à 5 gymnastes).':'Tu obtiens un code à 4 lettres à donner à tes amies (jusqu\'à 6 gymnastes).';netStatus('');show('sOnline');}
 function needNom(){if(S.nom)return true;alert('Écris d\'abord ton prénom 🙂');$('#inNom').focus();return false;}
 $('#inNom').value=S.nom; $('#inNom').addEventListener('input',e=>{S.nom=e.target.value.trim();saveS();});
 document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>{
   getAC(); const go=b.dataset.go;
   const premiere=f=>{if(store.get('rs_aide',0)){f();return;}store.set('rs_aide',1);AIDE_SUITE=f;show('sAide');};
   if(go==='solo'){if(needNom())premiere(()=>openReglage('solo'));}
-  else if(go==='online'||go==='coop'){if(needNom())premiere(()=>{const c=go==='coop';NET.coopMode=c;$('#onTitre').textContent=c?'🤝 Mode coopératif':'Compétition en ligne';$('#onCoopInfo').style.display=c?'':'none';$('#onCreerHint').textContent=c?'Tu obtiens un code à 4 lettres à donner à tes coéquipières (2 à 5 gymnastes).':'Tu obtiens un code à 4 lettres à donner à tes amies (jusqu\'à 6 gymnastes).';netStatus('');show('sOnline');});}
+  else if(go==='online'||go==='coop'){if(needNom())premiere(()=>ecranEnLigne(go==='coop'));}
   else if(go==='local'){premiere(()=>{renderLocal();show('sLocal');});}
   else if(go==='aide'){AIDE_SUITE=null;show('sAide');}
   else if(go==='choreo'){ouvrirAtelier();}
@@ -2909,6 +2930,88 @@ function gererTroc(d){
   }
 }
 $('#lbTroc').onclick=ouvrirTrocEnLigne;
+/* ---- tchat de la salle ---- */
+NET.chat=[];
+const RAPIDES=['👋 Coucou !','✅ Prête !','⏳ J\'arrive','🔥 Revanche ?','👏 Bravo !','😂','💖','🍀 Bonne chance !'];
+function renderChat(){
+  const box=$('#chatLog'); if(!box)return;
+  box.innerHTML=NET.chat.length?NET.chat.map(m=>`<div class="m ${m.pid===NET.me?'moi':''}"><b>${m.pid===NET.me?'Moi':nomHTML(m.nom,m.deco)}</b>${esc(m.txt)}</div>`).join(''):'<p class="hint">Les messages ne sont vus que par les joueuses de la salle et disparaissent quand on la quitte.</p>';
+  box.scrollTop=box.scrollHeight;
+}
+function recevoirChat(m){
+  NET.chat.push(m); if(NET.chat.length>80)NET.chat.shift(); renderChat();
+  if(m.pid!==NET.me&&VIEW!=='sLobby'&&!GAME){const t=$('#toastChat');t.innerHTML=`💬 <b>${esc(m.nom)}</b> : ${esc(m.txt)}`;t.classList.remove('on');void t.offsetWidth;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),3500);}
+}
+function envoyerChat(txt){
+  txt=String(txt||'').trim().slice(0,120); if(!txt||!NET.peer)return;
+  if(NET.host){const p=NET.players.find(p=>p.pid==='host')||{};const m={t:'chat',pid:'host',nom:p.nom||S.nom,deco:p.deco,txt};broadcast(m);recevoirChat(m);}
+  else if(NET.hostConn&&NET.hostConn.open)NET.hostConn.send({t:'chat',txt});
+}
+$('#chatRapide').innerHTML=RAPIDES.map(r=>`<button class="chip">${r}</button>`).join('');
+$('#chatRapide').querySelectorAll('button').forEach(b=>b.onclick=()=>envoyerChat(b.textContent));
+$('#chatEnv').onclick=()=>{envoyerChat($('#chatIn').value);$('#chatIn').value='';};
+$('#chatIn').addEventListener('keydown',e=>{if(e.key==='Enter'){envoyerChat($('#chatIn').value);$('#chatIn').value='';}});
+$('#toastChat').onclick=()=>{if(NET.peer){renderLobby();show('sLobby');}$('#toastChat').classList.remove('on');};
+
+/* ---- invitations & rendez-vous ---- */
+const MODES_TXT={online:'🏆 compétition',coop:'🤝 coopérative'};
+function lienSalle(code,mode,quand){const u=new URL(location.href.split('#')[0].split('?')[0]);u.searchParams.set('salle',code);u.searchParams.set('mode',mode);if(quand)u.searchParams.set('quand',quand);return u.toString();}
+function quandTxt(q){if(!q)return 'maintenant';const d=new Date(q);if(isNaN(d))return '';const auj=new Date(),dem=new Date();dem.setDate(auj.getDate()+1);
+  const h=d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  if(d.toDateString()===auj.toDateString())return 'aujourd\'hui à '+h; if(d.toDateString()===dem.toDateString())return 'demain à '+h;
+  return d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})+' à '+h;}
+async function partager(code,mode,quand){
+  const url=lienSalle(code,mode,quand), txt=`🎀 Rythmique Star : ${S.nom||'Une amie'} t'invite à une partie ${MODES_TXT[mode]||''} ${quandTxt(quand)} ! Salle ${code}. Touche le lien pour la rejoindre :`;
+  if(navigator.share){try{await navigator.share({title:'Rythmique Star',text:txt,url});return 'ok';}catch(e){if(e&&e.name==='AbortError')return 'annule';}}
+  $('#tmCorps').innerHTML=`<div class="lbl">📤 Envoyer l'invitation</div><p style="user-select:text;-webkit-user-select:text;background:rgba(0,0,0,.25);padding:10px;border-radius:12px;font-size:.9rem">${esc(txt)}<br>${esc(url)}</p>
+    <div class="actions" style="flex-wrap:wrap"><a class="filebtn" style="flex:1;text-decoration:none;background:#25d366" target="_blank" href="https://wa.me/?text=${encodeURIComponent(txt+' '+url)}">WhatsApp</a><a class="filebtn" style="flex:1;text-decoration:none" href="sms:?&body=${encodeURIComponent(txt+' '+url)}">SMS</a><button id="tmCopie" style="flex:1">📋 Copier</button></div>
+    <div class="actions"><button class="big" id="tmNon">Fermer</button></div>`;
+  $('#trocModal').classList.add('on'); $('#tmNon').onclick=fermerTroc;
+  $('#tmCopie').onclick=async()=>{try{await navigator.clipboard.writeText(txt+' '+url);$('#tmCopie').textContent='✓ Copié';}catch(e){$('#tmCopie').textContent='Sélectionne le texte';}};
+  return 'modal';
+}
+function mesRdv(){const L=(store.get('rs_rdv',[])||[]).filter(r=>!r.quand||new Date(r.quand).getTime()>Date.now()-3*3600e3);store.set('rs_rdv',L);return L;}
+function ajouterRdv(r){const L=mesRdv().filter(x=>x.code!==r.code);L.push(r);L.sort((a,b)=>new Date(a.quand||0)-new Date(b.quand||0));store.set('rs_rdv',L.slice(-6));}
+function renderRdv(){
+  const L=mesRdv(), box=$('#rdvBox'); if(!L.length){box.style.display='none';return;}
+  const r=L[0], t=r.quand?new Date(r.quand).getTime()-Date.now():0;
+  const dans=t>3600e3?`dans ${Math.floor(t/3600e3)} h ${String(Math.floor(t%3600e3/60e3)).padStart(2,'0')}`:t>60e3?`dans ${Math.ceil(t/60e3)} min`:'c\'est l\'heure !';
+  box.style.display=''; box.innerHTML=`<div class="lbl">📅 Rendez-vous ${r.par?'avec '+esc(r.par):''}</div><div>Partie ${MODES_TXT[r.mode]||''} <b>${esc(quandTxt(r.quand))}</b> · salle <b>${esc(r.code)}</b><br><small class="hint">${dans}${L.length>1?` · ${L.length-1} autre(s) rendez-vous`:''}</small></div>
+    <div class="row" style="margin-top:8px"><button class="big" id="rdvGo" style="padding:9px 16px">🚪 Entrer dans la salle</button><button id="rdvSuppr" style="padding:9px 12px">✕</button></div><p class="hint" id="rdvMsg" style="margin:4px 0 0"></p>`;
+  $('#rdvGo').onclick=()=>entrerRdv(r);
+  $('#rdvSuppr').onclick=()=>{store.set('rs_rdv',mesRdv().filter(x=>x.code!==r.code));renderRdv();};
+}
+/* entrer : on rejoint la salle ; si personne ne l'a encore ouverte, on l'ouvre soi-même */
+async function entrerRdv(r){
+  if(!needNom())return; getAC(); NET.coopMode=r.mode==='coop'; const msg=t=>{const e=$('#rdvMsg');if(e)e.textContent=t;};
+  if(NET.peer)resetNet();
+  msg('Connexion…');
+  try{await rejoindre(r.code);ecranEnLigne(NET.coopMode);netStatus('Connectée ✓');renderLobby();show('sLobby');msg('');return;}
+  catch(e){if(!/introuvable/i.test(e.message)){msg(e.message);return;}}
+  try{msg('Tu es la première : ouverture de la salle…');await creerSalle(r.code);ecranEnLigne(NET.coopMode);netStatus('');renderLobby();show('sLobby');msg('');}
+  catch(e){ // ouverte entre-temps par une amie : on réessaie de la rejoindre
+    try{await rejoindre(r.code);ecranEnLigne(NET.coopMode);renderLobby();show('sLobby');msg('');}catch(x){msg('Impossible d\'entrer : '+x.message);}}
+}
+function ouvrirInvitation(){
+  const now=new Date(Date.now()+3600e3); now.setMinutes(0,0,0); const pad=n=>String(n).padStart(2,'0');
+  const def=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:00`;
+  $('#tmCorps').innerHTML=`<div class="lbl">📅 Inviter à une partie</div>
+    <label class="field" style="margin-top:4px">Jour et heure<input type="datetime-local" id="ivQuand" value="${def}"></label>
+    <div class="lbl" style="margin-top:10px">Mode</div><div class="chips" id="ivMode"><button data-m="online" class="on">🏆 Compétition</button><button data-m="coop">🤝 Coopératif</button></div>
+    <p class="hint">Un code de salle est réservé pour ce rendez-vous. À l'heure dite, chacune touche le lien (ou « Entrer dans la salle » sur l'accueil) : la première arrivée ouvre la salle, les autres la rejoignent.</p>
+    <div class="actions"><button id="tmNon">Annuler</button><button class="big" id="tmOui">📤 Envoyer l'invitation</button></div>`;
+  let mode=NET.coopMode?'coop':'online';
+  const maj=()=>$('#ivMode').querySelectorAll('button').forEach(b=>b.className='chip'+(b.dataset.m===mode?' on':'')); maj();
+  $('#ivMode').querySelectorAll('button').forEach(b=>b.onclick=()=>{mode=b.dataset.m;maj();});
+  $('#trocModal').classList.add('on'); $('#tmNon').onclick=fermerTroc;
+  $('#tmOui').onclick=async()=>{const q=$('#ivQuand').value; const code=code4(); ajouterRdv({code,mode,quand:q?new Date(q).toISOString():null,par:''}); renderRdv(); fermerTroc(); await partager(code,mode,q?new Date(q).toISOString():null);};
+}
+$('#onInviter').onclick=ouvrirInvitation;
+$('#lbInviter').onclick=()=>{if(NET.code)partager(NET.code,NET.set&&NET.set.coop?'coop':'online',null);};
+/* lien d'invitation reçu (gr.html?salle=ABCD&mode=coop&quand=…) */
+(()=>{try{const u=new URL(location.href),c=(u.searchParams.get('salle')||'').toUpperCase();
+  if(/^[A-Z]{4}$/.test(c)){ajouterRdv({code:c,mode:u.searchParams.get('mode')==='coop'?'coop':'online',quand:u.searchParams.get('quand')||new Date().toISOString(),par:'une amie'});history.replaceState(null,'',location.pathname);}
+}catch(e){}renderRdv();setInterval(()=>{if(VIEW==='sAccueil')renderRdv();},30000);})();
 $('#lbForce').onclick=()=>{if(confirm('Lancer avec seulement les gymnastes prêtes ?'))checkAllReady(true);};
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&AC&&AC.state!=='running')AC.resume();});
 $('#vicOk').onclick=()=>fermerVictoire();
