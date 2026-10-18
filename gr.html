@@ -246,7 +246,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <!-- ACCUEIL -->
 <div id="sAccueil" class="screen on">
   <button id="cadenas" title="Code">🔒</button>
-  <div id="version">v1.0</div>
+  <div id="version">v1.1</div>
   <div id="classement"><div class="ct">🏆 Classement ▾</div><div class="cb"></div></div>
   <div class="brand"><div class="soutien"><a class="pill" id="btMail" href="mailto:chris333j@yahoo.fr?subject=Rythmique%20Star">✉️ M'écrire</a><a class="pill" id="btInstall" href="#" style="display:none">📲 Installer l'appli</a><a class="pill cafe" id="btCafe" href="#" target="_blank" rel="noopener">☕ Offrir un café</a></div><div class="logo">🎀</div><h1>Rythmique <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
   <label class="field">Ton prénom<input id="inNom" maxlength="14" placeholder="Prénom" autocomplete="off"></label>
@@ -1780,13 +1780,43 @@ function detectTempo(on){
 function idb(){return new Promise((res,rej)=>{const r=indexedDB.open('rythmique-star',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
 async function idbSet(k,v){const db=await idb();return new Promise((res,rej)=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=()=>res();t.onerror=()=>rej(t.error);});}
 async function idbGet(k){const db=await idb();return new Promise((res,rej)=>{const q=db.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);});}
-function garderMusique(){const c=S.custom;if(!c||!c.bytes)return;idbSet('musique',{nom:c.nom,bytes:c.bytes,bpm:c.bpm,offset:c.offset}).catch(()=>{});}
+/* Les 5 dernières musiques importées : la liste (noms, tempo) + chaque fichier gardé à part */
+let MUSIMP=[];
+const sauverListeMus=()=>idbSet('mp3list',MUSIMP).catch(()=>{});
+function garderMusique(){
+  const c=S.custom; if(!c||!c.bytes)return;
+  if(!c.id){c.id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);idbSet('mp3:'+c.id,c.bytes).catch(()=>{});}
+  MUSIMP=MUSIMP.filter(m=>m.id!==c.id); MUSIMP.unshift({id:c.id,nom:c.nom,bpm:c.bpm,offset:c.offset,ts:Date.now()});
+  for(const m of MUSIMP.slice(5))idbSet('mp3:'+m.id,null).catch(()=>{});
+  MUSIMP=MUSIMP.slice(0,5); store.set('rs_musimp',c.id); sauverListeMus();
+}
+async function chargerImport(id,ctx){
+  const m=MUSIMP.find(x=>x.id===id); if(!m)throw new Error('musique introuvable');
+  if(S.custom&&S.custom.id===id&&S.custom.buffer)return S.custom;
+  const bytes=await idbGet('mp3:'+id); if(!bytes)throw new Error('fichier perdu, réimporte-le');
+  const buf=await (ctx||getAC()).decodeAudioData(bytes.slice(0)); const on=analyseEnv(buf);
+  S.custom={id,nom:m.nom,bytes,buffer:buf,bpm:m.bpm,offset:m.offset,on}; return S.custom;
+}
+/* liste des boutons de musique (musiques du jeu + 5 dernières importées) et choix */
+function musChips(){return [...MUSIQUES.map(m=>({k:m.id,t:'🎵 '+m.nom})),...MUSIMP.map(m=>({k:'imp:'+m.id,t:'🎧 '+m.nom}))];}
+const musCourante=()=>S.musique==='custom'&&S.custom&&S.custom.id?'imp:'+S.custom.id:S.musique;
+async function choisirMus(k,apres,info){
+  if(!k.startsWith('imp:')){S.musique=k;saveS();apres();return;}
+  const id=k.slice(4); if(info)info('⏳ Chargement de la musique…');
+  try{await chargerImport(id);S.musique='custom';saveS();garderMusique();}catch(e){if(info)info('⚠️ '+e.message);return;}
+  apres();
+}
 const RESTO_MUS=(async()=>{
-  try{const m=await idbGet('musique'); if(!m||!m.bytes)throw 0;
-    const dec=AC||new (window.OfflineAudioContext||window.webkitOfflineAudioContext)(2,1,44100); const buf=await dec.decodeAudioData(m.bytes.slice(0)); const on=analyseEnv(buf);
-    S.custom={nom:m.nom,bytes:m.bytes,buffer:buf,bpm:m.bpm,offset:m.offset,on};
+  try{
+    MUSIMP=(await idbGet('mp3list'))||[];
+    const vieux=await idbGet('musique');           // ancienne version (une seule musique)
+    if(vieux&&vieux.bytes&&!MUSIMP.length){const id='m'+Date.now().toString(36);await idbSet('mp3:'+id,vieux.bytes);MUSIMP=[{id,nom:vieux.nom,bpm:vieux.bpm,offset:vieux.offset,ts:Date.now()}];store.set('rs_musimp',id);await sauverListeMus();await idbSet('musique',null);}
     if(VIEW==='sReglage')renderReglage();
-  }catch(e){if(S.musique==='custom'){S.musique='elan';saveS();}}
+    if(S.musique!=='custom')return; if(!MUSIMP.length)throw 0;
+    const id=MUSIMP.some(m=>m.id===store.get('rs_musimp',''))?store.get('rs_musimp',''):MUSIMP[0].id;
+    await chargerImport(id,AC||new (window.OfflineAudioContext||window.webkitOfflineAudioContext)(2,1,44100));
+    if(VIEW==='sReglage')renderReglage();
+  }catch(e){if(S.musique==='custom'&&!S.custom){S.musique='elan';saveS();}}
 })();
 async function getMusicSel(){
   if(S.musique==='custom'&&!S.custom)await RESTO_MUS;
@@ -2849,9 +2879,9 @@ function ouvrirAtelier(){renderAtelier();show('sChoreo');}
 function renderAtelier(){
   $('#chNom').value=CH.nom;
   chips($('#chEngin'),Object.entries(ENGINS).map(([k,e])=>({k,t:e.ico+' '+e.nom})),CH.engin,k=>{CH.engin=k;CH.seq=CH.seq.filter(it=>it.c!=='DA');renderAtelier();});
-  const mus=MUSIQUES.map(m=>({k:m.id,t:'🎵 '+m.nom})); if(S.custom)mus.push({k:'custom',t:'🎧 '+S.custom.nom});
+  const mus=musChips();
   for(const m of BIBLIO)mus.push({k:'lib:'+m.id,t:m.ico+' '+m.nom});
-  chips($('#chMus'),mus,S.musique,k=>{S.musique=k;saveS();renderAtelier();if(k.startsWith('lib:'))chargerBiblio(k.slice(4)).then(()=>{if(S.musique===k)renderAtelier();}).catch(e=>alert(e.message));});
+  chips($('#chMus'),mus,musCourante(),k=>{if(k.startsWith('imp:')){choisirMus(k,renderAtelier,t=>{$('#chMusInfo').textContent=t;});return;}S.musique=k;saveS();renderAtelier();if(k.startsWith('lib:'))chargerBiblio(k.slice(4)).then(()=>{if(S.musique===k)renderAtelier();}).catch(e=>alert(e.message));});
   const liste=store.get('rs_choreos',[]);
   $('#chListe').innerHTML=liste.length?liste.map((c,i)=>`<option value="${i}">${esc(c.nom)} – ${ENGINS[c.engin].nom}</option>`).join(''):'<option value="">(aucune pour l\'instant)</option>';
   chips($('#chCat'),CH_CATS.map(([k,t])=>({k,t:k==='DA'?ENGINS[CH.engin].ico+' '+ENGINS[CH.engin].nom:t})),CH.cat,k=>{CH.cat=k;renderAtelier();});
@@ -3662,8 +3692,7 @@ function renderReglage(){
   {const b=$('#rgNiv').querySelector('[data-k=survie]');if(b)b.classList.add('survie');}
   if(S.survie){const rec=store.get('rs_survie_rec',{})[cleNom(S.nom||'Moi')];$('#rgNivHint').innerHTML=`<b style="color:#ff7a45">Mode survie</b> : 3 cœurs ❤️❤️❤️, chaque raté en coûte un. La musique accélère toutes les 20 secondes : tiens le plus longtemps possible !${rec?` · Ton record : <b>${dureeTxt(Math.round(rec.t))}</b>`:''}`;}
   else $('#rgNivHint').textContent=NIVEAUX[S.niv].hint;
-  const mus=MUSIQUES.map(m=>({k:m.id,t:'🎵 '+m.nom})); if(S.custom)mus.push({k:'custom',t:'🎧 '+S.custom.nom});
-  chips($('#rgMus'),mus,S.musique,k=>{S.musique=k;saveS();renderReglage();});
+  chips($('#rgMus'),musChips(),musCourante(),k=>choisirMus(k,()=>{renderReglage();if(RG_MODE==='online'&&NET.host){hostSettings();broadcastLobby();}},t=>{$('#rgMusInfo').textContent=t;}));
   const libId=String(S.musique).startsWith('lib:')?S.musique.slice(4):null;
   chips($('#rgBib'),BIBLIO.map(m=>({k:'lib:'+m.id,t:m.ico+' '+m.nom})),S.musique,async k=>{
     S.musique=k;saveS();renderReglage(); $('#rgMusInfo').textContent='⏳ Chargement de la musique…';
