@@ -246,7 +246,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <!-- ACCUEIL -->
 <div id="sAccueil" class="screen on">
   <button id="cadenas" title="Code">🔒</button>
-  <div id="version">v1.5</div>
+  <div id="version">v1.6</div>
   <div id="classement"><div class="ct">🏆 Classement ▾</div><div class="cb"></div></div>
   <div class="brand"><div class="soutien"><a class="pill" id="btMail" href="mailto:chris333j@yahoo.fr?subject=Rythmique%20Star">✉️ M'écrire</a><a class="pill" id="btInstall" href="#" style="display:none">📲 Installer l'appli</a><a class="pill cafe" id="btCafe" href="#" target="_blank" rel="noopener">☕ Offrir un café</a></div><div class="logo">🎀</div><h1>Rythmique <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
   <label class="field">Ton prénom<input id="inNom" maxlength="14" placeholder="Prénom" autocomplete="off"></label>
@@ -4080,33 +4080,82 @@ $('#rpClose').onclick=fermerReplay;
 /* ---- Vidéo du passage : on rejoue le passage en filmant l'image 3D + la musique ---- */
 let REC=null;
 function typeVideo(){for(const t of ['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'])if(MediaRecorder.isTypeSupported(t))return t;return '';}
-function lancerVideo(){
+const URL_JEU=(location.host+location.pathname).replace(/^www\./,'');
+function choisirVideo(){
+  if(!RP||REC)return;
+  const C=$('#tmCorps');$('#trocModal').classList.add('on');
+  C.innerHTML=`<div class="lbl" style="text-align:center">🎥 Quelle vidéo ?</div>
+    <div class="actions" style="flex-direction:column">
+      <button class="big" id="vdSoc">📱 Pour les réseaux<br><small style="font-weight:500">TikTok · Instagram · YouTube Shorts (vertical)</small></button>
+      <button id="vdCla">🖥️ Classique<br><small>comme l'écran</small></button>
+      <button id="tmNon">Annuler</button></div>
+    <p class="hint" style="text-align:center">Le passage est rejoué et filmé avec la musique. Conseil : ne montre pas ton visage ni ton vrai nom sur les réseaux.</p>`;
+  $('#tmNon').onclick=fermerTroc;
+  $('#vdSoc').onclick=()=>{fermerTroc();lancerVideo(true);};
+  $('#vdCla').onclick=()=>{fermerTroc();lancerVideo(false);};
+}
+function lancerVideo(social){
   if(!RP||REC)return;
   if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream){alert('Ce téléphone ne sait pas enregistrer de vidéo depuis le navigateur 😕 (essaie avec Chrome ou Safari à jour).');return;}
-  const w0=canvas3d.width,h0=canvas3d.height,k=Math.min(1,720/Math.min(w0,h0)),W=Math.round(w0*k/2)*2,H=Math.round(h0*k/2)*2;
+  const w0=canvas3d.width,h0=canvas3d.height,k=Math.min(1,720/Math.min(w0,h0));
+  let W=Math.round(w0*k/2)*2,H=Math.round(h0*k/2)*2; if(social){W=720;H=1280;}
   const cv=document.createElement('canvas');cv.width=W;cv.height=H;const ctx=cv.getContext('2d');
   const ac=getAC(),dest=ac.createMediaStreamDestination(),vs=cv.captureStream(30);
   const st=new MediaStream([...vs.getVideoTracks(),...dest.stream.getAudioTracks()]);
   const mime=typeVideo(); let mr; try{mr=new MediaRecorder(st,mime?{mimeType:mime,videoBitsPerSecond:4e6}:{});}catch(e){try{mr=new MediaRecorder(st);}catch(e2){alert('Enregistrement vidéo impossible sur ce téléphone.');return;}}
-  REC={mr,chunks:[],cv,ctx,dest,mime:mr.mimeType||mime||'video/webm',auto:true,fin:false,W,H};
+  REC={mr,chunks:[],cv,ctx,dest,mime:mr.mimeType||mime||'video/webm',auto:true,fin:false,W,H,social:!!social};
   mr.ondataavailable=e=>{if(e.data&&e.data.size)REC&&REC.chunks.push(e.data);};
   recFrame(); mr.start(500);
   $('#sReplay').classList.add('rec'); $('#rpTitre').textContent='⏺ Enregistrement de la vidéo…';
   RP.T=RP.t0; RP.speed=1; RP.paused=false; RP.cam={yaw:-.6,dist:RP.d.coop?8:5.2,h:RP.d.coop?2.6:1.8}; renderVitesses(); rpAudio();
 }
 function recFrame(){
-  const R=REC,c=R.ctx,W=R.W,H=R.H,u=Math.min(W,H)/720; c.drawImage(canvas3d,0,0,W,H);
+  const R=REC,c=R.ctx,W=R.W,H=R.H,u=Math.min(W,H)/720;
+  if(R.carte){carteFin(R);return;}
+  if(R.social){ // format vertical : on recadre l'image 3D au centre (sans la déformer)
+    const sw=canvas3d.width,sh=canvas3d.height,kk=Math.max(W/sw,H/sh),cw=W/kk,ch=H/kk;
+    c.fillStyle='#12081f';c.fillRect(0,0,W,H);c.drawImage(canvas3d,(sw-cw)/2,(sh-ch)/2,cw,ch,0,0,W,H);
+  } else c.drawImage(canvas3d,0,0,W,H);
   const gt=c.createLinearGradient(0,0,0,110*u);gt.addColorStop(0,'rgba(18,8,31,.75)');gt.addColorStop(1,'rgba(18,8,31,0)');c.fillStyle=gt;c.fillRect(0,0,W,110*u);
   c.textAlign='left';c.textBaseline='top';c.fillStyle='#fff';c.font=`700 ${30*u}px "Dancing Script",cursive`;c.fillText('🎀 Rythmique Star',22*u,18*u);
   c.font=`800 ${30*u}px system-ui,sans-serif`;c.textAlign='right';c.fillText(RP?RP.d.nom:'',W-22*u,20*u);
-  if(RP){const el=$('#rpElem').textContent,j=$('#rpJudge').textContent;
+  if(RP){const ec=$('#rpElem'),el=ec.lastChild&&ec.lastChild.nodeType===3?ec.lastChild.textContent:ec.textContent,j=$('#rpJudge').textContent;
     if(el){c.textAlign='center';c.font=`700 ${24*u}px system-ui,sans-serif`;c.fillStyle='rgba(18,8,31,.55)';const tw=c.measureText(el).width+30*u;c.fillRect((W-tw)/2,H-120*u,tw,40*u);c.fillStyle='#fff';c.textBaseline='middle';c.fillText(el,W/2,H-100*u);}
     if(j){c.textAlign='center';c.textBaseline='middle';c.font=`900 ${46*u}px system-ui,sans-serif`;c.fillStyle=(GRADES.find(x=>x.t===j)||{c:'#fff'}).c;c.shadowColor='rgba(0,0,0,.8)';c.shadowBlur=12*u;c.fillText(j,W/2,H*.22);c.shadowBlur=0;}
+    if(R.social){
+      const t=RP.T-RP.t0;
+      if(t<2.2){const a=Math.min(1,(2.2-t)/.5);c.globalAlpha=a;c.textAlign='center';c.textBaseline='middle';c.shadowColor='rgba(0,0,0,.85)';c.shadowBlur=14*u;
+        c.fillStyle='#fff';c.font=`900 ${58*u}px system-ui,sans-serif`;c.fillText('Mon passage de GR',W/2,H*.3);
+        c.fillStyle='#ffd166';c.font=`900 ${50*u}px system-ui,sans-serif`;c.fillText('🎀 sur mon téléphone',W/2,H*.3+66*u);c.shadowBlur=0;c.globalAlpha=1;}
+      c.textAlign='center';c.textBaseline='bottom';c.font=`700 ${22*u}px system-ui,sans-serif`;c.fillStyle='rgba(255,255,255,.75)';c.shadowColor='rgba(0,0,0,.8)';c.shadowBlur=6*u;
+      c.fillText('Joue gratuitement : '+URL_JEU,W/2,H-28*u);c.shadowBlur=0;}
     if(RP.d.total!=null&&RP.T>RP.t1-2.5){c.textAlign='center';c.textBaseline='middle';c.font=`900 ${64*u}px system-ui,sans-serif`;c.fillStyle='#ffd166';c.shadowColor='rgba(0,0,0,.9)';c.shadowBlur=16*u;c.fillText(fmt(RP.d.total,2)+' pts',W/2,H*.4);c.shadowBlur=0;}}
 }
 function annulerVideo(){if(!REC)return;REC.fin=true;try{REC.mr.onstop=null;REC.mr.stop();}catch(e){}REC=null;$('#sReplay').classList.remove('rec');}
+/* écran de fin pour les réseaux : score + adresse du jeu, 3,5 secondes avec applaudissements */
+function carteFin(R){
+  const c=R.ctx,W=R.W,H=R.H,u=W/720,t=(performance.now()-R.carte)/1000,a=Math.min(1,t/.4);
+  const g=c.createLinearGradient(0,0,W,H);g.addColorStop(0,'#2a0f45');g.addColorStop(1,'#7a1f5c');c.fillStyle=g;c.fillRect(0,0,W,H);
+  c.globalAlpha=a;c.textAlign='center';c.textBaseline='middle';
+  for(let i=0;i<40;i++){const y=((i*.618+t*.08*(1+i%3))%1)*H;c.fillStyle=['#ffd166','#ff4fa3','#fff','#a24bff'][i%4];c.globalAlpha=a*.6;c.beginPath();c.arc((i*97)%W,y,(2+i%4)*u,0,7);c.fill();}
+  c.globalAlpha=a;c.fillStyle='#fff';c.font=`700 ${84*u}px "Dancing Script",cursive`;c.fillText('🎀 Rythmique Star',W/2,H*.26);
+  if(R.score!=null){c.fillStyle='#ffd166';c.font=`900 ${96*u}px system-ui,sans-serif`;c.fillText(fmt(R.score,2)+' pts',W/2,H*.42);
+    c.fillStyle='#fff';c.font=`700 ${34*u}px system-ui,sans-serif`;c.fillText('Tu fais mieux ? 😏',W/2,H*.42+80*u);}
+  c.font=`800 ${40*u}px system-ui,sans-serif`;c.fillText('Le jeu de gymnastique rythmique',W/2,H*.62);
+  c.fillText('gratuit, sans installation',W/2,H*.62+52*u);
+  const tx=URL_JEU;c.font=`800 ${Math.min(36,640/Math.max(1,tx.length)*1.9)*u}px system-ui,sans-serif`;const tw=c.measureText(tx).width+44*u;
+  c.fillStyle='rgba(255,255,255,.95)';c.beginPath();if(c.roundRect)c.roundRect((W-tw)/2,H*.78-36*u,tw,72*u,36*u);else c.rect((W-tw)/2,H*.78-36*u,tw,72*u);c.fill();c.fillStyle='#7a1f5c';c.fillText(tx,W/2,H*.78);
+  c.globalAlpha=1;
+}
 function finVideo(){
   const R=REC; R.fin=true;
+  if(R.social&&!R.carteFaite){ // on ajoute l'écran de fin avant d'arrêter
+    R.score=RP?RP.d.total:null; R.carte=performance.now();
+    try{const ac=getAC(),f=SONS_APPL.grand.find(x=>APPL[x]);if(f){const s=ac.createBufferSource(),v=ac.createGain();s.buffer=APPL[f];v.gain.value=.8;s.connect(v);v.connect(ac.destination);v.connect(R.dest);s.start();s.stop(ac.currentTime+3.6);}}catch(e){}
+    const iv=setInterval(()=>{if(REC!==R){clearInterval(iv);return;}carteFin(R);},33);
+    setTimeout(()=>{clearInterval(iv);if(REC!==R)return;R.carteFaite=true;finVideo();},3600);
+    return;
+  }
   setTimeout(()=>{R.mr.onstop=()=>{
     REC=null; $('#sReplay').classList.remove('rec'); if(RP)$('#rpTitre').textContent='🎬 '+RP.d.nom;
     const blob=new Blob(R.chunks,{type:R.mime.split(';')[0]}),ext=/mp4/.test(R.mime)?'mp4':'webm';
@@ -4118,10 +4167,10 @@ function finVideo(){
       <p class="hint" style="text-align:center">${(blob.size/1048576).toFixed(1)} Mo · ${ext.toUpperCase()}</p>
       <div class="actions">${peutPartager?'<button class="big" id="vdPart">📤 Partager</button>':''}<a class="filebtn" id="vdDl" href="${url}" download="${nomF}" style="text-align:center;text-decoration:none">💾 Enregistrer</a><button id="tmNon">Fermer</button></div>`;
     $('#tmNon').onclick=()=>{fermerTroc();};
-    if(peutPartager)$('#vdPart').onclick=()=>navigator.share({files:[file],title:'Rythmique Star',text:'Regarde mon passage sur Rythmique Star ! 🎀'}).catch(()=>{});
+    if(peutPartager)$('#vdPart').onclick=()=>navigator.share({files:[file],title:'Rythmique Star',text:'Regarde mon passage sur Rythmique Star ! 🎀 Joue gratuitement : https://'+URL_JEU}).catch(()=>{});
   };try{R.mr.stop();}catch(e){}},600);
 }
-$('#rpVideo').onclick=lancerVideo;
+$('#rpVideo').onclick=choisirVideo;
 $('#rpPlay').onclick=()=>{if(RP.T>=RP.t1)RP.T=RP.t0;RP.paused=!RP.paused;renderVitesses();rpAudio();};
 $('#rpRestart').onclick=()=>{RP.T=RP.t0;rpAudio();};
 $('#rpSeek').addEventListener('input',e=>{RP.T=RP.t0+(+e.target.value/1000)*(RP.t1-RP.t0);if(RP.src){try{RP.src.stop();}catch(x){}RP.src=null;}});
