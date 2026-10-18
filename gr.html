@@ -246,7 +246,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <!-- ACCUEIL -->
 <div id="sAccueil" class="screen on">
   <button id="cadenas" title="Code">🔒</button>
-  <div id="version">v1.3</div>
+  <div id="version">v1.4</div>
   <div id="classement"><div class="ct">🏆 Classement ▾</div><div class="cb"></div></div>
   <div class="brand"><div class="soutien"><a class="pill" id="btMail" href="mailto:chris333j@yahoo.fr?subject=Rythmique%20Star">✉️ M'écrire</a><a class="pill" id="btInstall" href="#" style="display:none">📲 Installer l'appli</a><a class="pill cafe" id="btCafe" href="#" target="_blank" rel="noopener">☕ Offrir un café</a></div><div class="logo">🎀</div><h1>Rythmique <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
   <label class="field">Ton prénom<input id="inNom" maxlength="14" placeholder="Prénom" autocomplete="off"></label>
@@ -1501,16 +1501,17 @@ async function habiller(obj,out,bones){
     // encolure : le justaucorps s'arrête sous le cou, et plus bas sur les épaules (sans manche)
     float ax=abs(p.x), dos=smoothstep(.005*uH,-.025*uH,p.z), haut=mix(.03,-.006,dos)*uH-.045*uH*smoothstep(.03*uH,.07*uH,ax);
     float sousCol=1.-smoothstep(haut-.006*uH,haut+.006*uH,p.y), manche=smoothstep(.2,.45,arm);
-    float m=clamp(dedans*estTissu*sousCol+manche,0.,1.);
+    float pasPeau=smoothstep(.07,.14,ds);   // ni tissu reconnu ni peau (paillettes, liserés du justaucorps d'origine)
+    float m=clamp(dedans*max(estTissu,pasPeau)*sousCol+manche,0.,1.);
     // au-dessus de l'encolure, le tissu d'origine est repeint couleur peau
-    float peau=smoothstep(-.12,0.,ds-dl)*(1.-sousCol)*(1.-manche)*smoothstep(.05,.2,vLeo.x);
+    float peau=(1.-sousCol)*(1.-manche)*smoothstep(.05,.2,vLeo.x)*smoothstep(.02,.1,distance(orig,uSkinRef));
     vec2 uvC=vec2(atan(p.x,p.z)/6.2831853+.5, p.y/uH*uVS);
     vec2 uvA=vec2(atan(p.y,p.z)/6.2831853+.5, p.x/uH*uVS);
     vec2 uvL=arm>.5?uvA:uvC;
     vec3 motif=texture2D(uLeoMap,uvL).rgb;
     float lum=dot(orig,vec3(.299,.587,.114)), lref=max(.04,dot(arm>.5?uLeoRef:cref,vec3(.299,.587,.114)));
     float ombre=clamp(lum/lref,.55,1.3);
-    vec3 skin=uSkinRef*clamp(ombre,.88,1.08);   // couleur de la peau du modèle, avec juste les ombres du tissu d'origine
+    vec3 skin=uSkinRef;   // couleur de peau unie du modèle (l'éclairage fait les ombres)
     diffuseColor.rgb=mix(mix(orig,skin,peau),motif*ombre,m);
   }`);
       };
