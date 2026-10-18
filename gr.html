@@ -358,7 +358,8 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
     <div class="row" style="margin-top:0;justify-content:space-between">🎙️ Commentatrice<div class="chips" id="rgVoix"></div></div>
     <div class="row" style="justify-content:space-between">👏 Public<div class="chips" id="rgPublic"></div></div>
     <div class="row" style="justify-content:space-between">🖥️ Graphismes<div class="chips" id="rgQual"></div></div>
-    <p class="hint" style="margin-top:2px">« Auto » baisse la finesse de l'image si l'appareil rame, pour garder la barre du bas fluide.</p></div>
+    <p class="hint" style="margin-top:2px">« Auto » baisse la finesse de l'image si l'appareil rame, pour garder la barre du bas fluide.</p>
+    <button id="rgTestSon" style="width:100%;margin-top:6px">🔊 Tester la commentatrice et le public</button><p class="hint" id="rgTestInfo"></p></div>
   <div class="actions"><button id="rgRetour">← Retour</button><button class="big" id="rgGo">C'est parti !</button></div>
 </div>
 
@@ -1932,13 +1933,19 @@ function voixFr(){
   VOIX.voix=L.find(v=>/fr-FR/i.test(v.lang)&&fem.test(v.name))||L.find(v=>fem.test(v.name))||L.find(v=>/fr-FR/i.test(v.lang))||L[0]; return VOIX.voix;
 }
 if(window.speechSynthesis)speechSynthesis.onvoiceschanged=()=>{VOIX.voix=null;voixFr();};
-document.addEventListener('pointerdown',function deverrouille(){try{if(window.speechSynthesis){const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u);}}catch(e){}document.removeEventListener('pointerdown',deverrouille,true);},true);
+if(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1))   // iOS seulement : débloquer la voix au premier appui
+  document.addEventListener('pointerdown',function deverrouille(){try{if(window.speechSynthesis){const u=new SpeechSynthesisUtterance('.');u.volume=0;speechSynthesis.speak(u);}}catch(e){}document.removeEventListener('pointerdown',deverrouille,true);},true);
 /* prio 0 : normal (pas plus d'une phrase toutes les 3,5 s) · 2 : important (coupe la phrase en cours) */
-function dire(txt,prio=0){
-  if(!VOIX.on||!window.speechSynthesis||!txt)return; const now=performance.now();
-  if(prio<2&&(now-VOIX.last<3500||speechSynthesis.speaking))return; if(prio>=2)speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(txt); u.lang='fr-FR'; const v=voixFr(); if(v)u.voice=v; u.rate=1.07; u.pitch=1.12; u.volume=1;
-  speechSynthesis.speak(u); VOIX.last=now;
+function dire(txt,prio=0,force){
+  if((!VOIX.on&&!force)||!window.speechSynthesis||!txt)return; const now=performance.now(), S2=speechSynthesis;
+  const parle=VOIX.fin>now;                       // notre propre suivi (speechSynthesis.speaking reste parfois bloqué sur Android)
+  if(prio<2&&(now-VOIX.last<3500||parle))return;
+  const lancer=()=>{try{S2.resume();}catch(e){}
+    const u=new SpeechSynthesisUtterance(txt); u.lang='fr-FR'; const v=voixFr(); if(v)u.voice=v; u.rate=1.07; u.pitch=1.12; u.volume=1;
+    u.onend=u.onerror=()=>{VOIX.fin=0;}; S2.speak(u); VOIX.fin=performance.now()+600+txt.length*90;};
+  VOIX.last=now;
+  if(S2.speaking||S2.pending){S2.cancel();setTimeout(lancer,120);}   // Chrome Android : parler juste après « cancel » est parfois ignoré
+  else lancer();
 }
 const noteParlee=v=>{const t=(Math.round(v*100)/100).toFixed(2).split('.');return t[0]+' virgule '+t[1];};
 /* --- public --- */
@@ -1979,7 +1986,7 @@ function banderole(txt,c1,c2){
 }
 function publicInit(g){
   publicFin(); PUB.hype=.15; g.ditDebut=false;
-  if(g.demo)return; try{bufApplaudir();}catch(e){} const P=foulePoints(); P.P.visible=qualNiv()<2;
+  if(g.demo)return; try{bufApplaudir();}catch(e){} const P=foulePoints(); P.P.visible=true;
   // annonce d'entrée sur le praticable, dès le début du décompte
   setTimeout(()=>{if(GAME!==g||g.done)return;
     const autres=[...g.ghosts.values()].map(v=>v.nom).filter(Boolean), noms=g.perturbMode?autres:[g.nom,...autres];
@@ -3711,6 +3718,8 @@ function renderReglage(){
   chips($('#rgPublic'),[{k:'1',t:'Oui'},{k:'0',t:'Non'}],PUB.son?'1':'0',k=>{PUB.son=k==='1';store.set('rs_public',PUB.son);renderReglage();});
   $('#rgLat').value=S.latence; $('#rgLatV').textContent=S.latence+' ms';
 }
+$('#rgTestSon').onclick=()=>{getAC();applaudir(.7);const ok=!!window.speechSynthesis;dire('Bravo ! Le public t\'applaudit.',2,true);
+  setTimeout(()=>{const n=ok?speechSynthesis.getVoices().filter(v=>/^fr/i.test(v.lang)).length:0;$('#rgTestInfo').textContent=!ok?'⚠️ Ce navigateur ne sait pas faire parler le téléphone.':n?`Voix françaises trouvées : ${n}. Si tu n'entends rien, vérifie le volume du téléphone (et que le mode silencieux est coupé).`:'⚠️ Aucune voix française installée : Paramètres du téléphone → Synthèse vocale → installer le français.';},700);};
 $('#rgLat').addEventListener('input',e=>{S.latence=+e.target.value;$('#rgLatV').textContent=S.latence+' ms';saveS();});
 function bpmAdj(d){const lib=String(S.musique).startsWith('lib:')?BIB[S.musique.slice(4)]:null,c=lib||S.custom;if(!c||!c.buffer)return;c.bpm=Math.max(60,Math.min(190,Math.round(c.bpm)+d));c.offset=gridScore(c.on,c.bpm).offset;if(lib){const o=store.get('rs_bibbpm',{});o[lib.id]=c.bpm;store.set('rs_bibbpm',o);}else garderMusique();renderReglage();if(RG_MODE==='online'&&NET.host){hostSettings();broadcastLobby();}}
 $('#bpmM').onclick=()=>bpmAdj(-1); $('#bpmP').onclick=()=>bpmAdj(1);
