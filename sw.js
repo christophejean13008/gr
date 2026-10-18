@@ -1,7 +1,7 @@
 /* Rythmique Star – service worker
    - la page du jeu : réseau d'abord (toujours la dernière version), copie de secours si pas de réseau
    - bibliothèques (three.js, PeerJS, polices), modèles 3D et musiques : copie gardée sur le téléphone */
-const CACHE = 'rythmique-star-v1';
+const CACHE = 'rythmique-star-v2';
 const PAGE = 'gr.html';
 
 self.addEventListener('install', e => {
@@ -33,7 +33,7 @@ self.addEventListener('fetch', e => {
     return;
   }
   const garder = /unpkg\.com|jsdelivr|fonts\.(googleapis|gstatic)\.com/.test(url.hostname) ||
-    (url.origin === location.origin && /\/(modeles|musiques)\/|\.(png|webmanifest)$/.test(url.pathname));
+    (url.origin === location.origin && /\/(modeles|musiques|sons)\/|\.(png|webmanifest)$/.test(url.pathname));
   if (!garder) return;
   e.respondWith((async () => {
     const c = await caches.open(CACHE), hit = await c.match(req);

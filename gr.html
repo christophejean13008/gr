@@ -1980,22 +1980,26 @@ function bufApplaudir(){
   }
   return PUB.claps=b;
 }
-/* Vrais applaudissements enregistrés (fichier sons/applaudissements.mp3, libre de droits CC0, bigsoundbank.com).
-   S'il n'est pas sur le site, on garde les applaudissements fabriqués par le jeu. */
-let APPL_VRAI=null,APPL_ESSAI=null;
+/* Vrais applaudissements enregistrés (dossier sons/, LaSonotheque.fr) :
+   petits applaudissements pour les réussites, cris + applaudissements d'ados pour les grands moments.
+   Si les fichiers ne sont pas sur le site, on garde les applaudissements fabriqués par le jeu. */
+const SONS_APPL={petit:['sons/CRWDCheer_Applaudissements concert bar 4 (ID 2482)_LaSonotheque.fr.mp3','sons/CRWDCheer_Applaudissements concert bar 1 (ID 2479)_LaSonotheque.fr.mp3'],
+  grand:['sons/CRWDCheer_Cris et applaudissements d ados 1 (ID 0236)_LaSonotheque.fr.mp3','sons/CRWDCheer_Applaudissements concert bar 1 (ID 2479)_LaSonotheque.fr.mp3']};
+const APPL={},APPL_ESSAI={};
 function chargerApplaudissements(){
-  if(APPL_ESSAI)return APPL_ESSAI;
-  return APPL_ESSAI=fetch('sons/applaudissements.mp3').then(r=>{if(!r.ok)throw 0;return r.arrayBuffer();}).then(b=>getAC().decodeAudioData(b)).then(buf=>{APPL_VRAI=buf;}).catch(()=>{});
+  const tous=[...new Set([...SONS_APPL.petit,...SONS_APPL.grand])];
+  return Promise.all(tous.map(f=>APPL_ESSAI[f]||(APPL_ESSAI[f]=fetch(encodeURI(f)).then(r=>{if(!r.ok)throw 0;return r.arrayBuffer();}).then(b=>getAC().decodeAudioData(b)).then(buf=>{APPL[f]=buf;}).catch(()=>{}))));
 }
 function applaudir(force=.6){
   if(!PUB.son)return;
   try{const ac=getAC(),t=ac.currentTime,s=ac.createBufferSource(),v=ac.createGain();
-    if(APPL_VRAI){ // un extrait du vrai enregistrement, qui monte puis s'éteint en douceur
-      const d=1.8+3.2*force, st=Math.random()*Math.max(0,APPL_VRAI.duration-d-.5), vol=.35+.65*force;
-      s.buffer=APPL_VRAI; v.gain.setValueAtTime(.0001,t); v.gain.exponentialRampToValueAtTime(vol,t+.25); v.gain.setValueAtTime(vol,t+d*.55); v.gain.exponentialRampToValueAtTime(.0001,t+d);
-      s.connect(v); v.connect(ac.destination); s.start(t,st); s.stop(t+d+.05); return;}
-    const f=ac.createBiquadFilter(); s.buffer=bufApplaudir(); s.playbackRate.value=.95+Math.random()*.1; f.type='highpass'; f.frequency.value=180;
-    v.gain.value=.22+.5*force; s.connect(f); f.connect(v); v.connect(ac.destination); s.start(); s.stop(t+1.2+2*force);
+    const liste=(force>=.6?SONS_APPL.grand:SONS_APPL.petit).filter(f=>APPL[f]); const f=liste[Math.floor(Math.random()*liste.length)];
+    if(f){ // un vrai enregistrement : entier pour les grands moments, raccourci en fondu pour les petits
+      const buf=APPL[f], d=Math.min(buf.duration,1.6+5*force), vol=.45+.55*force;
+      s.buffer=buf; v.gain.setValueAtTime(vol,t); if(d<buf.duration){v.gain.setValueAtTime(vol,t+d*.6);v.gain.exponentialRampToValueAtTime(.0001,t+d);}
+      s.connect(v); v.connect(ac.destination); s.start(t); s.stop(t+d+.05); return;}
+    const fl=ac.createBiquadFilter(); s.buffer=bufApplaudir(); s.playbackRate.value=.95+Math.random()*.1; fl.type='highpass'; fl.frequency.value=180;
+    v.gain.value=.22+.5*force; s.connect(fl); fl.connect(v); v.connect(ac.destination); s.start(); s.stop(t+1.2+2*force);
   }catch(e){}
 }
 function deception(){
@@ -2036,7 +2040,7 @@ function publicInit(g){
 function publicFin(){for(const b of PUB.ban){scene.remove(b);b.geometry.dispose();b.material.map.dispose();b.material.dispose();}PUB.ban=[];if(PUB.pts)PUB.pts.P.visible=false;}
 function publicFrame(T,dt){
   const g=GAME; if(!g||g.demo)return;
-  if(!g.ditDebut&&T>g.first-2.2&&T<g.first){g.ditDebut=true;applaudir(.35);}
+
   PUB.hype=Math.max(.08,PUB.hype-dt*.05);
   const P=PUB.pts; if(!P||!P.P.visible)return; const rate=1+PUB.hype*22; let k=Math.floor(rate*dt+(Math.random()<(rate*dt)%1?1:0));
   while(k-->0){const i=Math.floor(Math.random()*P.N);P.life[i]=1;}
@@ -3235,7 +3239,7 @@ function ecranEnLigne(c){NET.coopMode=c;$('#onTitre').textContent=c?'🤝 Mode c
 function needNom(){if(S.nom)return true;alert('Écris d\'abord ton prénom 🙂');$('#inNom').focus();return false;}
 $('#inNom').value=S.nom; $('#inNom').addEventListener('input',e=>{S.nom=e.target.value.trim();saveS();});
 document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>{
-  getAC(); const go=b.dataset.go;
+  getAC(); chargerApplaudissements(); const go=b.dataset.go;
   const premiere=f=>{if(store.get('rs_aide',0)){f();return;}store.set('rs_aide',1);AIDE_SUITE=f;show('sAide');};
   if(go==='solo'){if(needNom())premiere(()=>openReglage('solo'));}
   else if(go==='online'||go==='coop'){if(needNom())premiere(()=>ecranEnLigne(go==='coop'));}
