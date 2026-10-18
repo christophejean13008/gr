@@ -246,7 +246,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <!-- ACCUEIL -->
 <div id="sAccueil" class="screen on">
   <button id="cadenas" title="Code">🔒</button>
-  <div id="version">v1.6</div>
+  <div id="version">v1.7</div>
   <div id="classement"><div class="ct">🏆 Classement ▾</div><div class="cb"></div></div>
   <div class="brand"><div class="soutien"><a class="pill" id="btMail" href="mailto:chris333j@yahoo.fr?subject=Rythmique%20Star">✉️ M'écrire</a><a class="pill" id="btInstall" href="#" style="display:none">📲 Installer l'appli</a><a class="pill cafe" id="btCafe" href="#" target="_blank" rel="noopener">☕ Offrir un café</a></div><div class="logo">🎀</div><h1>Rythmique <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
   <label class="field">Ton prénom<input id="inNom" maxlength="14" placeholder="Prénom" autocomplete="off"></label>
@@ -310,6 +310,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
     <div class="lbl mt">Cheveux</div><div class="cols" id="crHair"></div>
     <div class="lbl mt">Peau</div><div class="cols" id="crSkin"></div>
     <div class="actions"><button id="crRetour">← Retour</button><button class="big" id="crSave">💾 Enregistrer</button></div>
+    <button id="crPartager" style="width:100%;margin-top:10px">📤 Partager ma création</button>
   </div>
   <div id="dsPanel">
     <div class="row" style="margin:0 0 6px;justify-content:space-between;flex-wrap:nowrap"><b>✏️ Mon dessin</b><button id="dsVoir" style="padding:6px 10px;font-size:.8rem">👁️ Voir</button></div>
@@ -3760,6 +3761,66 @@ $('#crSave').onclick=()=>{
   if(CREA_EDIT)list=list.map(x=>x===CREA_EDIT?id:x); else list.unshift(id);
   store.set('rs_crea',list.slice(0,20)); S.tenue=id; saveS(); renderVestiaire(); show('sVestiaire');
 };
+/* ---- Partager sa création : photo du justaucorps + bandeau de présentation du jeu ---- */
+function chargerQR(){
+  if(window.qrcode)return Promise.resolve();
+  return new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://unpkg.com/qrcode-generator@1.4.4/qrcode.js';s.onload=()=>res();s.onerror=()=>rej();document.head.appendChild(s);});
+}
+function photoGym(){ // rend la gymnaste en pied avec une caméra « photo », sans toucher à l'écran
+  const W=canvas3d.width,H=canvas3d.height,ratio=1080/980;            // zone photo du visuel : 1080 × 980
+  let cw=W,ch=Math.round(W/ratio); if(ch>H){ch=H;cw=Math.round(H*ratio);}
+  const sv={p:camera.position.clone(),q:camera.quaternion.clone(),off:VIT.offset};
+  camera.clearViewOffset();
+  const vis=2.05, f=ch/H, d=vis/(f*2*Math.tan(THREE.MathUtils.degToRad(camera.fov/2)));
+  camera.position.set(0,.88,d); camera.lookAt(0,.86,0); camera.updateMatrixWorld();
+  const eg=PREV&&PREV.engin&&PREV.engin.g, egv=eg?eg.visible:false; if(eg)eg.visible=false;   // l'engin n'apparaît pas sur la photo
+  renderer.render(scene,camera); if(eg)eg.visible=egv;
+  const c=document.createElement('canvas');c.width=1080;c.height=980;c.getContext('2d').drawImage(canvas3d,(W-cw)/2,(H-ch)/2,cw,ch,0,0,1080,980);
+  camera.position.copy(sv.p);camera.quaternion.copy(sv.q);camera.updateMatrixWorld(); VIT.offset=false;  // la boucle remet le décalage à la prochaine image
+  return c;
+}
+async function visuelCrea(nomLeo){
+  try{await document.fonts.load('700 80px "Dancing Script"');await document.fonts.load('800 40px "Baloo 2"');}catch(e){}
+  const W=1080,H=1350,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
+  const bg=g.createLinearGradient(0,0,W,H);bg.addColorStop(0,'#2a0f45');bg.addColorStop(1,'#5a1650');g.fillStyle=bg;g.fillRect(0,0,W,H);
+  g.drawImage(photoGym(),0,0);
+  const fondu=g.createLinearGradient(0,700,0,980);fondu.addColorStop(0,'rgba(42,15,69,0)');fondu.addColorStop(1,'rgba(42,15,69,.95)');g.fillStyle=fondu;g.fillRect(0,700,W,280);
+  g.textAlign='center';g.textBaseline='alphabetic';g.shadowColor='rgba(0,0,0,.6)';g.shadowBlur=18;
+  g.fillStyle='#ffd166';g.font='800 38px "Baloo 2",system-ui,sans-serif';g.fillText('MON JUSTAUCORPS DE GR',W/2,880);
+  g.fillStyle='#fff';let fs=92;g.font=`700 ${fs}px "Dancing Script",cursive`;while(g.measureText(nomLeo).width>W-80&&fs>40){fs-=4;g.font=`700 ${fs}px "Dancing Script",cursive`;}g.fillText(nomLeo,W/2,960);g.shadowBlur=0;
+  // bandeau du bas : présentation du jeu + adresse + QR code
+  g.fillStyle='rgba(255,255,255,.07)';g.fillRect(0,990,W,360);g.fillStyle='#ff4fa3';g.fillRect(0,990,W,6);
+  const qx=W-60-250,qy=1040; let qrOk=false;
+  try{await chargerQR();const q=qrcode(0,'M');q.addData('https://'+URL_JEU);q.make();const n=q.getModuleCount(),cell=Math.floor(230/n),tq=cell*n,ox=qx+(250-tq)/2,oy=qy+(250-tq)/2;
+    g.fillStyle='#fff';g.beginPath();g.roundRect?g.roundRect(qx,qy,250,250,18):g.rect(qx,qy,250,250);g.fill();g.fillStyle='#2a0f45';
+    for(let r=0;r<n;r++)for(let k=0;k<n;k++)if(q.isDark(r,k))g.fillRect(ox+k*cell,oy+r*cell,cell,cell);qrOk=true;}catch(e){}
+  const tx=qrOk?60:W/2,al=qrOk?'left':'center';g.textAlign=al;
+  g.fillStyle='#fff';g.font='700 76px "Dancing Script",cursive';g.fillText('🎀 Rythmique Star',tx,1095);
+  g.font='700 36px "Baloo 2",system-ui,sans-serif';g.fillStyle='#f3e8ff';
+  g.fillText('Le jeu de gymnastique rythmique',tx,1155);g.fillText('gratuit, sans installation 📱',tx,1200);
+  g.fillStyle='#ffd166';g.font='800 36px "Baloo 2",system-ui,sans-serif';g.fillText(qrOk?'Crée le tien : scanne le code 👉':'Crée le tien sur :',tx,1258);
+  g.fillStyle='#fff';let fu=30;g.font=`700 ${fu}px "Baloo 2",system-ui,sans-serif`;const lim=qrOk?W-60-250-30-tx:W-80;while(g.measureText(URL_JEU).width>lim&&fu>18){fu-=2;g.font=`700 ${fu}px "Baloo 2",system-ui,sans-serif`;}g.fillText(URL_JEU,tx,1305);
+  return new Promise(r=>c.toBlob(r,'image/png'));
+}
+async function partagerCrea(){
+  if(PREV&&PREV.L&&PREV.L.kind!=='proc'&&!PREV.custom){alert('Patiente une seconde, la gymnaste arrive…');return;}
+  const nomLeo=(CREA.n||'').trim()||'Ma création', b=$('#crPartager'), t0=b.textContent; b.disabled=true; b.textContent='⏳…';
+  let blob; try{blob=await visuelCrea(nomLeo);}catch(e){alert('Impossible de créer l\'image 😕');b.disabled=false;b.textContent=t0;return;}
+  b.disabled=false; b.textContent=t0;
+  const nomF='justaucorps-'+nomLeo.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\w-]+/g,'_')+'.png', file=new File([blob],nomF,{type:'image/png'}), url=URL.createObjectURL(blob);
+  const texte=`Mon justaucorps « ${nomLeo} » sur Rythmique Star 🎀 Le jeu de gymnastique rythmique gratuit : https://${URL_JEU}`;
+  const peut=navigator.canShare&&navigator.canShare({files:[file]});
+  const C=$('#tmCorps');$('#trocModal').classList.add('on');
+  C.innerHTML=`<div class="lbl" style="text-align:center">📤 Partage ta création !</div>
+    <img src="${url}" alt="" style="width:100%;max-height:50vh;object-fit:contain;border-radius:12px">
+    <div class="actions">${peut?'<button class="big" id="cpPart">📤 Partager</button>':''}<a class="filebtn" href="${url}" download="${nomF}" style="text-align:center;text-decoration:none">💾 Enregistrer l'image</a></div>
+    <div class="actions" style="margin-top:8px"><button id="cpLien">🔗 Copier le lien du jeu</button><button id="tmNon">Fermer</button></div>
+    <p class="hint" style="text-align:center">Une image n'est pas cliquable : le lien est ajouté au message quand tu partages, et le QR code se scanne avec un téléphone.</p>`;
+  $('#tmNon').onclick=fermerTroc;
+  $('#cpLien').onclick=async()=>{try{await navigator.clipboard.writeText(texte);$('#cpLien').textContent='✓ Lien copié';}catch(e){prompt('Copie ce texte :',texte);}};
+  if(peut)$('#cpPart').onclick=()=>navigator.share({files:[file],title:'Rythmique Star',text:texte}).catch(()=>{});
+}
+$('#crPartager').onclick=partagerCrea;
 $('#vsFile').addEventListener('change',e=>{
   const f=e.target.files[0]; if(!f)return; e.target.value='';
   LOCAL_LEO={id:'local',kind:'file',nom:f.name.replace(/\.[^.]+$/,'').slice(0,16),src:f,color:'#ff4fa3',motif:'3d'}; delete TEXCACHE.local; delete SWCACHE.local;
