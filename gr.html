@@ -1783,7 +1783,7 @@ async function idbGet(k){const db=await idb();return new Promise((res,rej)=>{con
 function garderMusique(){const c=S.custom;if(!c||!c.bytes)return;idbSet('musique',{nom:c.nom,bytes:c.bytes,bpm:c.bpm,offset:c.offset}).catch(()=>{});}
 const RESTO_MUS=(async()=>{
   try{const m=await idbGet('musique'); if(!m||!m.bytes)throw 0;
-    const buf=await getAC().decodeAudioData(m.bytes.slice(0)); const on=analyseEnv(buf);
+    const dec=AC||new (window.OfflineAudioContext||window.webkitOfflineAudioContext)(2,1,44100); const buf=await dec.decodeAudioData(m.bytes.slice(0)); const on=analyseEnv(buf);
     S.custom={nom:m.nom,bytes:m.bytes,buffer:buf,bpm:m.bpm,offset:m.offset,on};
     if(VIEW==='sReglage')renderReglage();
   }catch(e){if(S.musique==='custom'){S.musique='elan';saveS();}}
@@ -1807,17 +1807,21 @@ function newStats(){return {dedE:0,dedA:0,DB:[],R:[],DA:[],groups:new Set(),line
 const sum=a=>a.reduce((x,y)=>x+y,0);
 function computeD(st){return sum([...st.DB].sort((a,b)=>b-a).slice(0,8))+sum(st.R.slice(0,4))+sum(st.DA.slice(0,15))+sum(st.EX||[]);}
 function liveScores(){const g=GAME,st=g.st;const D=computeD(st),E=Math.max(0,10-st.dedE),A=Math.max(0,10-st.dedA);const T=gameTime();return {D,E,A,T:Math.max(0,D+E+A-st.line)+(st.bonus||0),prog:clamp((T-g.first)/(g.final-g.first),0,1)};}
-function gameTimeAudio(){if(!GAME)return 0;const v=GAME.surv;if(v)return v.m0+(AC.currentTime-v.w0)*v.r-S.latence/1000-(AC.outputLatency||0);return AC.currentTime-GAME.startAt-S.latence/1000-(AC.outputLatency||0);}
+const latSortie=()=>{const l=+AC.outputLatency;return isFinite(l)&&l>0&&l<.5?l:0;};
+function gameTimeAudio(){if(!GAME)return 0;const v=GAME.surv;if(v)return v.m0+(AC.currentTime-v.w0)*v.r-S.latence/1000-latSortie();return AC.currentTime-GAME.startAt-S.latence/1000-latSortie();}
 /* Horloge lissée : sur iPad, l'horloge audio avance par à-coups (paquets de son), ce qui fait saccader la barre.
    On suit l'horloge précise de l'écran (performance.now) et on la recale tout doucement sur la musique. */
 const CLK={g:null,off:0,r:1,last:0}; let NFRAME=0;
 function gameTime(){
   if(!GAME)return 0; const raw=gameTimeAudio(), p=performance.now()/1000, r=GAME.surv?GAME.surv.r:1;
-  if(CLK.g!==GAME||CLK.r!==r){CLK.g=GAME;CLK.r=r;CLK.off=raw-p*r;CLK.last=p;return raw;}
+  if(CLK.g!==GAME||CLK.r!==r){const nv=CLK.g!==GAME;CLK.g=GAME;CLK.r=r;CLK.off=raw-p*r;CLK.last=p;if(nv)CLK.T=null;return raw;}
   const cible=raw-p*r, err=cible-CLK.off;
   if(Math.abs(err)>.12)CLK.off=cible;                       // gros décalage (pause, reprise) : on recale d'un coup
   else{const k=Math.min(1,(p-CLK.last)*1.5);CLK.off+=err*k;} // sinon correction très douce
-  CLK.last=p; return p*r+CLK.off;
+  CLK.last=p; let T=p*r+CLK.off;
+  if(AC.state!=='running'){try{AC.resume();}catch(e){}}
+  if(CLK.T!=null&&CLK.g===GAME&&T<CLK.T)T=CLK.T;            // le temps ne recule jamais
+  CLK.T=T; return T;
 }
 
 function lancerPartie({choreo,music,nom,leo,design=null,opponents=[],online=false,demo=false,retour=null,coop=null,perturb=false,vue=null,debut=null,onFin}){
