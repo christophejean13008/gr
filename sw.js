@@ -33,7 +33,7 @@ self.addEventListener('fetch', e => {
     return;
   }
   // retouches des modèles : toujours la dernière version si possible
-  if (url.origin === location.origin && url.pathname.endsWith('_retouche.png')) {
+  if (url.origin === location.origin && /_(retouche|peau)\.png$/.test(url.pathname)) {
     e.respondWith((async () => {
       try { const r = await fetch(req, { cache: 'no-store' }); if (r.ok) (await caches.open(CACHE)).put(req, r.clone()); return r; }
       catch (err) { return (await caches.match(req)) || Response.error(); }

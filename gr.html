@@ -1363,16 +1363,28 @@ function corrigerMateriaux(obj){
     if(m.emissive&&!m.emissiveMap&&(m.emissive.r+m.emissive.g+m.emissive.b)>.05){m.emissive.setRGB(0,0,0);if(m.color)m.color.setRGB(.8,.8,.8);}
   });});
 }
-/* Retouche faite avec retouche.html : « modele_retouche.png » à côté du modèle remplace sa texture */
+/* Retouche faite avec retouche.html : « modele_retouche.png » à côté du modèle remplace sa texture,
+   « modele_peau.png » (blanc = zone qui reste couleur peau) empêche le justaucorps de recouvrir ces zones */
+const PEAU_VIDE=(()=>{const t=new THREE.DataTexture(new Uint8Array([0,0,0,255]),1,1);t.needsUpdate=true;return t;})();
 async function appliquerRetouche(obj,src){
   if(!/\.(fbx|glb|gltf)$/i.test(src)||/anim/i.test(src))return;
-  try{const r=await fetch(src.replace(/\.(fbx|glb|gltf)$/i,'_retouche.png'));if(!r.ok)return;
-    const bm=await createImageBitmap(await r.blob()); const maps=new Set();
-    obj.traverse(o=>{if(!o.isMesh)return;(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{if(m&&m.map)maps.add(m.map);});});
+  const maps=new Set();
+  obj.traverse(o=>{if(!o.isMesh)return;(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{if(m&&m.map)maps.add(m.map);});});
+  if(!maps.size)return;
+  const flip=[...maps][0].flipY;
+  const tRet=(async()=>{try{const r=await fetch(src.replace(/\.(fbx|glb|gltf)$/i,'_retouche.png'));if(!r.ok)return;
+    const bm=await createImageBitmap(await r.blob());
     const c=document.createElement('canvas');c.width=bm.width;c.height=bm.height;c.getContext('2d').drawImage(bm,0,0);
     const img=new Image(); img.src=c.toDataURL('image/png'); await img.decode();
     for(const t of maps){t.image=img;t.needsUpdate=true;}
-  }catch(e){}
+  }catch(e){}})();
+  const tPeau=(async()=>{try{const r=await fetch(src.replace(/\.(fbx|glb|gltf)$/i,'_peau.png'));if(!r.ok)return;
+    const bm=await createImageBitmap(await r.blob());
+    const c=document.createElement('canvas');c.width=bm.width;c.height=bm.height;c.getContext('2d').drawImage(bm,0,0);
+    const t=new THREE.CanvasTexture(c); t.flipY=flip; t.colorSpace=THREE.NoColorSpace;
+    for(const m of maps)m.userData.peau=t;
+  }catch(e){}})();
+  await Promise.all([tRet,tPeau]);
 }
 const CLIPMAP={idle:'idle',pas:'pas',saut:'saut',equilibre:'equilibre',pivot:'pivot',lancer:'lancer',tour:'tour',rattraper:'rattraper',engin:'engin',final:'salut',chute:'chute'};
 /* Redresse un modèle enregistré couché ou de dos : tête au-dessus des pieds, bras gauche vers +X (donc face à la caméra) */
@@ -1504,12 +1516,12 @@ async function habiller(obj,out,bones){
         if(rf&&rf.l)leoRef=rf.l; if(rf&&rf.s)skinRef=rf.s; if(rf&&rf.cl&&rf.cl.length)clus=rf.cl; if(rf&&rf.sk&&rf.sk.length)skins=rf.sk; if(rf&&rf.cu)skinCu=rf.cu;}
       const C4=[0,1,2,3].map(i=>(clus&&clus[i])?clus[i]:new THREE.Vector3(9,9,9)); if(!clus)C4[0]=leoRef;
       const S4=[0,1,2,3].map(i=>(skins&&skins[i])?skins[i]:(i?new THREE.Vector3(-9,-9,-9):skinRef));
-      const U={uBindRot:{value:new THREE.Matrix3().setFromMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(qr))},uSkinC:{value:S4},uLeoC:{value:C4},uLeoMap:{value:pat},uLeoRef:{value:leoRef},uSkinRef:{value:skinRef},uSleeve:{value:new THREE.Vector2(manL?1:0,manR?1:0)},uCenter:{value:new THREE.Vector3(info.cx,info.armY,info.cz)},uH:{value:info.H},uVS:{value:out.dessin&&out.dessin.length?DESSIN_VS:3.8},uSkinCu:{value:skinCu||skinRef}};
+      const U={uBindRot:{value:new THREE.Matrix3().setFromMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(qr))},uSkinC:{value:S4},uLeoC:{value:C4},uLeoMap:{value:pat},uLeoRef:{value:leoRef},uSkinRef:{value:skinRef},uSleeve:{value:new THREE.Vector2(manL?1:0,manR?1:0)},uCenter:{value:new THREE.Vector3(info.cx,info.armY,info.cz)},uH:{value:info.H},uVS:{value:out.dessin&&out.dessin.length?DESSIN_VS:3.8},uSkinCu:{value:skinCu||skinRef},uPeauMask:{value:(mat0.map&&mat0.map.userData.peau)||PEAU_VIDE},uHasPeau:{value:(mat0.map&&mat0.map.userData.peau)?1:0}};
       mat.onBeforeCompile=sh=>{
         Object.assign(sh.uniforms,U);
         sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute vec3 aLeo;\nvarying vec3 vLeo;\nvarying vec3 vBindPos;\nuniform mat3 uBindRot;')
           .replace('#include <begin_vertex>','#include <begin_vertex>\nvLeo=aLeo; vBindPos=uBindRot*position;');
-        sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vLeo;\nvarying vec3 vBindPos;\nuniform sampler2D uLeoMap;\nuniform vec3 uLeoRef,uSkinRef,uCenter;\nuniform vec3 uLeoC[4];\nuniform vec3 uSkinC[4];\nuniform vec2 uSleeve;\nuniform float uH;\nuniform float uVS;\nuniform vec3 uSkinCu;')
+        sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vLeo;\nvarying vec3 vBindPos;\nuniform sampler2D uLeoMap;\nuniform vec3 uLeoRef,uSkinRef,uCenter;\nuniform vec3 uLeoC[4];\nuniform vec3 uSkinC[4];\nuniform vec2 uSleeve;\nuniform float uH;\nuniform float uVS;\nuniform vec3 uSkinCu;\nuniform sampler2D uPeauMask;\nuniform float uHasPeau;')
           .replace('#include <map_fragment>',`#include <map_fragment>
   {
     vec3 orig=diffuseColor.rgb;
@@ -1522,9 +1534,15 @@ async function habiller(obj,out,bones){
     // sur les côtés (haut des cuisses), le poids du bassin vaut ~0,5 : on exige plus pour éviter les traînées sur les hanches
     float cote=smoothstep(.018*uH,.04*uH,abs(p.x));
     float seuil=mix(.15,.55,cote), dedans=smoothstep(seuil,seuil+.05,vLeo.x);
-    float m=clamp(dedans*estTissu+smoothstep(.2,.45,arm),0.,1.);
+    // zones peau choisies dans l'outil de retouche (cou, épaules…) : jamais recouvertes, sauf par une manche
+    float pm=0.;
+    #ifdef USE_MAP
+    pm=texture2D(uPeauMask,vMapUv).r*uHasPeau;
+    #endif
+    float manche=smoothstep(.2,.45,arm);
+    float m=clamp(dedans*estTissu*(1.-pm)+manche,0.,1.);
     // bord de jambe sur les côtés : le tissu d'origine qui dépasse est repeint couleur peau (plus de petites taches)
-    float peau=0.;
+    float peau=pm*(1.-manche)*max(estTissu,smoothstep(.05,.12,ds));
     vec2 uvC=vec2(atan(p.x,p.z)/6.2831853+.5, p.y/uH*uVS);
     vec2 uvA=vec2(atan(p.y,p.z)/6.2831853+.5, p.x/uH*uVS);
     vec2 uvL=arm>.5?uvA:uvC;

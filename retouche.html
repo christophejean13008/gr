@@ -23,6 +23,7 @@ button.big{background:linear-gradient(135deg,var(--accent),#a24bff);font-weight:
 select,input[type=text]{width:100%;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:8px}
 .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .outils button{flex:1;min-width:66px;font-size:.88rem}
+.outils button.zp{border-color:#3ddc97}
 input[type=range]{flex:1;accent-color:var(--accent)}
 .couleur{display:flex;gap:8px;align-items:center}
 #coul{width:52px;height:40px;border:none;border-radius:10px;padding:0;background:none}
@@ -49,7 +50,10 @@ input[type=range]{flex:1;accent-color:var(--accent)}
     <button data-o="pinceau">🖌️ Pinceau</button>
     <button data-o="pipette">💧 Pipette</button>
     <button data-o="gomme">🧽 Gomme</button>
+    <button data-o="zone" class="zp">🟢 Zone peau</button>
+    <button data-o="zonegomme" class="zp">✖️ Effacer zone</button>
   </div>
+  <label class="row hint" style="margin-top:6px;cursor:pointer"><input type="checkbox" id="voirZone" checked> Voir les zones peau (en vert)</label>
   <p class="hint" id="aideOutil">Glisse pour tourner autour du modèle, pince ou molette pour zoomer.</p>
   <div class="lbl">3. Couleur</div>
   <div class="couleur"><input type="color" id="coul" value="#e0a07a"><div id="histo"></div></div>
@@ -61,7 +65,9 @@ input[type=range]{flex:1;accent-color:var(--accent)}
   <div class="lbl">5. Enregistrer</div>
   <div class="row"><button id="annuler" style="flex:1">↶ Annuler</button><button id="original" style="flex:1">♻️ Tout effacer</button></div>
   <button class="big" id="sauver" style="margin-top:8px">💾 Télécharger la retouche (PNG)</button>
+  <button class="big" id="sauverZone" style="margin-top:8px;background:linear-gradient(135deg,#2bb673,#1f8a8a)">💾 Télécharger les zones peau (PNG)</button>
   <p class="hint" id="aideSauver">Mets ensuite le fichier téléchargé sur GitHub, <b>dans le même dossier que le modèle</b>, sans changer son nom. Le jeu l'utilisera automatiquement.</p>
+  <p class="hint" id="aideZone">Zones peau : ce que tu marques en vert restera toujours couleur peau dans le jeu (le justaucorps ne le recouvre plus, sauf les manches longues).</p>
 </div>
 <div id="etat">Chargement…</div>
 
@@ -99,7 +105,9 @@ async function listerModeles(){
 const retouchePath=f=>f.replace(/\.(fbx|glb|gltf)$/i,'_retouche.png');
 
 /* ---- chargement d'un modèle et de sa texture ---- */
-let MODELE=null, MESHES=[], TEX=null;   // TEX = {cv,g,orig,W,H,flipY,map,hist:[]}
+let MODELE=null, MESHES=[], TEX=null;   // TEX = {cv,g,orig,W,H,flipY,map,hist:[],zc,zg,zmap}
+const zonePath=f=>f.replace(/\.(fbx|glb|gltf)$/i,'_peau.png');
+const U_VOIR={value:1};
 async function charger(f){
   etat('Chargement du modèle…'); if(MODELE){scene.remove(MODELE);MODELE=null;} MESHES=[]; TEX=null;
   let obj;
@@ -120,13 +128,23 @@ async function charger(f){
   // une retouche existe déjà ? on la reprend
   try{const r=await fetch(retouchePath(f),{cache:'no-store'});if(r.ok){const bm=await createImageBitmap(await r.blob());g.drawImage(bm,0,0,W,H);etat('Retouche existante reprise ✓');setTimeout(()=>etat(''),2500);}else etat('');}catch(e){etat('');}
   const tex=new THREE.CanvasTexture(c); tex.colorSpace=THREE.SRGBColorSpace; tex.flipY=map.flipY; tex.wrapS=map.wrapS; tex.wrapT=map.wrapT;
-  obj.traverse(o=>{if(!o.isMesh)return;(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{if(m&&m.map===map){m.map=tex;m.needsUpdate=true;}});});
-  TEX={cv:c,g,orig,W,H,flipY:map.flipY,map:tex,hist:[],f};
+  // calque des zones peau (blanc opaque = peau), même taille que la texture
+  const zc=document.createElement('canvas');zc.width=W;zc.height=H;const zg=zc.getContext('2d',{willReadFrequently:true});
+  try{const r=await fetch(zonePath(f),{cache:'no-store'});if(r.ok){const bm=await createImageBitmap(await r.blob());zg.drawImage(bm,0,0,W,H);
+    const d=zg.getImageData(0,0,W,H);for(let i=0;i<d.data.length;i+=4){const a=d.data[i];d.data[i]=d.data[i+1]=d.data[i+2]=255;d.data[i+3]=a;}zg.putImageData(d,0,0);}}catch(e){}
+  const zmap=new THREE.CanvasTexture(zc); zmap.flipY=map.flipY; zmap.colorSpace=THREE.NoColorSpace;
+  obj.traverse(o=>{if(!o.isMesh)return;(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{if(m&&m.map===map){m.map=tex;
+    m.onBeforeCompile=sh=>{sh.uniforms.uZone={value:zmap};sh.uniforms.uVoir=U_VOIR;
+      sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nuniform sampler2D uZone;\nuniform float uVoir;')
+        .replace('#include <map_fragment>','#include <map_fragment>\n#ifdef USE_MAP\n diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.1,.95,.45),texture2D(uZone,vMapUv).a*.55*uVoir);\n#endif');};
+    m.customProgramCacheKey=()=>'zone-peau'; m.needsUpdate=true;}});});
+  TEX={cv:c,g,orig,W,H,flipY:map.flipY,map:tex,hist:[],f,zc,zg,zmap};
   const ctr=new THREE.Box3().setFromObject(obj); ctrl.target.set(0,ctr.min.y+(ctr.max.y-ctr.min.y)*.8,0); cam.position.set(0,ctrl.target.y+.1,1.3);
 }
 
 /* ---- outils ---- */
-let OUTIL='tourner'; const AIDE={tourner:'Glisse pour tourner autour du modèle, pince ou molette pour zoomer.',pinceau:'Peins directement sur le modèle. Repasse en 🔄 Tourner pour changer d\'angle.',pipette:'Touche le modèle pour prendre la couleur à cet endroit.',gomme:'Efface ta retouche : la couleur d\'origine revient.'};
+let OUTIL='tourner'; const AIDE={tourner:'Glisse pour tourner autour du modèle, pince ou molette pour zoomer.',pinceau:'Peins directement sur le modèle. Repasse en 🔄 Tourner pour changer d\'angle.',pipette:'Touche le modèle pour prendre la couleur à cet endroit.',gomme:'Efface ta retouche : la couleur d\'origine revient.',zone:'Peins en vert les zones qui doivent rester couleur peau (cou, épaules…).',zonegomme:'Enlève le vert : le justaucorps du jeu pourra de nouveau recouvrir cette zone.'};
+$('#voirZone').onchange=e=>{U_VOIR.value=e.target.checked?1:0;};
 document.querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{OUTIL=b.dataset.o;document.querySelectorAll('[data-o]').forEach(x=>x.classList.toggle('on',x===b));ctrl.enabled=OUTIL==='tourner';$('#aideOutil').textContent=AIDE[OUTIL];$('#curseur').style.display='none';});
 for(const id of ['taille','douceur','opac'])$('#'+id).oninput=e=>{$('#'+id+'V').textContent=e.target.value;};
 const HIST=[]; function ajouterHisto(c){if(HIST[0]===c)return;HIST.unshift(c);HIST.splice(8);$('#histo').innerHTML=HIST.map(x=>`<button style="background:${x}" data-c="${x}"></button>`).join('');$('#histo').querySelectorAll('button').forEach(b=>b.onclick=()=>{$('#coul').value=b.dataset.c;});}
@@ -154,6 +172,11 @@ function rayonTex(e,p){
 }
 function tamponner(p,rad){
   const g=TEX.g, dou=+$('#douceur').value/100, op=+$('#opac').value/100;
+  if(OUTIL==='zone'||OUTIL==='zonegomme'){ // calque des zones peau
+    const z=TEX.zg, gz=z.createRadialGradient(p.x,p.y,0,p.x,p.y,rad);
+    gz.addColorStop(0,`rgba(255,255,255,${op})`); gz.addColorStop(Math.max(0,1-dou),`rgba(255,255,255,${op})`); gz.addColorStop(1,'rgba(255,255,255,0)');
+    z.globalCompositeOperation=OUTIL==='zone'?'source-over':'destination-out'; z.fillStyle=gz; z.beginPath(); z.arc(p.x,p.y,rad,0,7); z.fill(); z.globalCompositeOperation='source-over';
+    TEX.zmap.needsUpdate=true; return;}
   if(OUTIL==='gomme'){ // on recopie l'original sous le pinceau
     const x0=Math.max(0,Math.floor(p.x-rad)),y0=Math.max(0,Math.floor(p.y-rad)),w=Math.min(TEX.W-x0,Math.ceil(rad*2)+1),h=Math.min(TEX.H-y0,Math.ceil(rad*2)+1); if(w<=0||h<=0)return;
     const cur=g.getImageData(x0,y0,w,h), o=TEX.orig.data;
@@ -169,12 +192,14 @@ let TRAIT=null;
 cv.addEventListener('pointerdown',e=>{
   if(OUTIL==='tourner'||!TEX)return; const p=toucher(e); if(!p)return; e.preventDefault(); cv.setPointerCapture(e.pointerId);
   if(OUTIL==='pipette'){const d=TEX.g.getImageData(Math.floor(p.x),Math.floor(p.y),1,1).data;const c='#'+[d[0],d[1],d[2]].map(x=>x.toString(16).padStart(2,'0')).join('');$('#coul').value=c;ajouterHisto(c);etat('Couleur prise : '+c);setTimeout(()=>etat(''),1500);return;}
-  TEX.hist.push(TEX.g.getImageData(0,0,TEX.W,TEX.H)); if(TEX.hist.length>10)TEX.hist.shift();
+  const zon=OUTIL==='zone'||OUTIL==='zonegomme';
+  TEX.hist.push({z:zon,d:(zon?TEX.zg:TEX.g).getImageData(0,0,TEX.W,TEX.H)}); if(TEX.hist.length>10)TEX.hist.shift();
   if(OUTIL==='pinceau')ajouterHisto($('#coul').value);
-  const rad=rayonTex(e,p); tamponner(p,rad); MODIF=true; SAUVE=false; TEX.map.needsUpdate=true; TRAIT={p,rad,id:e.pointerId};
+  if(zon&&!$('#voirZone').checked){$('#voirZone').checked=true;U_VOIR.value=1;}
+  const rad=rayonTex(e,p); tamponner(p,rad); if(zon){MODIFZ=true;SAUVEZ=false;}else{MODIF=true; SAUVE=false;} TEX.map.needsUpdate=true; TRAIT={p,rad,id:e.pointerId};
 });
 cv.addEventListener('pointermove',e=>{
-  const c=$('#curseur'); if(OUTIL==='pinceau'||OUTIL==='gomme'){const d=+$('#taille').value*2;c.style.display='block';c.style.width=c.style.height=d+'px';c.style.left=e.clientX+'px';c.style.top=e.clientY+'px';}
+  const c=$('#curseur'); if(OUTIL!=='tourner'&&OUTIL!=='pipette'){const d=+$('#taille').value*2;c.style.display='block';c.style.width=c.style.height=d+'px';c.style.left=e.clientX+'px';c.style.top=e.clientY+'px';}
   if(!TRAIT||TRAIT.id!==e.pointerId)return; const p=toucher(e); if(!p)return;
   const a=TRAIT.p, dist=Math.hypot(p.x-a.x,p.y-a.y);
   if(dist<TRAIT.rad*5){const n=Math.max(1,Math.ceil(dist/(TRAIT.rad*.35)));for(let i=1;i<=n;i++)tamponner({x:a.x+(p.x-a.x)*i/n,y:a.y+(p.y-a.y)*i/n},TRAIT.rad);}
@@ -184,13 +209,20 @@ cv.addEventListener('pointermove',e=>{
 const fin=()=>{TRAIT=null;}; cv.addEventListener('pointerup',fin); cv.addEventListener('pointercancel',fin);
 cv.addEventListener('pointerleave',()=>{$('#curseur').style.display='none';});
 
-$('#annuler').onclick=()=>{if(!TEX||!TEX.hist.length)return;TEX.g.putImageData(TEX.hist.pop(),0,0);TEX.map.needsUpdate=true;};
-$('#original').onclick=()=>{if(!TEX||!confirm('Effacer toutes les retouches de ce modèle ?'))return;TEX.hist.push(TEX.g.getImageData(0,0,TEX.W,TEX.H));TEX.g.putImageData(TEX.orig,0,0);TEX.map.needsUpdate=true;};
+$('#annuler').onclick=()=>{if(!TEX||!TEX.hist.length)return;const h=TEX.hist.pop();if(h.z){TEX.zg.putImageData(h.d,0,0);TEX.zmap.needsUpdate=true;}else{TEX.g.putImageData(h.d,0,0);TEX.map.needsUpdate=true;}};
+$('#original').onclick=()=>{if(!TEX)return;const zon=OUTIL==='zone'||OUTIL==='zonegomme';
+  if(!confirm(zon?'Effacer toutes les zones peau de ce modèle ?':'Effacer toutes les retouches de couleur de ce modèle ?'))return;
+  if(zon){TEX.hist.push({z:true,d:TEX.zg.getImageData(0,0,TEX.W,TEX.H)});TEX.zg.clearRect(0,0,TEX.W,TEX.H);TEX.zmap.needsUpdate=true;MODIFZ=true;SAUVEZ=false;}
+  else{TEX.hist.push({z:false,d:TEX.g.getImageData(0,0,TEX.W,TEX.H)});TEX.g.putImageData(TEX.orig,0,0);TEX.map.needsUpdate=true;}};
+$('#sauverZone').onclick=()=>{if(!TEX)return;const nom=zonePath(TEX.f).split('/').pop();
+  const c=document.createElement('canvas');c.width=TEX.W;c.height=TEX.H;const g=c.getContext('2d');g.fillStyle='#000';g.fillRect(0,0,TEX.W,TEX.H);g.drawImage(TEX.zc,0,0);
+  c.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=nom;document.body.appendChild(a);a.click();a.remove();
+    SAUVEZ=true; $('#aideZone').innerHTML=`Fichier <b>${nom}</b> téléchargé. Mets-le sur GitHub dans le dossier <b>${TEX.f.replace(/[^/]*$/,'')}</b>, sans changer son nom.`;},'image/png');};
 $('#sauver').onclick=()=>{if(!TEX)return;const nom=retouchePath(TEX.f).split('/').pop();
   TEX.cv.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=nom;document.body.appendChild(a);a.click();a.remove();
     SAUVE=true; $('#aideSauver').innerHTML=`Fichier <b>${nom}</b> téléchargé. Mets-le sur GitHub dans le dossier <b>${TEX.f.replace(/[^/]*$/,'')}</b>, sans changer son nom.`;},'image/png');};
-let MODIF=false, SAUVE=false;
-$('#quitter').onclick=()=>{if(MODIF&&!SAUVE&&!confirm('Tu n\'as pas téléchargé ta retouche : elle sera perdue. Quitter quand même ?'))return;location.href='gr.html';};
+let MODIF=false, SAUVE=false, MODIFZ=false, SAUVEZ=false;
+$('#quitter').onclick=()=>{if(((MODIF&&!SAUVE)||(MODIFZ&&!SAUVEZ))&&!confirm('Tu n\'as pas téléchargé ta retouche : elle sera perdue. Quitter quand même ?'))return;location.href='gr.html';};
 $('#plier').onclick=()=>{$('#panneau').classList.toggle('cache');$('#plier').textContent=$('#panneau').classList.contains('cache')?'▶':'◀';};
 $('#modele').onchange=e=>charger(e.target.value);
 $('#charger').onclick=()=>{const f=$('#autre').value.trim();if(f)charger(f);};
