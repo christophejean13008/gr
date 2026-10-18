@@ -1,7 +1,7 @@
 /* Rythmique Star – service worker
    - la page du jeu : réseau d'abord (toujours la dernière version), copie de secours si pas de réseau
    - bibliothèques (three.js, PeerJS, polices), modèles 3D et musiques : copie gardée sur le téléphone */
-const CACHE = 'rythmique-star-v2';
+const CACHE = 'rythmique-star-v3';
 const PAGE = 'gr.html';
 
 self.addEventListener('install', e => {
@@ -24,11 +24,19 @@ self.addEventListener('fetch', e => {
     e.respondWith((async () => {
       try {
         const r = await fetch(req, { cache: 'no-store' });
-        if (r.ok) (await caches.open(CACHE)).put(PAGE, r.clone());
+        if (r.ok) (await caches.open(CACHE)).put(url.pathname.endsWith('gr.html') ? PAGE : req, r.clone());
         return r;
       } catch (err) {
-        return (await caches.match(PAGE)) || (await caches.match(req)) || Response.error();
+        return (await caches.match(url.pathname.endsWith('gr.html') ? PAGE : req)) || (await caches.match(PAGE)) || Response.error();
       }
+    })());
+    return;
+  }
+  // retouches des modèles : toujours la dernière version si possible
+  if (url.origin === location.origin && url.pathname.endsWith('_retouche.png')) {
+    e.respondWith((async () => {
+      try { const r = await fetch(req, { cache: 'no-store' }); if (r.ok) (await caches.open(CACHE)).put(req, r.clone()); return r; }
+      catch (err) { return (await caches.match(req)) || Response.error(); }
     })());
     return;
   }

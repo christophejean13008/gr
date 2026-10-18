@@ -1345,10 +1345,24 @@ function loadAsset(src){
   const pr=(async()=>{
     const name=typeof src==='string'?src:src.name; const ext=name.split('.').pop().toLowerCase();
     const buf=typeof src==='string'?null:await src.arrayBuffer();
-    if(ext==='fbx'){const l=new FBXLoader();const o=buf?l.parse(buf,''):await l.loadAsync(src);return {scene:o,clips:o.animations||[]};}
-    const l=new GLTFLoader(); const g=buf?await l.parseAsync(buf,''):await l.loadAsync(src); return {scene:g.scene,clips:g.animations||[]};
+    let res;
+    if(ext==='fbx'){const l=new FBXLoader();const o=buf?l.parse(buf,''):await l.loadAsync(src);res={scene:o,clips:o.animations||[]};}
+    else {const l=new GLTFLoader(); const g=buf?await l.parseAsync(buf,''):await l.loadAsync(src); res={scene:g.scene,clips:g.animations||[]};}
+    if(typeof src==='string')await appliquerRetouche(res.scene,src);
+    return res;
   })();
   ASSETS.set(key,pr); pr.catch(()=>ASSETS.delete(key)); return pr;
+}
+/* Retouche faite avec retouche.html : « modele_retouche.png » à côté du modèle remplace sa texture */
+async function appliquerRetouche(obj,src){
+  if(!/\.(fbx|glb|gltf)$/i.test(src)||/anim/i.test(src))return;
+  try{const r=await fetch(src.replace(/\.(fbx|glb|gltf)$/i,'_retouche.png'));if(!r.ok)return;
+    const bm=await createImageBitmap(await r.blob()); const maps=new Set();
+    obj.traverse(o=>{if(!o.isMesh)return;(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{if(m&&m.map)maps.add(m.map);});});
+    const c=document.createElement('canvas');c.width=bm.width;c.height=bm.height;c.getContext('2d').drawImage(bm,0,0);
+    const img=new Image(); img.src=c.toDataURL('image/png'); await img.decode();
+    for(const t of maps){t.image=img;t.needsUpdate=true;}
+  }catch(e){}
 }
 const CLIPMAP={idle:'idle',pas:'pas',saut:'saut',equilibre:'equilibre',pivot:'pivot',lancer:'lancer',tour:'tour',rattraper:'rattraper',engin:'engin',final:'salut',chute:'chute'};
 /* Redresse un modèle enregistré couché ou de dos : tête au-dessus des pieds, bras gauche vers +X (donc face à la caméra) */
@@ -3453,11 +3467,13 @@ async function adminModal(vue='menu'){
         <button class="big" data-v="message" style="background:linear-gradient(135deg,#ffd166,#ff8c42)">📣 Message du jour (banderole)</button>
         <button class="big" data-v="reglages" style="background:linear-gradient(135deg,#00b4d8,#a24bff)">⚙️ Réglages du jeu pour tous</button>
         <button data-v="moderation">🛡️ Classements & modération</button>
+        <button id="adRetouche">🎨 Retoucher les modèles 3D (cou, épaules…)</button>
         <button data-v="moi">🎁 Mon profil (${esc(S.nom||'Moi')})</button>
         <button data-v="cle">🔑 Mot de passe de la base ${cle?'✅':'⚠️ à entrer'}</button>
         <button id="adFerme">🔒 Refermer le cadenas</button>
       </div>`;
     C.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>adminModal(b.dataset.v));
+    $('#adRetouche').onclick=()=>{location.href='retouche.html';};
     $('#adFerme').onclick=()=>{store.set('rs_admin','');majCadenas();renderVestiaire();fermerTroc();};
     fin(); return;
   }

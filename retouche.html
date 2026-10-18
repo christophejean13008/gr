@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Retouche des modèles · Rythmique Star</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#12081f;--panel:rgba(32,15,56,.94);--accent:#ff4fa3;--txt:#fff;--muted:#c9b6e8}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font-family:'Baloo 2',system-ui,sans-serif;overflow:hidden}
+#c3d{position:fixed;inset:0;width:100%;height:100%;touch-action:none;display:block}
+#panneau{position:fixed;top:0;left:0;bottom:0;width:min(330px,88vw);background:var(--panel);padding:12px 14px max(14px,env(safe-area-inset-bottom));overflow-y:auto;border-radius:0 18px 18px 0;box-shadow:0 0 24px rgba(0,0,0,.5);z-index:2;transition:transform .25s}
+#panneau.cache{transform:translateX(calc(-100% + 34px))}
+#plier{position:absolute;top:10px;right:6px;width:28px;height:28px;padding:0;border-radius:50%;font-size:.9rem}
+h1{font-size:1.15rem;margin:0 32px 6px 0}
+.lbl{font-weight:800;margin:12px 0 6px;font-size:.92rem}
+.hint{color:var(--muted);font-size:.8rem;margin:4px 0;line-height:1.3}
+button,select,input{font:inherit;color:#fff}
+button{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);border-radius:12px;padding:8px 10px;cursor:pointer}
+button.on{background:linear-gradient(135deg,var(--accent),#a24bff);border-color:#fff}
+button.big{background:linear-gradient(135deg,var(--accent),#a24bff);font-weight:800;width:100%;padding:11px}
+select,input[type=text]{width:100%;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:8px}
+.row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.outils button{flex:1;min-width:66px;font-size:.88rem}
+input[type=range]{flex:1;accent-color:var(--accent)}
+.couleur{display:flex;gap:8px;align-items:center}
+#coul{width:52px;height:40px;border:none;border-radius:10px;padding:0;background:none}
+#histo{display:flex;gap:5px;flex-wrap:wrap}
+#histo button{width:26px;height:26px;padding:0;border-radius:50%;border:2px solid rgba(255,255,255,.4)}
+#etat{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);background:rgba(18,8,31,.85);padding:7px 14px;border-radius:12px;font-size:.85rem;z-index:3;pointer-events:none;max-width:90vw;text-align:center}
+#curseur{position:fixed;border:2px solid #fff;border-radius:50%;pointer-events:none;z-index:3;box-shadow:0 0 0 1px #000;display:none;transform:translate(-50%,-50%)}
+</style>
+</head>
+<body>
+<canvas id="c3d"></canvas>
+<div id="curseur"></div>
+<div id="panneau">
+  <button id="plier" title="Cacher le panneau">◀</button>
+  <h1>🎨 Retouche des modèles</h1>
+  <p class="hint">Corrige directement la peau et le tissu du modèle 3D (cou, épaules…). Ce que tu peins couleur peau ne sera plus recouvert par le justaucorps du jeu.</p>
+  <div class="lbl">1. Modèle</div>
+  <select id="modele"></select>
+  <div class="row" style="margin-top:6px"><input type="text" id="autre" placeholder="ou chemin : modeles/persos/xxx.fbx"><button id="charger">Charger</button></div>
+  <div class="lbl">2. Outil</div>
+  <div class="row outils">
+    <button data-o="tourner" class="on">🔄 Tourner</button>
+    <button data-o="pinceau">🖌️ Pinceau</button>
+    <button data-o="pipette">💧 Pipette</button>
+    <button data-o="gomme">🧽 Gomme</button>
+  </div>
+  <p class="hint" id="aideOutil">Glisse pour tourner autour du modèle, pince ou molette pour zoomer.</p>
+  <div class="lbl">3. Couleur</div>
+  <div class="couleur"><input type="color" id="coul" value="#e0a07a"><div id="histo"></div></div>
+  <p class="hint">Astuce : prends la couleur de la peau avec la 💧 pipette juste à côté de la zone à corriger.</p>
+  <div class="lbl">4. Pinceau</div>
+  <div class="row">Taille <input type="range" id="taille" min="2" max="120" value="22"><b id="tailleV">22</b></div>
+  <div class="row">Douceur <input type="range" id="douceur" min="0" max="100" value="60"><b id="douceurV">60</b></div>
+  <div class="row">Opacité <input type="range" id="opac" min="10" max="100" value="100"><b id="opacV">100</b></div>
+  <div class="lbl">5. Enregistrer</div>
+  <div class="row"><button id="annuler" style="flex:1">↶ Annuler</button><button id="original" style="flex:1">♻️ Tout effacer</button></div>
+  <button class="big" id="sauver" style="margin-top:8px">💾 Télécharger la retouche (PNG)</button>
+  <p class="hint" id="aideSauver">Mets ensuite le fichier téléchargé sur GitHub, <b>dans le même dossier que le modèle</b>, sans changer son nom. Le jeu l'utilisera automatiquement.</p>
+</div>
+<div id="etat">Chargement…</div>
+
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import {FBXLoader} from 'three/addons/loaders/FBXLoader.js';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+const $=s=>document.querySelector(s), etat=t=>{$('#etat').textContent=t;$('#etat').style.display=t?'':'none';};
+
+/* ---- scène ---- */
+const cv=$('#c3d'), renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true,preserveDrawingBuffer:false});
+renderer.setPixelRatio(Math.min(2,devicePixelRatio||1)); renderer.outputColorSpace=THREE.SRGBColorSpace;
+const scene=new THREE.Scene(); scene.background=new THREE.Color('#2a1a40');
+const cam=new THREE.PerspectiveCamera(35,1,.05,50); cam.position.set(0,1.45,1.6);
+scene.add(new THREE.HemisphereLight(0xffffff,0x553366,1.6));
+const dl=new THREE.DirectionalLight(0xffffff,1.6); dl.position.set(1.5,3,2.5); scene.add(dl);
+const dl2=new THREE.DirectionalLight(0xffffff,.8); dl2.position.set(-2,2,-2.5); scene.add(dl2);
+const ctrl=new OrbitControls(cam,cv); ctrl.target.set(0,1.35,0); ctrl.enableDamping=true; ctrl.minDistance=.25; ctrl.maxDistance=5;
+function taille(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();}
+addEventListener('resize',taille); taille();
+(function boucle(){requestAnimationFrame(boucle);ctrl.update();renderer.render(scene,cam);})();
+
+/* ---- liste des modèles ---- */
+function depot(){const h=location.hostname;let dir=location.pathname.replace(/[^/]*$/,'');
+  if(h.endsWith('.github.io')){const seg=dir.split('/').filter(Boolean);return {owner:h.split('.')[0],repo:seg[0]||h,base:seg.slice(1).join('/')};}
+  return {owner:'christophejean13008',repo:'gr',base:''};}
+async function listerModeles(){
+  const L=[{nom:'Ma gymnaste',f:'modeles/gymnaste.fbx'}];
+  try{const d=depot(),r=await fetch(`https://api.github.com/repos/${d.owner}/${d.repo}/contents/${d.base?d.base+'/':''}modeles/persos`);
+    if(r.ok){for(const x of await r.json())if(/\.(fbx|glb|gltf)$/i.test(x.name))L.push({nom:x.name.replace(/\.[^.]+$/,''),f:'modeles/persos/'+x.name});}}catch(e){}
+  $('#modele').innerHTML=L.map(m=>`<option value="${m.f}">${m.nom}</option>`).join('');
+}
+const retouchePath=f=>f.replace(/\.(fbx|glb|gltf)$/i,'_retouche.png');
+
+/* ---- chargement d'un modèle et de sa texture ---- */
+let MODELE=null, MESHES=[], TEX=null;   // TEX = {cv,g,orig,W,H,flipY,map,hist:[]}
+async function charger(f){
+  etat('Chargement du modèle…'); if(MODELE){scene.remove(MODELE);MODELE=null;} MESHES=[]; TEX=null;
+  let obj;
+  try{ if(/\.fbx$/i.test(f))obj=await new FBXLoader().loadAsync(f); else obj=(await new GLTFLoader().loadAsync(f)).scene; }
+  catch(e){etat('⚠️ Impossible de charger '+f);return;}
+  // mise à l'échelle : 1,65 m de haut, pieds au sol
+  obj.updateMatrixWorld(true); const box=new THREE.Box3().setFromObject(obj), h=(box.max.y-box.min.y)||1, s=1.65/h;
+  obj.scale.multiplyScalar(s); obj.updateMatrixWorld(true); const b2=new THREE.Box3().setFromObject(obj);
+  obj.position.y-=b2.min.y; obj.position.x-=(b2.min.x+b2.max.x)/2; obj.position.z-=(b2.min.z+b2.max.z)/2;
+  scene.add(obj); MODELE=obj;
+  let map=null; obj.traverse(o=>{if(o.isMesh){MESHES.push(o);const m=Array.isArray(o.material)?o.material[0]:o.material;if(!map&&m&&m.map)map=m.map;}});
+  if(!map){etat('⚠️ Ce modèle n\'a pas de texture à retoucher.');return;}
+  const t0=performance.now(); while(!(map.image&&map.image.width)){if(performance.now()-t0>10000){etat('⚠️ Texture introuvable');return;}await new Promise(r=>setTimeout(r,80));}
+  const im=map.image, W=Math.min(2048,im.width), H=Math.round(im.height*W/im.width);
+  const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d',{willReadFrequently:true});
+  g.drawImage(im,0,0,W,H); const orig=g.getImageData(0,0,W,H);
+  // une retouche existe déjà ? on la reprend
+  try{const r=await fetch(retouchePath(f),{cache:'no-store'});if(r.ok){const bm=await createImageBitmap(await r.blob());g.drawImage(bm,0,0,W,H);etat('Retouche existante reprise ✓');setTimeout(()=>etat(''),2500);}else etat('');}catch(e){etat('');}
+  const tex=new THREE.CanvasTexture(c); tex.colorSpace=THREE.SRGBColorSpace; tex.flipY=map.flipY; tex.wrapS=map.wrapS; tex.wrapT=map.wrapT;
+  obj.traverse(o=>{if(!o.isMesh)return;(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{if(m&&m.map===map){m.map=tex;m.needsUpdate=true;}});});
+  TEX={cv:c,g,orig,W,H,flipY:map.flipY,map:tex,hist:[],f};
+  const ctr=new THREE.Box3().setFromObject(obj); ctrl.target.set(0,ctr.min.y+(ctr.max.y-ctr.min.y)*.8,0); cam.position.set(0,ctrl.target.y+.1,1.3);
+}
+
+/* ---- outils ---- */
+let OUTIL='tourner'; const AIDE={tourner:'Glisse pour tourner autour du modèle, pince ou molette pour zoomer.',pinceau:'Peins directement sur le modèle. Repasse en 🔄 Tourner pour changer d\'angle.',pipette:'Touche le modèle pour prendre la couleur à cet endroit.',gomme:'Efface ta retouche : la couleur d\'origine revient.'};
+document.querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{OUTIL=b.dataset.o;document.querySelectorAll('[data-o]').forEach(x=>x.classList.toggle('on',x===b));ctrl.enabled=OUTIL==='tourner';$('#aideOutil').textContent=AIDE[OUTIL];$('#curseur').style.display='none';});
+for(const id of ['taille','douceur','opac'])$('#'+id).oninput=e=>{$('#'+id+'V').textContent=e.target.value;};
+const HIST=[]; function ajouterHisto(c){if(HIST[0]===c)return;HIST.unshift(c);HIST.splice(8);$('#histo').innerHTML=HIST.map(x=>`<button style="background:${x}" data-c="${x}"></button>`).join('');$('#histo').querySelectorAll('button').forEach(b=>b.onclick=()=>{$('#coul').value=b.dataset.c;});}
+
+const ray=new THREE.Raycaster(), ndc=new THREE.Vector2();
+function toucher(e){
+  if(!MESHES.length||!TEX)return null; const r=cv.getBoundingClientRect();
+  ndc.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1); ray.setFromCamera(ndc,cam);
+  const hit=ray.intersectObjects(MESHES,false).find(h=>h.uv); if(!hit)return null;
+  let u=hit.uv.x,v=hit.uv.y; u=((u%1)+1)%1; v=((v%1)+1)%1;
+  return {x:u*TEX.W,y:(TEX.flipY?1-v:v)*TEX.H,u,v,hit};
+}
+/* taille du pinceau : exprimée en pixels d'écran, convertie en pixels de texture
+   grâce à la densité de texture du triangle touché (pixels de texture par mètre) */
+const _a=new THREE.Vector3(),_b=new THREE.Vector3(),_c=new THREE.Vector3();
+function rayonTex(e,p){
+  const d=+$('#taille').value, h=p.hit, g=h.object.geometry, pos=g.attributes.position, uv=g.attributes.uv, f=h.face; if(!f)return d*.5;
+  _a.fromBufferAttribute(pos,f.a).applyMatrix4(h.object.matrixWorld);_b.fromBufferAttribute(pos,f.b).applyMatrix4(h.object.matrixWorld);_c.fromBufferAttribute(pos,f.c).applyMatrix4(h.object.matrixWorld);
+  const aire3=_b.clone().sub(_a).cross(_c.clone().sub(_a)).length()/2;
+  const ua=uv.getX(f.a)*TEX.W,va=uv.getY(f.a)*TEX.H,ub=uv.getX(f.b)*TEX.W,vb=uv.getY(f.b)*TEX.H,uc=uv.getX(f.c)*TEX.W,vc=uv.getY(f.c)*TEX.H;
+  const aire2=Math.abs((ub-ua)*(vc-va)-(uc-ua)*(vb-va))/2; if(!(aire3>1e-12)||!(aire2>0))return d*.5;
+  const pxParM=Math.sqrt(aire2/aire3);                                  // pixels de texture par mètre
+  const mParPx=2*h.distance*Math.tan(THREE.MathUtils.degToRad(cam.fov/2))/innerHeight;   // mètres par pixel d'écran
+  return Math.max(1.5,Math.min(300,d*mParPx*pxParM));
+}
+function tamponner(p,rad){
+  const g=TEX.g, dou=+$('#douceur').value/100, op=+$('#opac').value/100;
+  if(OUTIL==='gomme'){ // on recopie l'original sous le pinceau
+    const x0=Math.max(0,Math.floor(p.x-rad)),y0=Math.max(0,Math.floor(p.y-rad)),w=Math.min(TEX.W-x0,Math.ceil(rad*2)+1),h=Math.min(TEX.H-y0,Math.ceil(rad*2)+1); if(w<=0||h<=0)return;
+    const cur=g.getImageData(x0,y0,w,h), o=TEX.orig.data;
+    for(let j=0;j<h;j++)for(let i=0;i<w;i++){const dx=x0+i-p.x,dy=y0+j-p.y,dd=Math.hypot(dx,dy)/rad;if(dd>1)continue;const a=(dd<1-dou?1:(1-dd)/Math.max(.01,dou))*op;
+      const k=(j*w+i)*4,ko=((y0+j)*TEX.W+x0+i)*4;for(let c=0;c<3;c++)cur.data[k+c]+= (o[ko+c]-cur.data[k+c])*a;}
+    g.putImageData(cur,x0,y0); return;}
+  const col=$('#coul').value, gr=g.createRadialGradient(p.x,p.y,0,p.x,p.y,rad);
+  const rgb=[1,3,5].map(i=>parseInt(col.substr(i,2),16)).join(',');
+  gr.addColorStop(0,`rgba(${rgb},${op})`); gr.addColorStop(Math.max(0,1-dou),`rgba(${rgb},${op})`); gr.addColorStop(1,`rgba(${rgb},0)`);
+  g.fillStyle=gr; g.beginPath(); g.arc(p.x,p.y,rad,0,7); g.fill();
+}
+let TRAIT=null;
+cv.addEventListener('pointerdown',e=>{
+  if(OUTIL==='tourner'||!TEX)return; const p=toucher(e); if(!p)return; e.preventDefault(); cv.setPointerCapture(e.pointerId);
+  if(OUTIL==='pipette'){const d=TEX.g.getImageData(Math.floor(p.x),Math.floor(p.y),1,1).data;const c='#'+[d[0],d[1],d[2]].map(x=>x.toString(16).padStart(2,'0')).join('');$('#coul').value=c;ajouterHisto(c);etat('Couleur prise : '+c);setTimeout(()=>etat(''),1500);return;}
+  TEX.hist.push(TEX.g.getImageData(0,0,TEX.W,TEX.H)); if(TEX.hist.length>10)TEX.hist.shift();
+  if(OUTIL==='pinceau')ajouterHisto($('#coul').value);
+  const rad=rayonTex(e,p); tamponner(p,rad); TEX.map.needsUpdate=true; TRAIT={p,rad,id:e.pointerId};
+});
+cv.addEventListener('pointermove',e=>{
+  const c=$('#curseur'); if(OUTIL==='pinceau'||OUTIL==='gomme'){const d=+$('#taille').value*2;c.style.display='block';c.style.width=c.style.height=d+'px';c.style.left=e.clientX+'px';c.style.top=e.clientY+'px';}
+  if(!TRAIT||TRAIT.id!==e.pointerId)return; const p=toucher(e); if(!p)return;
+  const a=TRAIT.p, dist=Math.hypot(p.x-a.x,p.y-a.y);
+  if(dist<TRAIT.rad*5){const n=Math.max(1,Math.ceil(dist/(TRAIT.rad*.35)));for(let i=1;i<=n;i++)tamponner({x:a.x+(p.x-a.x)*i/n,y:a.y+(p.y-a.y)*i/n},TRAIT.rad);}
+  else tamponner(p,TRAIT.rad);   // saut d'une zone de la texture à une autre : on ne relie pas
+  TRAIT.p=p; TEX.map.needsUpdate=true;
+});
+const fin=()=>{TRAIT=null;}; cv.addEventListener('pointerup',fin); cv.addEventListener('pointercancel',fin);
+cv.addEventListener('pointerleave',()=>{$('#curseur').style.display='none';});
+
+$('#annuler').onclick=()=>{if(!TEX||!TEX.hist.length)return;TEX.g.putImageData(TEX.hist.pop(),0,0);TEX.map.needsUpdate=true;};
+$('#original').onclick=()=>{if(!TEX||!confirm('Effacer toutes les retouches de ce modèle ?'))return;TEX.hist.push(TEX.g.getImageData(0,0,TEX.W,TEX.H));TEX.g.putImageData(TEX.orig,0,0);TEX.map.needsUpdate=true;};
+$('#sauver').onclick=()=>{if(!TEX)return;const nom=retouchePath(TEX.f).split('/').pop();
+  TEX.cv.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=nom;document.body.appendChild(a);a.click();a.remove();
+    $('#aideSauver').innerHTML=`Fichier <b>${nom}</b> téléchargé. Mets-le sur GitHub dans le dossier <b>${TEX.f.replace(/[^/]*$/,'')}</b>, sans changer son nom.`;},'image/png');};
+$('#plier').onclick=()=>{$('#panneau').classList.toggle('cache');$('#plier').textContent=$('#panneau').classList.contains('cache')?'▶':'◀';};
+$('#modele').onchange=e=>charger(e.target.value);
+$('#charger').onclick=()=>{const f=$('#autre').value.trim();if(f)charger(f);};
+await listerModeles(); charger($('#modele').value);
+</script>
+</body>
+</html>
