@@ -143,7 +143,9 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 .chip.survie.on{background:linear-gradient(135deg,#ff7a45,#d4145a);color:#fff;border-color:#ffd166}
 #hJudge{position:absolute;top:24%;left:0;right:0;text-align:center;font-size:2rem;font-weight:900;pointer-events:none;opacity:0;text-shadow:0 3px 12px rgba(0,0,0,.8)}
 #hJudge small{display:block;font-size:.95rem;font-weight:700}
-#bonus{position:absolute;z-index:6;width:78px;height:78px;margin:-39px 0 0 -39px;display:none;touch-action:none;filter:drop-shadow(0 0 12px rgba(255,209,102,.9))}
+#bonus{position:absolute;z-index:6;width:78px;height:78px;margin:-39px 0 0 -39px;display:none;touch-action:none}
+#bonus .forme{box-shadow:0 0 16px 4px rgba(255,209,102,.75)}
+#bonus.etoile .forme{box-shadow:none}
 #bonus.on{display:block;animation:bnIn .22s ease-out}
 #bonus.etoile{width:104px;height:104px;margin:-52px 0 0 -52px}
 #bonus svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);pointer-events:none}
@@ -1533,7 +1535,7 @@ class Gymnast{
     this.tumble=new THREE.Group(); this.tumble.rotation.order='YXZ'; this.root.add(this.tumble); this.tumble.add(this.proc.root);
     this.custom=null;
     if(L.kind!=='proc'){ this.proc.root.visible=false;
-      makeCustom(L).then(c=>{if(this.dead)return;this.custom=c;this.tumble.add(c.obj);}).catch(e=>{console.warn(e);this.proc.root.visible=true;if(opt.onErr)opt.onErr(e);}); }
+      makeCustom(L).then(c=>{if(this.dead)return;this.custom=c;this.tumble.add(c.obj);precompiler();}).catch(e=>{console.warn(e);this.proc.root.visible=true;if(opt.onErr)opt.onErr(e);}); }
     this.engin=new Engin(engin,L,opt.design);
     this.deco=opt.deco||null; this.flammesJusqua=-1; if(this.deco&&this.deco.magiques&&this.deco.magiques.includes(engin))this.engin.magique=true;
     this.tl=[];this.flights=[];this.extra=[];this.wob=-9;this.yaw=0;this.B=.6;
@@ -1828,7 +1830,7 @@ function lancerPartie({choreo,music,nom,leo,design=null,opponents=[],online=fals
   const g={choreo,notes:choreo.notes.map(n=>Object.assign({},n)),els:choreo.els.map(e=>Object.assign({},e)),niv:choreo.niv,engin:choreo.engin,B:choreo.B,first:choreo.first,final:choreo.final,
     nom,leo,design,music,rec:{wobs:[],drops:[],grades:[]},online,onFin,st:newStats(),ghosts:new Map(),live:{},running:true,done:false,speed:NIVEAUX[choreo.niv].vit*(CFG.vit[choreo.niv]||1),flash:null,lastHud:0,trails:new Map(),rnd:mulberry32(Date.now()&0xffffff)};
   for(const n of g.notes){const e=g.els[n.el];e.total=(e.total||0)+1;}
-  g.laneI=0; qualDebut();
+  g.laneI=0; qualDebut(); precompiler();
   g.classe=!demo&&!perturb&&!retour;
   g.t0=Date.now(); g.modeNom=perturb?'Perturbatrice':coop?'Coopératif':online?'Compétition':retour?'Ma chorégraphie':(LOCAL.ch===choreo?'À tour de rôle':'Solo');
   if(coop){
@@ -1871,6 +1873,8 @@ function qualFin(){ // partie très fluide : on retente une qualité plus belle 
   if(QUAL.mode==='auto'&&QUAL.niv>0&&QUAL.pire&&QUAL.pire<15){QUAL.niv--;store.set('rs_qual',QUAL.niv);}
 }
 function appliquerQual(){renderer.setPixelRatio(pr3D());resize();if(VIEW==='sJeu')resizeHUD();}
+let PRECOMP=0;
+function precompiler(){if(PRECOMP)return;PRECOMP=setTimeout(()=>{PRECOMP=0;try{(renderer.compileAsync?renderer.compileAsync(scene,camera):Promise.resolve(renderer.compile(scene,camera))).catch(()=>{});}catch(e){}},30);}
 function stopAudio(g,fade=1.2){try{const t=AC.currentTime;g.gain.gain.setValueAtTime(g.gain.gain.value,t);g.gain.gain.linearRampToValueAtTime(0,t+fade);g.src.stop(t+fade+.05);}catch(e){}}
 const FORM_CZ=-.8;
 function formation(n){const R=n<=2?1.5:n===3?1.9:2.2;return [...Array(n)].map((_,k)=>{const a=Math.PI/n+2*Math.PI*k/n;return [R*Math.sin(a),FORM_CZ+R*Math.cos(a)];});}
@@ -1887,7 +1891,7 @@ function exPerte(n,kind){
 }
 /* ================= Ambiance : commentatrice vocale + public réactif ================= */
 const alea=a=>a[Math.floor(Math.random()*a.length)];
-const VOIX={on:store.get('rs_voix',true),last:0,voix:null};
+const VOIX={on:store.get('rs_voix',!(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1))),last:0,voix:null};
 function voixFr(){
   if(VOIX.voix||!window.speechSynthesis)return VOIX.voix; const L=speechSynthesis.getVoices().filter(v=>/^fr/i.test(v.lang)); if(!L.length)return null;
   const fem=/am[ée]lie|audrey|marie|virginie|julie|c[ée]line|hortense|denise|aur[ée]lie|google fran|female|femme|léa|lea|chantal|sylvie/i;
