@@ -1805,7 +1805,18 @@ function newStats(){return {dedE:0,dedA:0,DB:[],R:[],DA:[],groups:new Set(),line
 const sum=a=>a.reduce((x,y)=>x+y,0);
 function computeD(st){return sum([...st.DB].sort((a,b)=>b-a).slice(0,8))+sum(st.R.slice(0,4))+sum(st.DA.slice(0,15))+sum(st.EX||[]);}
 function liveScores(){const g=GAME,st=g.st;const D=computeD(st),E=Math.max(0,10-st.dedE),A=Math.max(0,10-st.dedA);const T=gameTime();return {D,E,A,T:Math.max(0,D+E+A-st.line)+(st.bonus||0),prog:clamp((T-g.first)/(g.final-g.first),0,1)};}
-function gameTime(){if(!GAME)return 0;const v=GAME.surv;if(v)return v.m0+(AC.currentTime-v.w0)*v.r-S.latence/1000-(AC.outputLatency||0);return AC.currentTime-GAME.startAt-S.latence/1000-(AC.outputLatency||0);}
+function gameTimeAudio(){if(!GAME)return 0;const v=GAME.surv;if(v)return v.m0+(AC.currentTime-v.w0)*v.r-S.latence/1000-(AC.outputLatency||0);return AC.currentTime-GAME.startAt-S.latence/1000-(AC.outputLatency||0);}
+/* Horloge lissée : sur iPad, l'horloge audio avance par à-coups (paquets de son), ce qui fait saccader la barre.
+   On suit l'horloge précise de l'écran (performance.now) et on la recale tout doucement sur la musique. */
+const CLK={g:null,off:0,r:1,last:0}; let NFRAME=0;
+function gameTime(){
+  if(!GAME)return 0; const raw=gameTimeAudio(), p=performance.now()/1000, r=GAME.surv?GAME.surv.r:1;
+  if(CLK.g!==GAME||CLK.r!==r){CLK.g=GAME;CLK.r=r;CLK.off=raw-p*r;CLK.last=p;return raw;}
+  const cible=raw-p*r, err=cible-CLK.off;
+  if(Math.abs(err)>.12)CLK.off=cible;                       // gros décalage (pause, reprise) : on recale d'un coup
+  else{const k=Math.min(1,(p-CLK.last)*1.5);CLK.off+=err*k;} // sinon correction très douce
+  CLK.last=p; return p*r+CLK.off;
+}
 
 function lancerPartie({choreo,music,nom,leo,design=null,opponents=[],online=false,demo=false,retour=null,coop=null,perturb=false,vue=null,debut=null,onFin}){
   if(PREV){PREV.dispose();PREV=null;PREVKEY='';}
@@ -4046,6 +4057,7 @@ function loop(now){
     _t.set(0,vest?(portrait?1.0:1.2):1.7,vest?(portrait?4.6:4.4):(portrait?6.6:5.2)); camera.position.lerp(_t,k);
     _l.set(0,vest?(portrait?-.55:-.1):1.4,0); camLook.lerp(_l,k); camera.lookAt(camLook);
   }
+  if(GAME&&qualNiv()>=2&&(++NFRAME&1))return;   // appareil lent : la 3D est redessinée une image sur deux, la barre du bas reste à pleine vitesse
   renderer.render(scene,camera);
 }
 composeLeo(); saveS();
