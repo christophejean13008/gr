@@ -246,7 +246,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <!-- ACCUEIL -->
 <div id="sAccueil" class="screen on">
   <button id="cadenas" title="Code">🔒</button>
-  <div id="version">v1.1</div>
+  <div id="version">v1.2</div>
   <div id="classement"><div class="ct">🏆 Classement ▾</div><div class="cb"></div></div>
   <div class="brand"><div class="soutien"><a class="pill" id="btMail" href="mailto:chris333j@yahoo.fr?subject=Rythmique%20Star">✉️ M'écrire</a><a class="pill" id="btInstall" href="#" style="display:none">📲 Installer l'appli</a><a class="pill cafe" id="btCafe" href="#" target="_blank" rel="noopener">☕ Offrir un café</a></div><div class="logo">🎀</div><h1>Rythmique <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
   <label class="field">Ton prénom<input id="inNom" maxlength="14" placeholder="Prénom" autocomplete="off"></label>
@@ -1940,27 +1940,49 @@ function dire(txt,prio=0,force){
   if((!VOIX.on&&!force)||!window.speechSynthesis||!txt)return; const now=performance.now(), S2=speechSynthesis;
   const parle=VOIX.fin>now;                       // notre propre suivi (speechSynthesis.speaking reste parfois bloqué sur Android)
   if(prio<2&&(now-VOIX.last<3500||parle))return;
-  const lancer=()=>{try{S2.resume();}catch(e){}
-    const u=new SpeechSynthesisUtterance(txt); u.lang='fr-FR'; const v=voixFr(); if(v)u.voice=v; u.rate=1.07; u.pitch=1.12; u.volume=1;
-    u.onend=u.onerror=()=>{VOIX.fin=0;}; S2.speak(u); VOIX.fin=performance.now()+600+txt.length*90;};
+  const android=/Android/i.test(navigator.userAgent);
+  const lancer=(sansVoix)=>{try{if(S2.paused)S2.resume();}catch(e){}
+    const u=new SpeechSynthesisUtterance(txt); u.lang='fr-FR';
+    // Android : on laisse le téléphone choisir sa voix française (imposer une voix la rend parfois muette)
+    const v=voixFr(); if(v&&!sansVoix&&(!android||v.localService))u.voice=v;
+    u.rate=1.05; u.pitch=1.1; u.volume=1; let parti=false;
+    u.onstart=()=>{parti=true;VOIX.ok=true;VOIX.nomVoix=u.voice?u.voice.name:'voix par défaut du téléphone';}; u.onend=u.onerror=()=>{VOIX.fin=0;};
+    S2.speak(u); VOIX.fin=performance.now()+600+txt.length*90;
+    if(!sansVoix)setTimeout(()=>{if(!parti&&!S2.speaking){S2.cancel();setTimeout(()=>lancer(true),80);}},1500);   // rien n'est sorti : nouvel essai avec la voix par défaut
+  };
   VOIX.last=now;
-  if(S2.speaking||S2.pending){S2.cancel();setTimeout(lancer,120);}   // Chrome Android : parler juste après « cancel » est parfois ignoré
+  if(S2.speaking||S2.pending){S2.cancel();setTimeout(()=>lancer(),120);}   // Chrome Android : parler juste après « cancel » est parfois ignoré
   else lancer();
 }
 const noteParlee=v=>{const t=(Math.round(v*100)/100).toFixed(2).split('.');return t[0]+' virgule '+t[1];};
 /* --- public --- */
 const PUB={son:store.get('rs_public',true),hype:0,pts:null,ban:[],claps:null,next:0};
 function bufApplaudir(){
-  if(PUB.claps)return PUB.claps; const ac=getAC(),sr=ac.sampleRate,n=Math.floor(sr*3.2),b=ac.createBuffer(2,n,sr);
-  for(let c=0;c<2;c++){const d=b.getChannelData(c);const rr=mulberry32(11+c);
-    for(let k=0;k<900;k++){const t0=Math.floor(Math.pow(rr(),1.25)*(n-sr*.05)),len=Math.floor(sr*(.008+rr()*.02)),a=.08+rr()*.18;let lp=0;
-      for(let i=0;i<len;i++){const w=rr()*2-1;lp+=(w-lp)*.55;d[t0+i]+=(w-lp*.6)*a*Math.exp(-i/(len*.28));}}
-    for(let i=0;i<n;i++){const f=i/n;d[i]*=Math.min(1,f*14)*Math.min(1,(1-f)*2.4);}}
+  /* applaudissements réalistes : ~25 spectateurs qui frappent dans leurs mains (claquements filtrés « creux »),
+     + une rumeur de foule douce en fond, le tout qui monte puis retombe */
+  if(PUB.claps)return PUB.claps; const ac=getAC(),sr=ac.sampleRate,dur=3.4,n=Math.floor(sr*dur),b=ac.createBuffer(2,n,sr);
+  for(let c=0;c<2;c++){const d=b.getChannelData(c),rr=mulberry32(21+c*7);
+    // claquements : chaque spectateur a sa cadence et sa « couleur » de son
+    for(let p=0;p<26;p++){
+      const f0=900+rr()*1500,q=1.6+rr()*1.4,per=.19+rr()*.12,vol=.25+rr()*.35; let t=rr()*per;
+      const w=2*Math.PI*f0/sr,al=Math.sin(w)/(2*q),a0=1+al,b0=al/a0,b2=-al/a0,a1=-2*Math.cos(w)/a0,a2=(1-al)/a0;
+      while(t<dur-.05){
+        const s0=Math.floor(t*sr),len=Math.floor(sr*(.035+rr()*.02)),tau=sr*(.007+rr()*.009),amp=vol*(.7+rr()*.6);
+        let x1=0,x2=0,y1=0,y2=0;
+        for(let i=0;i<len&&s0+i<n;i++){const x=(rr()*2-1)*Math.exp(-i/tau);const y=b0*x+b2*x2-a1*y1-a2*y2;x2=x1;x1=x;y2=y1;y1=y;d[s0+i]+=y*amp;}
+        t+=per*(.85+rr()*.3);
+      }
+    }
+    // rumeur de foule : bruit grave adouci
+    let l1=0,l2=0; for(let i=0;i<n;i++){const x=rr()*2-1;l1+=(x-l1)*.06;l2+=(l1-l2)*.06;d[i]+=l2*.9;}
+    // enveloppe : monte vite, tient, retombe doucement
+    for(let i=0;i<n;i++){const f=i/n;d[i]*=Math.min(1,f*9)*Math.min(1,(1-f)*2.2)*1.5;}
+  }
   return PUB.claps=b;
 }
 function applaudir(force=.6){
   if(!PUB.son)return; try{const ac=getAC(),s=ac.createBufferSource(),v=ac.createGain(),f=ac.createBiquadFilter();
-  s.buffer=bufApplaudir(); s.playbackRate.value=.92+Math.random()*.16; f.type='highpass'; f.frequency.value=500;
+  s.buffer=bufApplaudir(); s.playbackRate.value=.95+Math.random()*.1; f.type='highpass'; f.frequency.value=180;
   v.gain.value=.22+.5*force; s.connect(f); f.connect(v); v.connect(ac.destination); s.start(); s.stop(ac.currentTime+1.2+2*force);}catch(e){}
 }
 function deception(){
@@ -3718,8 +3740,8 @@ function renderReglage(){
   chips($('#rgPublic'),[{k:'1',t:'Oui'},{k:'0',t:'Non'}],PUB.son?'1':'0',k=>{PUB.son=k==='1';store.set('rs_public',PUB.son);renderReglage();});
   $('#rgLat').value=S.latence; $('#rgLatV').textContent=S.latence+' ms';
 }
-$('#rgTestSon').onclick=()=>{getAC();applaudir(.7);const ok=!!window.speechSynthesis;dire('Bravo ! Le public t\'applaudit.',2,true);
-  setTimeout(()=>{const n=ok?speechSynthesis.getVoices().filter(v=>/^fr/i.test(v.lang)).length:0;$('#rgTestInfo').textContent=!ok?'⚠️ Ce navigateur ne sait pas faire parler le téléphone.':n?`Voix françaises trouvées : ${n}. Si tu n'entends rien, vérifie le volume du téléphone (et que le mode silencieux est coupé).`:'⚠️ Aucune voix française installée : Paramètres du téléphone → Synthèse vocale → installer le français.';},700);};
+$('#rgTestSon').onclick=()=>{getAC();applaudir(.7);const ok=!!window.speechSynthesis;VOIX.ok=false;dire('Bravo ! Le public t\'applaudit.',2,true);$('#rgTestInfo').textContent='⏳ Test en cours…';
+  setTimeout(()=>{if(VOIX.ok){$('#rgTestInfo').textContent=`✅ La voix parle (${VOIX.nomVoix}). Si tu n'entends rien, monte le volume « multimédia » du téléphone.`;return;}const n=ok?speechSynthesis.getVoices().filter(v=>/^fr/i.test(v.lang)).length:0;$('#rgTestInfo').textContent=!ok?'⚠️ Ce navigateur ne sait pas faire parler le téléphone.':n?`Voix françaises trouvées : ${n}. Si tu n'entends rien, vérifie le volume du téléphone (et que le mode silencieux est coupé).`:'⚠️ Aucune voix française installée : Paramètres du téléphone → Synthèse vocale → installer le français.';},3200);};
 $('#rgLat').addEventListener('input',e=>{S.latence=+e.target.value;$('#rgLatV').textContent=S.latence+' ms';saveS();});
 function bpmAdj(d){const lib=String(S.musique).startsWith('lib:')?BIB[S.musique.slice(4)]:null,c=lib||S.custom;if(!c||!c.buffer)return;c.bpm=Math.max(60,Math.min(190,Math.round(c.bpm)+d));c.offset=gridScore(c.on,c.bpm).offset;if(lib){const o=store.get('rs_bibbpm',{});o[lib.id]=c.bpm;store.set('rs_bibbpm',o);}else garderMusique();renderReglage();if(RG_MODE==='online'&&NET.host){hostSettings();broadcastLobby();}}
 $('#bpmM').onclick=()=>bpmAdj(-1); $('#bpmP').onclick=()=>bpmAdj(1);
