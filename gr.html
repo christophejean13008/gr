@@ -246,7 +246,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <!-- ACCUEIL -->
 <div id="sAccueil" class="screen on">
   <button id="cadenas" title="Code">🔒</button>
-  <div id="version">v1.7</div>
+  <div id="version">v1.8</div>
   <div id="classement"><div class="ct">🏆 Classement ▾</div><div class="cb"></div></div>
   <div class="brand"><div class="soutien"><a class="pill" id="btMail" href="mailto:chris333j@yahoo.fr?subject=Rythmique%20Star">✉️ M'écrire</a><a class="pill" id="btInstall" href="#" style="display:none">📲 Installer l'appli</a><a class="pill cafe" id="btCafe" href="#" target="_blank" rel="noopener">☕ Offrir un café</a></div><div class="logo">🎀</div><h1>Rythmique <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
   <label class="field">Ton prénom<input id="inNom" maxlength="14" placeholder="Prénom" autocomplete="off"></label>
@@ -708,7 +708,7 @@ async function chargerBiblio(id){
   if(BIB[id]&&BIB[id].buffer)return BIB[id];
   const M=BIBLIO.find(m=>m.id===id); if(!M)throw new Error('musique inconnue');
   const r=await fetch('musiques/'+M.f); if(!r.ok)throw new Error(`fichier musiques/${M.f} introuvable sur le site`);
-  const bytes=await r.arrayBuffer(), buffer=await getAC().decodeAudioData(bytes.slice(0));
+  const bytes=await r.arrayBuffer(), buffer=await decoder(getAC(),bytes.slice(0));
   const on=analyseEnv(buffer); let {bpm,offset}=detectTempo(on);
   const reg=store.get('rs_bibbpm',{})[id]; if(reg){bpm=reg;offset=gridScore(on,bpm).offset;}
   return BIB[id]={id,nom:M.nom,bytes,buffer,bpm,offset,on,lib:id};
@@ -1771,6 +1771,8 @@ function fxReset(){lane.style.filter='';lane.style.transform='';hEls.Elem.style.
 
 /* ============================== Audio ============================== */
 let AC=null;
+function decoder(ctx,bytes){return new Promise((res,rej)=>{let fait=false;const ok=b=>{if(!fait){fait=true;b?res(b):rej(new Error('format non reconnu'));}},ko=e=>{if(!fait){fait=true;rej(e instanceof Error?e:new Error('format non reconnu (essaie un MP3 ou M4A)'));}};
+  try{const p=ctx.decodeAudioData(bytes,ok,ko);if(p&&p.then)p.then(ok,ko);}catch(e){ko(e);}});}
 function getAC(){ if(!AC) AC=new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==='suspended') AC.resume(); return AC; }
 const MCACHE={};
 async function genMusic(id){
@@ -1832,24 +1834,26 @@ function garderMusique(){
   if(!c.id){c.id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);idbSet('mp3:'+c.id,c.bytes).catch(()=>{});}
   MUSIMP=MUSIMP.filter(m=>m.id!==c.id); MUSIMP.unshift({id:c.id,nom:c.nom,bpm:c.bpm,offset:c.offset,ts:Date.now()});
   for(const m of MUSIMP.slice(5))idbSet('mp3:'+m.id,null).catch(()=>{});
-  MUSIMP=MUSIMP.slice(0,5); store.set('rs_musimp',c.id); sauverListeMus();
+  MUSIMP=MUSIMP.slice(0,5); store.set('rs_musimp',c.id); MUS_ATTENTE=c.id; sauverListeMus();
+  try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch(e){}
 }
 async function chargerImport(id,ctx){
   const m=MUSIMP.find(x=>x.id===id); if(!m)throw new Error('musique introuvable');
   if(S.custom&&S.custom.id===id&&S.custom.buffer)return S.custom;
   const bytes=await idbGet('mp3:'+id); if(!bytes)throw new Error('fichier perdu, réimporte-le');
-  const buf=await (ctx||getAC()).decodeAudioData(bytes.slice(0)); const on=analyseEnv(buf);
+  const buf=await decoder(ctx||getAC(),bytes.slice(0)); const on=analyseEnv(buf);
   S.custom={id,nom:m.nom,bytes,buffer:buf,bpm:m.bpm,offset:m.offset,on}; return S.custom;
 }
 /* liste des boutons de musique (musiques du jeu + 5 dernières importées) et choix */
 function musChips(){return [...MUSIQUES.map(m=>({k:m.id,t:'🎵 '+m.nom})),...MUSIMP.map(m=>({k:'imp:'+m.id,t:'🎧 '+m.nom}))];}
-const musCourante=()=>S.musique==='custom'&&S.custom&&S.custom.id?'imp:'+S.custom.id:S.musique;
+const musCourante=()=>S.musique==='custom'?((S.custom&&S.custom.id)?'imp:'+S.custom.id:(MUS_ATTENTE?'imp:'+MUS_ATTENTE:S.musique)):S.musique;
 async function choisirMus(k,apres,info){
   if(!k.startsWith('imp:')){S.musique=k;saveS();apres();return;}
   const id=k.slice(4); if(info)info('⏳ Chargement de la musique…');
   try{await chargerImport(id);S.musique='custom';saveS();garderMusique();}catch(e){if(info)info('⚠️ '+e.message);return;}
   apres();
 }
+let MUS_ATTENTE=null;
 const RESTO_MUS=(async()=>{
   try{
     MUSIMP=(await idbGet('mp3list'))||[];
@@ -1858,13 +1862,22 @@ const RESTO_MUS=(async()=>{
     if(VIEW==='sReglage')renderReglage();
     if(S.musique!=='custom')return; if(!MUSIMP.length)throw 0;
     const id=MUSIMP.some(m=>m.id===store.get('rs_musimp',''))?store.get('rs_musimp',''):MUSIMP[0].id;
-    await chargerImport(id,AC||new (window.OfflineAudioContext||window.webkitOfflineAudioContext)(2,1,44100));
+    MUS_ATTENTE=id;
+    try{await chargerImport(id,AC||new (window.OfflineAudioContext||window.webkitOfflineAudioContext)(2,1,44100));}catch(e){} // sinon on réessaiera au lancement de la partie
     if(VIEW==='sReglage')renderReglage();
-  }catch(e){if(S.musique==='custom'&&!S.custom){S.musique='elan';saveS();}}
+  }catch(e){}
 })();
+async function musiqueImportee(){ // au moment de jouer : on (re)charge la musique importée, sinon on le dit clairement
+  if(S.custom&&S.custom.buffer)return S.custom;
+  await RESTO_MUS;
+  if(S.custom&&S.custom.buffer)return S.custom;
+  const id=MUS_ATTENTE||(MUSIMP[0]&&MUSIMP[0].id);
+  if(!id)throw new Error('ta musique n\'est plus enregistrée sur cet appareil. Réimporte-la dans les réglages (📂 Importer ma musique).');
+  try{return await chargerImport(id,getAC());}
+  catch(e){throw new Error('ta musique « '+((MUSIMP.find(m=>m.id===id)||{}).nom||'importée')+' » ne se charge pas ('+e.message+'). Réimporte-la dans les réglages.');}
+}
 async function getMusicSel(){
-  if(S.musique==='custom'&&!S.custom)await RESTO_MUS;
-  if(S.musique==='custom'&&S.custom){const c=S.custom;return {buffer:c.buffer,bpm:c.bpm,offset:c.offset,dur:c.buffer.duration,finAt:null,nom:c.nom,id:'custom'};}
+  if(S.musique==='custom'){const c=await musiqueImportee();return {buffer:c.buffer,bpm:c.bpm,offset:c.offset,dur:c.buffer.duration,finAt:null,nom:c.nom,id:'custom'};}
   if(String(S.musique).startsWith('lib:')){const c=await chargerBiblio(S.musique.slice(4));return {buffer:c.buffer,bpm:c.bpm,offset:c.offset,dur:c.buffer.duration,finAt:null,nom:c.nom,id:S.musique,bytes:c.bytes};}
   return genMusic(S.musique);
 }
@@ -2031,7 +2044,7 @@ const SONS_APPL={petit:['sons/CRWDCheer_Applaudissements concert bar 4 (ID 2482)
 const APPL={},APPL_ESSAI={};
 function chargerApplaudissements(){
   const tous=[...new Set([...SONS_APPL.petit,...SONS_APPL.grand])];
-  return Promise.all(tous.map(f=>APPL_ESSAI[f]||(APPL_ESSAI[f]=fetch(encodeURI(f)).then(r=>{if(!r.ok)throw 0;return r.arrayBuffer();}).then(b=>getAC().decodeAudioData(b)).then(buf=>{APPL[f]=buf;}).catch(()=>{}))));
+  return Promise.all(tous.map(f=>APPL_ESSAI[f]||(APPL_ESSAI[f]=fetch(encodeURI(f)).then(r=>{if(!r.ok)throw 0;return r.arrayBuffer();}).then(b=>decoder(getAC(),b)).then(buf=>{APPL[f]=buf;}).catch(()=>{}))));
 }
 function applaudir(force=.6){
   if(!PUB.son)return;
@@ -2743,7 +2756,7 @@ async function guestData(d){
       if(rx.got===rx.n){
         const tot=rx.parts.reduce((s,p)=>s+p.length,0),all=new Uint8Array(tot);let o=0;for(const p of rx.parts){all.set(p,o);o+=p.length;}
         NET.rx=null;
-        try{const buf=await getAC().decodeAudioData(all.buffer);const p=NET.prep;NET.mus={buffer:buf,bpm:p.bpm,offset:p.offset,dur:p.dur,finAt:p.finAt,nom:p.musNom};musiquePrete();}
+        try{const buf=await decoder(getAC(),all.buffer);const p=NET.prep;NET.mus={buffer:buf,bpm:p.bpm,offset:p.offset,dur:p.dur,finAt:p.finAt,nom:p.musNom};musiquePrete();}
         catch(e){netStatus('Musique illisible sur ce téléphone.');envoyerEtat('musique illisible',true);}
       }
       break;}
@@ -3050,7 +3063,7 @@ $('#chOuvrir').onclick=()=>{const l=store.get('rs_choreos',[]),c=l[+$('#chListe'
 $('#chSuppr').onclick=()=>{const l=store.get('rs_choreos',[]),i=+$('#chListe').value;if(!l[i]||!confirm('Supprimer « '+l[i].nom+' » ?'))return;l.splice(i,1);store.set('rs_choreos',l);renderAtelier();};
 $('#chFile').addEventListener('change',async e=>{
   const f=e.target.files[0]; if(!f)return; e.target.value=''; $('#chMusInfo').textContent='Analyse de la musique…';
-  try{const bytes=await f.arrayBuffer();const buf=await getAC().decodeAudioData(bytes.slice(0));if(buf.duration<30)throw new Error('musique trop courte');
+  try{const bytes=await f.arrayBuffer();const buf=await decoder(getAC(),bytes.slice(0));if(buf.duration<30)throw new Error('musique trop courte');
     const on=analyseEnv(buf),tp=detectTempo(on);S.custom={nom:f.name.replace(/\.[^.]+$/,'').slice(0,28),bytes,buffer:buf,bpm:tp.bpm,offset:tp.offset,on};S.musique='custom';saveS();garderMusique();$('#chMusInfo').textContent='Tempo détecté : '+Math.round(tp.bpm)+' bpm';renderAtelier();}
   catch(err){$('#chMusInfo').textContent='Impossible de lire cette musique : '+((err&&err.message)||'format non reconnu (essaie un MP3 ou M4A)');}
 });
@@ -3873,7 +3886,7 @@ if(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel
 $('#rgFile').addEventListener('change',async e=>{
   const f=e.target.files[0]; if(!f)return; e.target.value=''; $('#rgMusInfo').textContent='Analyse de la musique…';
   try{
-    const bytes=await f.arrayBuffer(); const buf=await getAC().decodeAudioData(bytes.slice(0));
+    const bytes=await f.arrayBuffer(); const buf=await decoder(getAC(),bytes.slice(0));
     if(buf.duration<30)throw new Error('musique trop courte (moins de 30 s)');
     const on=analyseEnv(buf); const tp=detectTempo(on);
     S.custom={nom:f.name.replace(/\.[^.]+$/,'').slice(0,28),bytes,buffer:buf,bpm:tp.bpm,offset:tp.offset,on}; S.musique='custom'; saveS(); garderMusique(); renderReglage();
