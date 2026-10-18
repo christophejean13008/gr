@@ -1516,10 +1516,12 @@ async function habiller(obj,out,bones){
 
 /* ============================ Gymnaste ============================ */
 const IDLE={name:'idle',t0:0,dur:1};
+/* toutes les gymnastes présentes dans la scène (pour pouvoir nettoyer celles qui seraient restées) */
+const GYMS=new Set();
 class Gymnast{
   constructor(leoId,engin,opt={}){
     this.leoId=leoId;
-    this.root=new THREE.Group(); scene.add(this.root); this.opt=opt;
+    this.root=new THREE.Group(); scene.add(this.root); this.opt=opt; GYMS.add(this);
     const L=leoDef(leoId); this.L=L; if(L.outfit)L.kind='tripo';
     this.proc=new ProcRig(L.kind==='proc'&&!L.src?L:(L.outfit||LEOS[0]));
     this.tumble=new THREE.Group(); this.tumble.rotation.order='YXZ'; this.root.add(this.tumble); this.tumble.add(this.proc.root);
@@ -1540,7 +1542,7 @@ class Gymnast{
     if(!D||D===this||D.dead)return own; const k='_dh'+side; return D.hand(side,this[k]||(this[k]=V3()));
   }
   dispose(){
-    this.dead=true;scene.remove(this.root);this.engin.dispose();if(this.aura)this.aura.dispose();if(this.feu)this.feu.dispose();
+    GYMS.delete(this);if(this.dead)return;this.dead=true;scene.remove(this.root);this.engin.dispose();if(this.aura)this.aura.dispose();if(this.feu)this.feu.dispose();
     const free=o=>{if(o.geometry)o.geometry.dispose();if(o.material){const m=o.material;if(m.map&&m.map!==SHADOWTEX)m.map.dispose();m.dispose();}};
     this.proc.root.traverse(free); this.engin.g.traverse(free);
   }
@@ -1787,6 +1789,8 @@ function gameTime(){if(!GAME)return 0;const v=GAME.surv;if(v)return v.m0+(AC.cur
 
 function lancerPartie({choreo,music,nom,leo,design=null,opponents=[],online=false,demo=false,retour=null,coop=null,perturb=false,vue=null,debut=null,onFin}){
   if(PREV){PREV.dispose();PREV=null;PREVKEY='';}
+  if(GAME){const old=GAME;old.done=true;stopAudio(old,.05);finirJeu();}   // une partie déjà lancée (double appui) : on la ferme proprement
+  for(const G of [...GYMS])if(!(RP&&(G===RP.main||RP.gh.includes(G)))&&!(VICT&&VICT.gyms.includes(G)))G.dispose();
   const ac=getAC();
   if(!demo&&nom)leo=compterEssai(nom,leo);
   const decoMoi=demo?null:decoDe(nom);
@@ -2337,6 +2341,7 @@ function genSurvie(mus,engin){
   out.final+=1e6; return out;
 }
 async function demarrerSurvie(){
+  if(Date.now()-LANCE<2500)return; LANCE=Date.now();
   const btn=$('#rgGo'); btn.disabled=true; btn.textContent='Préparation…';
   try{
     getAC(); const mus=await genMusic(MUSIQUES.some(m=>m.id===S.musique)?S.musique:'elan');
@@ -3025,7 +3030,9 @@ async function ouvrirDefi(){
   $('#dfListe').innerHTML=(L.length?L.map(([n,v],i)=>`<div class="pl"><span>${med[i]||(i+1)+'.'} ${n===moi?'<b>'+esc(n)+'</b> (toi)':esc(n)}</span><b>${fmt(v,2)}</b></div>`).join(''):'<p class="hint">Personne n\'a encore relevé le défi aujourd\'hui. Sois la première !</p>')
     +(mien!=null?`<p class="hint" style="text-align:center">Ton meilleur score aujourd'hui : <b>${fmt(mien,2)}</b></p>`:'')+(src?`<p class="hint" style="text-align:center;opacity:.6">(${src})</p>`:'');
 }
+let LANCE=0;
 async function lancerDefi(){
+  if(Date.now()-LANCE<2500)return; LANCE=Date.now();
   const D=defiDuJour();
   try{
     getAC(); const mus=await genMusic(D.mus);
@@ -3099,7 +3106,7 @@ $('#classement .ct').onclick=()=>{const b=$('#classement');b.classList.toggle('f
 if(store.get('rs_cls_ferme',false))$('#classement').classList.add('ferme');
 viderFile().catch(()=>{}); renderClassement();
 
-function goAccueil(){renderRecords();renderClassement();setTimeout(()=>{chargerCfg();montrerMessage();},600);construireSalle(S.salle||'star');show('sAccueil');}
+function goAccueil(){if(!GAME&&!RP&&!VICT)for(const G of [...GYMS])if(G!==PREV)G.dispose();renderRecords();renderClassement();setTimeout(()=>{chargerCfg();montrerMessage();},600);construireSalle(S.salle||'star');show('sAccueil');}
 function ecranEnLigne(c){NET.coopMode=c;$('#onTitre').textContent=c?'🤝 Mode coopératif':'Compétition en ligne';$('#onCoopInfo').style.display=c?'':'none';$('#onCreerHint').textContent=c?'Tu obtiens un code à 4 lettres à donner à tes coéquipières (2 à 5 gymnastes).':'Tu obtiens un code à 4 lettres à donner à tes amies (jusqu\'à 6 gymnastes).';netStatus('');show('sOnline');}
 function needNom(){if(S.nom)return true;alert('Écris d\'abord ton prénom 🙂');$('#inNom').focus();return false;}
 $('#inNom').value=S.nom; $('#inNom').addEventListener('input',e=>{S.nom=e.target.value.trim();saveS();});
