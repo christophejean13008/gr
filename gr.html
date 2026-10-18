@@ -246,7 +246,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <!-- ACCUEIL -->
 <div id="sAccueil" class="screen on">
   <button id="cadenas" title="Code">🔒</button>
-  <div id="version">v1.8</div>
+  <div id="version">v1.9</div>
   <div id="classement"><div class="ct">🏆 Classement ▾</div><div class="cb"></div></div>
   <div class="brand"><div class="soutien"><a class="pill" id="btMail" href="mailto:chris333j@yahoo.fr?subject=Rythmique%20Star">✉️ M'écrire</a><a class="pill" id="btInstall" href="#" style="display:none">📲 Installer l'appli</a><a class="pill cafe" id="btCafe" href="#" target="_blank" rel="noopener">☕ Offrir un café</a></div><div class="logo">🎀</div><h1>Rythmique <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
   <label class="field">Ton prénom<input id="inNom" maxlength="14" placeholder="Prénom" autocomplete="off"></label>
@@ -1914,7 +1914,9 @@ function gameTime(){
 function lancerPartie({choreo,music,nom,leo,design=null,opponents=[],online=false,demo=false,retour=null,coop=null,perturb=false,vue=null,debut=null,onFin}){
   if(PREV){PREV.dispose();PREV=null;PREVKEY='';}
   if(GAME){const old=GAME;old.done=true;stopAudio(old,.05);finirJeu();}   // une partie déjà lancée (double appui) : on la ferme proprement
-  for(const G of [...GYMS])if(!(RP&&(G===RP.main||RP.gh.includes(G)))&&!(VICT&&VICT.gyms.includes(G)))G.dispose();
+  if(VICT)fermerVictoire(true);
+  if(RP){if(REC)annulerVideo();if(RP.src){try{RP.src.stop();}catch(e){}}RP.main.dispose();RP.gh.forEach(G=>G.dispose());RP=null;}
+  for(const G of [...GYMS])G.dispose();
   const ac=getAC();
   if(!demo&&nom)leo=compterEssai(nom,leo);
   const decoMoi=demo?null:decoDe(nom);
@@ -2787,7 +2789,8 @@ async function lancerOnline(){
   if(NET.perturb&&!NET.players.some(p=>p.pid===NET.perturb))NET.perturb=null;
   const nbG=NET.players.length-(NET.perturb?1:0);
   if(NET.set&&NET.set.coop&&nbG<2){alert('Il faut au moins 2 gymnastes dans l\'équipe, en plus de la perturbatrice.');return;}
-  const btn=$('#lbLancer'); btn.disabled=true; netStatus('Préparation…');
+  if(NET.lance)return;                 // déjà en préparation : on ignore les appuis répétés
+  const btn=$('#lbLancer'); btn.disabled=true; NET.lance=true; netStatus('Préparation…');
   try{
     getAC(); const mus=await getMusicSel(); NET.mus=mus; NET.finals=new Map(); NET.inGame=true;
     const prep={t:'prep',seed:Math.floor(Math.random()*1e9),engin:S.engin,niv:S.niv,bpm:mus.bpm,offset:mus.offset,dur:mus.dur,finAt:mus.finAt||null,musique:mus.id==='custom'?'custom':mus.id,musNom:mus.nom};
@@ -2805,6 +2808,7 @@ async function lancerOnline(){
     lobbyBientot();
     netStatus('Les autres téléphones se préparent…'); renderLobby(); checkAllReady();
   }catch(e){alert('Problème : '+e.message);NET.inGame=false;NET.prep=null;btn.disabled=false;}
+  finally{NET.lance=false;}
 }
 function checkAllReady(force){
   if(!NET.host||!NET.prep||GAME)return;
@@ -2819,6 +2823,8 @@ function checkAllReady(force){
 }
 function startOnlineGame(go={}){
   const p0=NET.prep; if(!p0||!NET.mus)return; netStatus('');
+  if(GAME&&GAME.online&&NET.prepLance===p0)return;   // « go » reçu deux fois pour la même partie
+  NET.prepLance=p0;
   const p=Object.assign({},p0); if(p.salle)construireSalle(p.salle); if(go.order)p.order=go.order; if(go.sansPerturb)p.perturb=null; const pids=go.pids||NET.players.map(x=>x.pid);
   const moiP=!!p.perturb&&p.perturb===NET.me;
   const ch=moiP?genPerturb({seed:p.seed,engin:p.engin,niv:p.niv,bpm:p.bpm,offset:p.offset,dur:p.dur,finAt:p.finAt})
@@ -2891,7 +2897,7 @@ function renderLobby(){
    b.textContent=!pz?'😈 Être la perturbatrice':pz===NET.me?'😈 Tu es la perturbatrice (toucher pour annuler)':`😈 ${qui||'Quelqu\'une'} est la perturbatrice`;
    b.className=pz===NET.me?'big':'';}
   $('#lbModif').style.display=NET.host?'':'none'; $('#lbLancer').style.display=NET.host?'':'none';
-  $('#lbLancer').disabled=!!NET.prep||NET.players.length<2;
+  $('#lbLancer').disabled=!!NET.prep||!!NET.lance||NET.players.length<2;
   $('#lbInfo').innerHTML=NET.host?`Donne le code <b>${NET.code}</b> à tes amies : elles choisissent « Rejoindre »${coop?' dans le mode coopératif':''}. Tout le monde passe en même temps sur la même musique.${coop?' Les engins de l\'équipe prennent tes couleurs.':''}`:coop?'🤝 Mode coopératif : la créatrice de la salle va lancer la chorégraphie d\'équipe.':'La créatrice de la salle va lancer la compétition.';
   $('#lbLancer').textContent=coop?'Lancer l\'équipe !':'Lancer !';
 }
