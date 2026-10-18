@@ -1498,16 +1498,19 @@ async function habiller(obj,out,bones){
     // sur les côtés (haut des cuisses), le poids du bassin vaut ~0,5 : on exige plus pour éviter les traînées sur les hanches
     float cote=smoothstep(.018*uH,.04*uH,abs(p.x));
     float seuil=mix(.15,.55,cote), dedans=smoothstep(seuil,seuil+.05,vLeo.x);
-    float m=clamp(dedans*estTissu+smoothstep(.2,.45,arm),0.,1.);
-    // bord de jambe sur les côtés : le tissu d'origine qui dépasse est repeint couleur peau (plus de petites taches)
-    float peau=0.;
+    // encolure : le justaucorps s'arrête sous le cou, et plus bas sur les épaules (sans manche)
+    float ax=abs(p.x), dos=smoothstep(.005*uH,-.025*uH,p.z), haut=mix(.03,-.006,dos)*uH-.045*uH*smoothstep(.03*uH,.07*uH,ax);
+    float sousCol=1.-smoothstep(haut-.006*uH,haut+.006*uH,p.y), manche=smoothstep(.2,.45,arm);
+    float m=clamp(dedans*estTissu*sousCol+manche,0.,1.);
+    // au-dessus de l'encolure, le tissu d'origine est repeint couleur peau
+    float peau=smoothstep(-.12,0.,ds-dl)*(1.-sousCol)*(1.-manche)*smoothstep(.05,.2,vLeo.x);
     vec2 uvC=vec2(atan(p.x,p.z)/6.2831853+.5, p.y/uH*uVS);
     vec2 uvA=vec2(atan(p.y,p.z)/6.2831853+.5, p.x/uH*uVS);
     vec2 uvL=arm>.5?uvA:uvC;
     vec3 motif=texture2D(uLeoMap,uvL).rgb;
     float lum=dot(orig,vec3(.299,.587,.114)), lref=max(.04,dot(arm>.5?uLeoRef:cref,vec3(.299,.587,.114)));
     float ombre=clamp(lum/lref,.55,1.3);
-    vec3 skin=uSkinCu*clamp(ombre,.8,1.15);
+    vec3 skin=uSkinRef*clamp(lum/max(.04,dot(uSkinRef,vec3(.299,.587,.114))),.7,.98);
     diffuseColor.rgb=mix(mix(orig,skin,peau),motif*ombre,m);
   }`);
       };
