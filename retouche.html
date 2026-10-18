@@ -37,6 +37,7 @@ input[type=range]{flex:1;accent-color:var(--accent)}
 <div id="curseur"></div>
 <div id="panneau">
   <button id="plier" title="Cacher le panneau">◀</button>
+  <button id="quitter" style="width:100%;margin-bottom:8px">← Retour au jeu</button>
   <h1>🎨 Retouche des modèles</h1>
   <p class="hint">Corrige directement la peau et le tissu du modèle 3D (cou, épaules…). Ce que tu peins couleur peau ne sera plus recouvert par le justaucorps du jeu.</p>
   <div class="lbl">1. Modèle</div>
@@ -169,7 +170,7 @@ cv.addEventListener('pointerdown',e=>{
   if(OUTIL==='pipette'){const d=TEX.g.getImageData(Math.floor(p.x),Math.floor(p.y),1,1).data;const c='#'+[d[0],d[1],d[2]].map(x=>x.toString(16).padStart(2,'0')).join('');$('#coul').value=c;ajouterHisto(c);etat('Couleur prise : '+c);setTimeout(()=>etat(''),1500);return;}
   TEX.hist.push(TEX.g.getImageData(0,0,TEX.W,TEX.H)); if(TEX.hist.length>10)TEX.hist.shift();
   if(OUTIL==='pinceau')ajouterHisto($('#coul').value);
-  const rad=rayonTex(e,p); tamponner(p,rad); TEX.map.needsUpdate=true; TRAIT={p,rad,id:e.pointerId};
+  const rad=rayonTex(e,p); tamponner(p,rad); MODIF=true; SAUVE=false; TEX.map.needsUpdate=true; TRAIT={p,rad,id:e.pointerId};
 });
 cv.addEventListener('pointermove',e=>{
   const c=$('#curseur'); if(OUTIL==='pinceau'||OUTIL==='gomme'){const d=+$('#taille').value*2;c.style.display='block';c.style.width=c.style.height=d+'px';c.style.left=e.clientX+'px';c.style.top=e.clientY+'px';}
@@ -186,7 +187,9 @@ $('#annuler').onclick=()=>{if(!TEX||!TEX.hist.length)return;TEX.g.putImageData(T
 $('#original').onclick=()=>{if(!TEX||!confirm('Effacer toutes les retouches de ce modèle ?'))return;TEX.hist.push(TEX.g.getImageData(0,0,TEX.W,TEX.H));TEX.g.putImageData(TEX.orig,0,0);TEX.map.needsUpdate=true;};
 $('#sauver').onclick=()=>{if(!TEX)return;const nom=retouchePath(TEX.f).split('/').pop();
   TEX.cv.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=nom;document.body.appendChild(a);a.click();a.remove();
-    $('#aideSauver').innerHTML=`Fichier <b>${nom}</b> téléchargé. Mets-le sur GitHub dans le dossier <b>${TEX.f.replace(/[^/]*$/,'')}</b>, sans changer son nom.`;},'image/png');};
+    SAUVE=true; $('#aideSauver').innerHTML=`Fichier <b>${nom}</b> téléchargé. Mets-le sur GitHub dans le dossier <b>${TEX.f.replace(/[^/]*$/,'')}</b>, sans changer son nom.`;},'image/png');};
+let MODIF=false, SAUVE=false;
+$('#quitter').onclick=()=>{if(MODIF&&!SAUVE&&!confirm('Tu n\'as pas téléchargé ta retouche : elle sera perdue. Quitter quand même ?'))return;location.href='gr.html';};
 $('#plier').onclick=()=>{$('#panneau').classList.toggle('cache');$('#plier').textContent=$('#panneau').classList.contains('cache')?'▶':'◀';};
 $('#modele').onchange=e=>charger(e.target.value);
 $('#charger').onclick=()=>{const f=$('#autre').value.trim();if(f)charger(f);};
