@@ -1980,10 +1980,23 @@ function bufApplaudir(){
   }
   return PUB.claps=b;
 }
+/* Vrais applaudissements enregistrés (fichier sons/applaudissements.mp3, libre de droits CC0, bigsoundbank.com).
+   S'il n'est pas sur le site, on garde les applaudissements fabriqués par le jeu. */
+let APPL_VRAI=null,APPL_ESSAI=null;
+function chargerApplaudissements(){
+  if(APPL_ESSAI)return APPL_ESSAI;
+  return APPL_ESSAI=fetch('sons/applaudissements.mp3').then(r=>{if(!r.ok)throw 0;return r.arrayBuffer();}).then(b=>getAC().decodeAudioData(b)).then(buf=>{APPL_VRAI=buf;}).catch(()=>{});
+}
 function applaudir(force=.6){
-  if(!PUB.son)return; try{const ac=getAC(),s=ac.createBufferSource(),v=ac.createGain(),f=ac.createBiquadFilter();
-  s.buffer=bufApplaudir(); s.playbackRate.value=.95+Math.random()*.1; f.type='highpass'; f.frequency.value=180;
-  v.gain.value=.22+.5*force; s.connect(f); f.connect(v); v.connect(ac.destination); s.start(); s.stop(ac.currentTime+1.2+2*force);}catch(e){}
+  if(!PUB.son)return;
+  try{const ac=getAC(),t=ac.currentTime,s=ac.createBufferSource(),v=ac.createGain();
+    if(APPL_VRAI){ // un extrait du vrai enregistrement, qui monte puis s'éteint en douceur
+      const d=1.8+3.2*force, st=Math.random()*Math.max(0,APPL_VRAI.duration-d-.5), vol=.35+.65*force;
+      s.buffer=APPL_VRAI; v.gain.setValueAtTime(.0001,t); v.gain.exponentialRampToValueAtTime(vol,t+.25); v.gain.setValueAtTime(vol,t+d*.55); v.gain.exponentialRampToValueAtTime(.0001,t+d);
+      s.connect(v); v.connect(ac.destination); s.start(t,st); s.stop(t+d+.05); return;}
+    const f=ac.createBiquadFilter(); s.buffer=bufApplaudir(); s.playbackRate.value=.95+Math.random()*.1; f.type='highpass'; f.frequency.value=180;
+    v.gain.value=.22+.5*force; s.connect(f); f.connect(v); v.connect(ac.destination); s.start(); s.stop(t+1.2+2*force);
+  }catch(e){}
 }
 function deception(){
   if(!PUB.son)return; try{const ac=getAC(),t=ac.currentTime,v=ac.createGain(),f=ac.createBiquadFilter(); f.type='lowpass'; f.frequency.value=800; v.gain.setValueAtTime(.0001,t); v.gain.exponentialRampToValueAtTime(.16,t+.15); v.gain.exponentialRampToValueAtTime(.0001,t+1.1); f.connect(v); v.connect(ac.destination);
@@ -2008,7 +2021,7 @@ function banderole(txt,c1,c2){
 }
 function publicInit(g){
   publicFin(); PUB.hype=.15; g.ditDebut=false;
-  if(g.demo)return; try{bufApplaudir();}catch(e){} const P=foulePoints(); P.P.visible=true;
+  if(g.demo)return; try{bufApplaudir();chargerApplaudissements();}catch(e){} const P=foulePoints(); P.P.visible=true;
   // annonce d'entrée sur le praticable, dès le début du décompte
   setTimeout(()=>{if(GAME!==g||g.done)return;
     const autres=[...g.ghosts.values()].map(v=>v.nom).filter(Boolean), noms=g.perturbMode?autres:[g.nom,...autres];
@@ -3740,7 +3753,7 @@ function renderReglage(){
   chips($('#rgPublic'),[{k:'1',t:'Oui'},{k:'0',t:'Non'}],PUB.son?'1':'0',k=>{PUB.son=k==='1';store.set('rs_public',PUB.son);renderReglage();});
   $('#rgLat').value=S.latence; $('#rgLatV').textContent=S.latence+' ms';
 }
-$('#rgTestSon').onclick=()=>{getAC();applaudir(.7);const ok=!!window.speechSynthesis;VOIX.ok=false;dire('Bravo ! Le public t\'applaudit.',2,true);$('#rgTestInfo').textContent='⏳ Test en cours…';
+$('#rgTestSon').onclick=()=>{getAC();const ok=!!window.speechSynthesis;VOIX.ok=false;dire('Bravo ! Le public t\'applaudit.',2,true);chargerApplaudissements().then(()=>applaudir(.7));$('#rgTestInfo').textContent='⏳ Test en cours…';
   setTimeout(()=>{if(VOIX.ok){$('#rgTestInfo').textContent=`✅ La voix parle (${VOIX.nomVoix}). Si tu n'entends rien, monte le volume « multimédia » du téléphone.`;return;}const n=ok?speechSynthesis.getVoices().filter(v=>/^fr/i.test(v.lang)).length:0;$('#rgTestInfo').textContent=!ok?'⚠️ Ce navigateur ne sait pas faire parler le téléphone.':n?`Voix françaises trouvées : ${n}. Si tu n'entends rien, vérifie le volume du téléphone (et que le mode silencieux est coupé).`:'⚠️ Aucune voix française installée : Paramètres du téléphone → Synthèse vocale → installer le français.';},3200);};
 $('#rgLat').addEventListener('input',e=>{S.latence=+e.target.value;$('#rgLatV').textContent=S.latence+' ms';saveS();});
 function bpmAdj(d){const lib=String(S.musique).startsWith('lib:')?BIB[S.musique.slice(4)]:null,c=lib||S.custom;if(!c||!c.buffer)return;c.bpm=Math.max(60,Math.min(190,Math.round(c.bpm)+d));c.offset=gridScore(c.on,c.bpm).offset;if(lib){const o=store.get('rs_bibbpm',{});o[lib.id]=c.bpm;store.set('rs_bibbpm',o);}else garderMusique();renderReglage();if(RG_MODE==='online'&&NET.host){hostSettings();broadcastLobby();}}
