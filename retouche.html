@@ -109,6 +109,7 @@ async function charger(f){
   obj.updateMatrixWorld(true); const box=new THREE.Box3().setFromObject(obj), h=(box.max.y-box.min.y)||1, s=1.65/h;
   obj.scale.multiplyScalar(s); obj.updateMatrixWorld(true); const b2=new THREE.Box3().setFromObject(obj);
   obj.position.y-=b2.min.y; obj.position.x-=(b2.min.x+b2.max.x)/2; obj.position.z-=(b2.min.z+b2.max.z)/2;
+  obj.traverse(o=>{if(!o.isMesh)return;(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{if(!m||!m.map)return;if(m.emissive&&!m.emissiveMap&&(m.emissive.r+m.emissive.g+m.emissive.b)>.05){m.emissive.setRGB(0,0,0);if(m.color)m.color.setRGB(.8,.8,.8);}});});
   scene.add(obj); MODELE=obj;
   let map=null; obj.traverse(o=>{if(o.isMesh){MESHES.push(o);const m=Array.isArray(o.material)?o.material[0]:o.material;if(!map&&m&&m.map)map=m.map;}});
   if(!map){etat('⚠️ Ce modèle n\'a pas de texture à retoucher.');return;}

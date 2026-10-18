@@ -1348,10 +1348,20 @@ function loadAsset(src){
     let res;
     if(ext==='fbx'){const l=new FBXLoader();const o=buf?l.parse(buf,''):await l.loadAsync(src);res={scene:o,clips:o.animations||[]};}
     else {const l=new GLTFLoader(); const g=buf?await l.parseAsync(buf,''):await l.loadAsync(src); res={scene:g.scene,clips:g.animations||[]};}
+    corrigerMateriaux(res.scene);
     if(typeof src==='string')await appliquerRetouche(res.scene,src);
     return res;
   })();
   ASSETS.set(key,pr); pr.catch(()=>ASSETS.delete(key)); return pr;
+}
+/* Certains FBX (passage par Mixamo) arrivent avec une lueur grise (« emissive ») et une couleur de base grise :
+   le personnage paraît délavé. On remet une couleur de base blanche et on éteint la lueur quand il y a une texture. */
+function corrigerMateriaux(obj){
+  obj.traverse(o=>{if(!o.isMesh)return;(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{
+    if(!m||!m.map)return;
+    // uniquement les modèles « délavés » (lueur grise) : les autres gardent exactement leurs couleurs
+    if(m.emissive&&!m.emissiveMap&&(m.emissive.r+m.emissive.g+m.emissive.b)>.05){m.emissive.setRGB(0,0,0);if(m.color)m.color.setRGB(.8,.8,.8);}
+  });});
 }
 /* Retouche faite avec retouche.html : « modele_retouche.png » à côté du modèle remplace sa texture */
 async function appliquerRetouche(obj,src){
