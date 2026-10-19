@@ -103,6 +103,18 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 .cols button{width:34px;height:34px;padding:0;border-radius:50%;border:3px solid rgba(255,255,255,.15)}
 .cols button.on{border-color:var(--accent2);transform:scale(1.12)}
 .cols input[type=color]{width:38px;height:38px;padding:0;border:0;border-radius:50%;background:none}
+.tuto{position:fixed;inset:0;z-index:60;display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:max(14px,env(safe-area-inset-top)) 16px max(14px,env(safe-area-inset-bottom));background:radial-gradient(circle at 50% 30%,#2a1250,#12081f 70%)}
+.tuto.on{display:flex}
+.tuto h2{margin:0;font-size:1.35rem;text-align:center}
+.tuto .tuIntro{color:var(--muted,#c9b6e8);font-size:.85rem;text-align:center;max-width:420px;margin:0}
+#tuCv{width:min(92vw,420px);height:min(46vh,330px);display:block}
+.tuEt{display:flex;align-items:center;gap:10px;max-width:440px}
+#tuIco{flex:none;width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#1a0b2e;font-size:1.05rem}
+#tuTitre{font-weight:800;font-size:1.15rem}
+#tuTxt{font-size:.92rem;line-height:1.35}
+#tuPts{display:flex;gap:6px;justify-content:center}#tuPts i{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.3);cursor:pointer}#tuPts i.on{background:#ff4fa3;transform:scale(1.3)}
+.tuto .actions{max-width:440px}
+#tuPasser{position:absolute;top:max(12px,env(safe-area-inset-top));right:14px;padding:6px 12px;font-size:.85rem}
 .aide-l{display:flex;gap:10px;align-items:center;margin:7px 0;font-size:.92rem;line-height:1.35}
 .pt{flex:0 0 38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#1a0b2e;font-weight:800;font-size:1rem}
 .pt.barre{border-radius:12px;flex-basis:54px}
@@ -249,7 +261,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <!-- ACCUEIL -->
 <div id="sAccueil" class="screen on">
   <button id="cadenas" title="Code">🔒</button>
-  <div id="version">v2.2</div>
+  <div id="version">v2.3</div>
   <div id="classement"><div class="ct">🏆 Classement ▾</div><div class="cb"></div></div>
   <div class="brand"><div class="soutien"><a class="pill" id="btMail" href="mailto:chris333j@yahoo.fr?subject=Rythmique%20Star">✉️ M'écrire</a><a class="pill" id="btInstall" href="#" style="display:none">📲 Installer l'appli</a><a class="pill cafe" id="btCafe" href="#" target="_blank" rel="noopener">☕ Offrir un café</a></div><div class="logo">🎀</div><h1>Rythmique <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
   <label class="field">Ton prénom<input id="inNom" maxlength="14" placeholder="Prénom" autocomplete="off"></label>
@@ -346,6 +358,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <!-- REGLAGES -->
 <div id="sReglage" class="screen">
   <h2 id="rgTitre">Réglages</h2>
+  <button id="rgTuto" style="align-self:center;margin:-4px 0 8px;background:linear-gradient(135deg,#ffd166,#ff8c42);color:#1a0b2e;font-weight:800">👆 Aide mouvements</button>
   <div class="card"><div class="lbl">Engin</div><div class="chips" id="rgEngin"></div></div>
   <div class="card"><div class="lbl">Salle de compétition</div><div class="chips" id="rgSalle"></div><p class="hint" id="rgSalleHint"></p></div>
   <div class="card"><div class="lbl">Niveau</div><div class="chips" id="rgNiv"></div><p class="hint" id="rgNivHint"></p></div>
@@ -519,9 +532,21 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
   <div class="actions" id="reActions"></div>
 </div>
 
+<!-- TUTO ANIMÉ DES GESTES -->
+<div id="tuto" class="tuto">
+  <button id="tuPasser">Passer ✕</button>
+  <h2>👆 Les gestes du jeu</h2>
+  <p class="tuIntro">Agis au moment où la note passe dans le <b>cercle blanc</b>. Tu peux toucher <b>n'importe où</b> sur l'écran.</p>
+  <canvas id="tuCv"></canvas>
+  <div class="tuEt"><div id="tuIco"></div><div><div id="tuTitre"></div><div id="tuTxt"></div></div></div>
+  <div id="tuPts"></div>
+  <div class="actions"><button id="tuPrec">◀ Précédent</button><button class="big" id="tuSuiv">Suivant ▶</button></div>
+</div>
+
 <!-- COMMENT JOUER -->
 <div id="sAide" class="screen">
   <h2>Comment jouer ?</h2>
+  <button id="aideTuto" style="align-self:center;margin:-4px 0 10px;background:linear-gradient(135deg,#ffd166,#ff8c42);color:#1a0b2e;font-weight:800">👆 Voir les gestes en animation</button>
   <div class="card regles">
     <h3>Le principe</h3>
     <p>La musique démarre, les <b>notes</b> arrivent de la droite sur la bande en bas de l'écran. Agis au moment où une note passe dans le <b>cercle blanc</b>, à gauche. Plus tu es pile dans le temps, meilleure est ta note.</p>
@@ -3322,7 +3347,7 @@ function needNom(){if(S.nom)return true;alert('Écris d\'abord ton prénom 🙂'
 $('#inNom').value=S.nom; $('#inNom').addEventListener('input',e=>{S.nom=e.target.value.trim();saveS();});
 document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>{
   getAC(); chargerApplaudissements(); const go=b.dataset.go;
-  const premiere=f=>{if(store.get('rs_aide',0)){f();return;}store.set('rs_aide',1);AIDE_SUITE=f;show('sAide');};
+  const premiere=f=>{if(store.get('rs_aide',0)){f();return;}store.set('rs_aide',1);ouvrirTuto(f);};
   if(go==='solo'){if(needNom())premiere(()=>openReglage('solo'));}
   else if(go==='online'||go==='coop'){if(needNom())premiere(()=>ecranEnLigne(go==='coop'));}
   else if(go==='local'){premiere(()=>{renderLocal();show('sLocal');});}
@@ -3334,6 +3359,118 @@ document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=
   else if(go==='regles')show('sRegles');
 }));
 $('#regRetour').onclick=goAccueil;
+/* ===================== Tuto animé des gestes (plein écran) ===================== */
+const TUTO=[
+  {ico:'●',col:'#ff4fa3',t:'Touche',d:'Quand la note arrive dans le <b>cercle blanc</b>, touche l\'écran <b>une fois</b>.',k:'tap'},
+  {ico:'●●',col:'#4cc9f0',t:'Touche 2 fois',d:'<b>Deux appuis rapides</b>. Un seul appui = raté !',k:'double'},
+  {ico:'▬',col:'#ff4fa3',t:'Maintiens appuyé',d:'Appuie quand la barre arrive et <b>garde le doigt posé</b> jusqu\'au bout (équilibres).',k:'hold'},
+  {ico:'➜',col:'#ff4fa3',t:'Glisse le doigt',d:'Pose le doigt et <b>fais-le glisser</b> (pivots).',k:'swipe'},
+  {ico:'⬆',col:'#ffd166',t:'Lancer',d:'<b>Glisse vers le haut</b> pour lancer l\'engin. Un simple appui ne suffit pas.',k:'up'},
+  {ico:'↺',col:'#ffd166',t:'Tour sous l\'engin',d:'<b>Dessine un petit rond</b> à chaque tour (les ¾ suffisent).',k:'rond'},
+  {ico:'⬇',col:'#ffd166',t:'Rattraper',d:'<b>Glisse vers le bas</b> pour rattraper l\'engin.',k:'down'},
+  {ico:'↻',col:'#4cc9f0',t:'Dessine des cercles',d:'Tant que la barre passe, fais de <b>grands cercles</b> n\'importe où. La jauge verte se remplit.',k:'circle'},
+  {ico:'〰',col:'#4cc9f0',t:'Fais des zigzags',d:'Tant que la barre passe, fais des <b>zigzags</b> (serpentins du ruban).',k:'zigzag'},
+  {ico:'✨',col:'#ffd166',t:'Bonus rond d\'or',d:'En Fédérale et Élite : touche le <b>rond d\'or</b> qui apparaît en haut à gauche, avec ton autre main, avant qu\'il disparaisse.',k:'bonus'}
+];
+const TU={i:0,t0:0,raf:0,suite:null};
+function ouvrirTuto(suite){
+  TU.suite=suite||null; TU.i=0; $('#tuto').classList.add('on'); tutoEtape(0);
+  if(!TU.raf){const f=now=>{TU.raf=$('#tuto').classList.contains('on')?requestAnimationFrame(f):0;if(TU.raf)tutoDessin(now);};TU.raf=requestAnimationFrame(f);}
+}
+function fermerTuto(){$('#tuto').classList.remove('on');const f=TU.suite;TU.suite=null;if(f)f();}
+function tutoEtape(i){
+  TU.i=Math.max(0,Math.min(TUTO.length-1,i)); TU.t0=performance.now(); const s=TUTO[TU.i];
+  $('#tuIco').textContent=s.ico; $('#tuIco').style.background=s.col; $('#tuTitre').textContent=s.t; $('#tuTxt').innerHTML=s.d;
+  $('#tuPts').innerHTML=TUTO.map((_,k)=>`<i class="${k===TU.i?'on':''}" data-k="${k}"></i>`).join('');
+  $('#tuPts').querySelectorAll('i').forEach(e=>e.onclick=()=>tutoEtape(+e.dataset.k));
+  $('#tuPrec').style.visibility=TU.i?'visible':'hidden';
+  $('#tuSuiv').textContent=TU.i===TUTO.length-1?'J\'ai compris ✓':'Suivant ▶';
+}
+/* un vrai doigt (index tendu, main en dessous), bout du doigt en (x,y) */
+function dessinDoigt(c,x,y,app){
+  c.save(); c.translate(x,y); const k=.62*(1-.08*app); c.scale(k,k); c.rotate(-.42);
+  const peau='#f2c4a2',ombre='#d69a76',trait='#a9714f';
+  c.lineJoin='round'; c.lineWidth=2.2; c.strokeStyle=trait;
+  // main (poing) avec les autres doigts repliés
+  c.fillStyle=peau; c.beginPath();
+  c.moveTo(-17,62); c.bezierCurveTo(-46,66,-60,92,-56,130); c.lineTo(-50,190); c.lineTo(46,190); c.lineTo(44,118);
+  c.bezierCurveTo(44,88,32,66,17,62); c.closePath(); c.fill(); c.stroke();
+  c.fillStyle=ombre; for(let j=0;j<3;j++){c.beginPath();c.ellipse(-6+j*15,84+j*3,12,9,0,0,7);c.globalAlpha=.55;c.fill();c.globalAlpha=1;c.stroke();}
+  // pouce
+  c.fillStyle=peau; c.beginPath(); c.moveTo(-50,112); c.bezierCurveTo(-74,100,-80,80,-66,72); c.bezierCurveTo(-56,66,-44,80,-34,96); c.closePath(); c.fill(); c.stroke();
+  // index tendu
+  const g=c.createLinearGradient(-17,0,17,0); g.addColorStop(0,ombre); g.addColorStop(.35,peau); g.addColorStop(.8,peau); g.addColorStop(1,ombre);
+  c.fillStyle=g; c.beginPath(); c.moveTo(-16,72); c.lineTo(-16,14); c.arc(0,14,16,Math.PI,0); c.lineTo(16,72); c.closePath(); c.fill(); c.stroke();
+  // ongle + plis
+  c.fillStyle='#f9dccb'; c.strokeStyle='#c98e6e'; c.lineWidth=1.5; c.beginPath(); c.ellipse(0,9,8.5,10,0,0,7); c.fill(); c.stroke();
+  c.strokeStyle='rgba(150,95,65,.7)'; c.lineWidth=1.6; for(const yy of [33,52]){c.beginPath();c.moveTo(-9,yy);c.quadraticCurveTo(0,yy+3,9,yy);c.stroke();}
+  c.restore();
+}
+function tutoDessin(now){
+  const cv=$('#tuCv'),dpr=Math.min(2,devicePixelRatio||1),W=cv.clientWidth||330,H=cv.clientHeight||300;
+  if(cv.width!==Math.round(W*dpr)){cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);}
+  const c=cv.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0,0,W,H);
+  const s=TUTO[TU.i], P=3.4, t=((now-TU.t0)/1000)%P, sp=120, hx=62, ly=Math.round(H*.6), T0=1.4;
+  // décor : gymnaste stylisée
+  c.fillStyle='rgba(255,255,255,.06)'; c.beginPath(); c.roundRect?c.roundRect(0,0,W,H,18):c.rect(0,0,W,H); c.fill();
+  const gx=W*.78,gy=Math.max(24,ly-150); c.fillStyle='rgba(255,255,255,.18)'; c.beginPath(); c.arc(gx,gy,13,0,7); c.fill();
+  c.strokeStyle='rgba(255,255,255,.18)'; c.lineWidth=9; c.lineCap='round'; c.beginPath(); c.moveTo(gx,gy+14); c.lineTo(gx,gy+62); c.moveTo(gx-34,gy+22); c.lineTo(gx+34,gy+22); c.moveTo(gx,gy+62); c.lineTo(gx-18,gy+100); c.moveTo(gx,gy+62); c.lineTo(gx+18,gy+100); c.stroke();
+  // bande des notes
+  c.fillStyle='rgba(18,8,31,.75)'; c.beginPath(); c.roundRect?c.roundRect(8,ly-38,W-16,76,18):c.rect(8,ly-38,W-16,76); c.fill();
+  c.strokeStyle='#fff'; c.lineWidth=3; c.beginPath(); c.arc(hx,ly,27,0,7); c.stroke();
+  const trace=s.k==='circle'||s.k==='zigzag', dur=s.k==='hold'?1:trace?1.6:0;
+  const fin=T0+dur+(s.k==='double'?.25:0);
+  // la note (et sa barre)
+  if(s.k!=='bonus'){
+    const dx=(T0-t)*sp, ex=(T0+dur-t)*sp, fait=t>fin+.05;
+    if(dur&&t<T0+dur){c.globalAlpha=.4;c.fillStyle=s.col;c.beginPath();const x0=hx+Math.max(dx,-30),x1=hx+ex;c.roundRect?c.roundRect(x0,ly-12,Math.max(4,x1-x0),24,12):c.rect(x0,ly-12,Math.max(4,x1-x0),24);c.fill();c.globalAlpha=1;}
+    if(!fait){const x=hx+Math.max(dx,0);c.fillStyle=s.col;c.beginPath();c.arc(x,ly,22,0,7);c.fill();c.fillStyle='#1a0b2e';c.font='bold 17px system-ui,sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(s.ico,x,ly+1);}
+    else if(t<fin+.6){const a=1-(t-fin)/.6;c.globalAlpha=a;c.fillStyle='#5be7a9';c.beginPath();c.arc(hx,ly,22+(t-fin)*40,0,7);c.fill();c.globalAlpha=1;
+      c.fillStyle='#5be7a9';c.font='800 26px "Baloo 2",system-ui,sans-serif';c.textAlign='center';c.fillText('Parfait !',W/2,ly-60-(t-fin)*20);}
+  }
+  // le doigt : position et appui selon le geste
+  let fx=hx+40,fy=ly-70,app=0; const u=t-T0, cx=W*.45, cy=Math.max(80,ly-115);
+  const trail=[];
+  const vers=(x1,y1,x2,y2,q)=>[x1+(x2-x1)*q,y1+(y2-y1)*q], ease=q=>q<0?0:q>1?1:q*q*(3-2*q);
+  if(s.k==='tap'||s.k==='double'){
+    const ts=s.k==='double'?[0,.25]:[0]; let m=9; for(const o of ts)m=Math.min(m,Math.abs(u-o));
+    app=Math.max(0,1-m/.12); [fx,fy]=vers(hx+40,ly-70,hx,ly,ease((u+.45)/.4)*(u<(s.k==='double'?.6:.35)?1:Math.max(0,1-(u-(s.k==='double'?.6:.35))/.4)));
+    if(u>-.45&&u<.6)fy-=(1-app)*18*(u>-.05?1:0);
+  } else if(s.k==='hold'){
+    const q=ease((u+.45)/.4), r=u>dur?Math.max(0,1-(u-dur)/.4):1; [fx,fy]=vers(hx+40,ly-70,hx,ly,q*r); app=(u>=0&&u<=dur)?1:0;
+  } else if(s.k==='swipe'||s.k==='up'||s.k==='down'){
+    const dir=s.k==='swipe'?[90,0]:s.k==='up'?[0,-95]:[0,85];
+    if(u<0){[fx,fy]=vers(hx+40,ly-70,hx,ly,ease((u+.45)/.4));}
+    else{const q=ease(u/.3);fx=hx+dir[0]*q;fy=ly+dir[1]*q;app=u<.35?1:0;if(u<.35)for(let j=0;j<=10;j++){const qq=ease(j/10*u/.3);trail.push([hx+dir[0]*qq,ly+dir[1]*qq]);}
+      if(u>.35){const r=ease((u-.35)/.5);fx+= (hx+40-fx)*r;fy+=(ly-70-fy)*r;}}
+  } else if(s.k==='rond'){
+    if(u<0){[fx,fy]=vers(hx+40,ly-70,hx,ly-28,ease((u+.45)/.4));}
+    else if(u<.6){const a=-Math.PI/2+u/.6*Math.PI*2;fx=hx+Math.cos(a)*28;fy=ly+Math.sin(a)*28;app=1;for(let j=0;j<=16;j++){const aa=-Math.PI/2+j/16*u/.6*Math.PI*2;trail.push([hx+Math.cos(aa)*28,ly+Math.sin(aa)*28]);}}
+    else{const r=ease((u-.6)/.5);fx=hx+(40)*r;fy=ly-28-(42)*r;}
+  } else if(trace){
+    const f=(v)=>s.k==='circle'?[cx+Math.cos(v*9)*55,cy+Math.sin(v*9)*45]:[cx+Math.sin(v*13)*75,cy+Math.sin(v*3.2)*16];
+    if(u<0){[fx,fy]=vers(hx+40,ly-70,...f(0),ease((u+.45)/.4));}
+    else if(u<=dur){[fx,fy]=f(u);app=1;for(let j=0;j<=24;j++){const v=Math.max(0,u-.45+j*.45/24);trail.push(f(v));}
+      const r=Math.min(1,u/dur);c.fillStyle='rgba(255,255,255,.15)';c.fillRect(W/2-70,24,140,10);c.fillStyle='#5be7a9';c.fillRect(W/2-70,24,140*r,10);
+      c.fillStyle='#fff';c.font='800 15px "Baloo 2",system-ui,sans-serif';c.textAlign='center';c.fillText(s.k==='circle'?'↻ Dessine des cercles !':'〰 Fais des zigzags !',W/2,16);}
+    else{const r=ease((u-dur)/.5);const p=f(dur);fx=p[0]+(hx+40-p[0])*r;fy=p[1]+(ly-70-p[1])*r;}
+  } else if(s.k==='bonus'){
+    const bx=gx-70,by=gy-20, vis=t>.5&&t<2.4, pris=t>=1.7;
+    if(vis){c.save();c.globalAlpha=pris?Math.max(0,1-(t-1.7)/.4):1;const rr=pris?24+(t-1.7)*50:24;c.fillStyle='rgba(255,209,102,.35)';c.beginPath();c.arc(bx,by,rr+8,0,7);c.fill();
+      c.fillStyle='#ffd166';c.strokeStyle='#fff';c.lineWidth=3;c.beginPath();c.arc(bx,by,rr,0,7);c.fill();c.stroke();c.restore();
+      if(pris&&t<2.4){c.fillStyle='#ffd166';c.font='800 22px "Baloo 2",system-ui,sans-serif';c.textAlign='center';c.fillText('+0,05',bx,by-38-(t-1.7)*20);}}
+    const q=ease((t-1.1)/.5)*(t<2.1?1:Math.max(0,1-(t-2.1)/.5)); fx=W-40+(bx-(W-40))*q; fy=H-30+(by-(H-30))*q; app=Math.max(0,1-Math.abs(t-1.7)/.12);
+  }
+  if(trail.length>1){c.lineCap='round';for(let j=1;j<trail.length;j++){const a=j/trail.length;c.strokeStyle=`rgba(255,209,102,${a*.85})`;c.lineWidth=3+8*a;c.beginPath();c.moveTo(...trail[j-1]);c.lineTo(...trail[j]);c.stroke();}}
+  if(app>0){c.fillStyle=`rgba(255,255,255,${.35*app})`;c.beginPath();c.arc(fx,fy,14+18*(1-app)+10*app,0,7);c.fill();}
+  dessinDoigt(c,fx,fy,app);
+}
+$('#tuSuiv').onclick=()=>{if(TU.i===TUTO.length-1)fermerTuto();else tutoEtape(TU.i+1);};
+$('#tuPrec').onclick=()=>tutoEtape(TU.i-1);
+$('#tuPasser').onclick=fermerTuto;
+$('#rgTuto').onclick=()=>ouvrirTuto();
+$('#aideTuto').onclick=()=>ouvrirTuto();
+
 let AIDE_SUITE=null;
 $('#aideOk').onclick=()=>{const f=AIDE_SUITE;AIDE_SUITE=null;if(f)f();else goAccueil();};
 function renderRecords(){
