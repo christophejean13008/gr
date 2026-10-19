@@ -217,6 +217,9 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 #classement .cl span{overflow:hidden;text-overflow:ellipsis}
 #classement .cv{color:#ddd;font-weight:700}
 #classement.ferme .cb{display:none}
+#classement .cn{display:flex;gap:2px;margin:2px 0 1px}
+#classement .cn button{flex:1;padding:1px 0;border-radius:6px;font-size:.56rem;font-weight:800;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;text-shadow:none;min-width:0}
+#classement .cn button.on{background:linear-gradient(135deg,#ff4fa3,#a24bff);border-color:#fff}
 @media (max-aspect-ratio:1/1){#sAccueil .brand{align-self:stretch;margin-top:0;padding-left:142px;min-height:228px;display:flex;flex-direction:column;justify-content:center}#sAccueil .brand h1{font-size:2.35rem;line-height:1.05}#sAccueil .brand .logo{font-size:2.6rem}#sAccueil .brand .sub{font-size:.85rem}}
 #version{position:absolute;top:calc(max(10px,env(safe-area-inset-top)) + 46px);right:12px;width:42px;text-align:center;font-size:.62rem;color:rgba(200,200,210,.6);z-index:3;pointer-events:none}
 #cadenas.tout{background:linear-gradient(135deg,#ffd166,#ffb703);box-shadow:0 0 14px rgba(255,209,102,.8)}
@@ -246,7 +249,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <!-- ACCUEIL -->
 <div id="sAccueil" class="screen on">
   <button id="cadenas" title="Code">🔒</button>
-  <div id="version">v1.9</div>
+  <div id="version">v2.0</div>
   <div id="classement"><div class="ct">🏆 Classement ▾</div><div class="cb"></div></div>
   <div class="brand"><div class="soutien"><a class="pill" id="btMail" href="mailto:chris333j@yahoo.fr?subject=Rythmique%20Star">✉️ M'écrire</a><a class="pill" id="btInstall" href="#" style="display:none">📲 Installer l'appli</a><a class="pill cafe" id="btCafe" href="#" target="_blank" rel="noopener">☕ Offrir un café</a></div><div class="logo">🎀</div><h1>Rythmique <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
   <label class="field">Ton prénom<input id="inNom" maxlength="14" placeholder="Prénom" autocomplete="off"></label>
@@ -2469,7 +2472,7 @@ function gagnantsDe(list){const L=list.filter(r=>!r.perturb&&isFinite(r.total));
 function finPartie(){
   const g=GAME; if(g.done)return; g.done=true; stopAudio(g,1.5); GAME_ST_PX=g.st;
   const res=computeFinal(g);
-  if(g.classe&&!res.abandon&&isFinite(res.total)&&res.total>0)envoyerScore(g.nom||'Moi',res.total);
+  if(g.classe&&!res.abandon&&isFinite(res.total)&&res.total>0)envoyerScore(g.nom||'Moi',res.total,g.surv?'':g.niv);
   if(!g.demo&&!g.perturbMode)ambianceFin(g,res);
   if(!g.demo)journaliser(g,res);
   DERNIER={total:res.total,choreo:g.choreo,buffer:g.music.buffer,leo:g.leo,design:g.design,deco:g.main.deco,rec:g.rec,els:g.els,nom:g.nom,coop:g.coop?{n:g.team.length,ti:g.tidx,ox:g.main.opt.ox,oz:g.main.opt.oz}:null,ghosts:[...g.ghosts.values()].map((v,i)=>({leo:v.gym.leoId,design:v.gym.opt.design,drops:v.drops||[],nom:v.nom,ox:v.gym.opt.ox,oz:v.gym.opt.oz,ti:v.gym.opt.ti,deco:v.gym.deco}))};
@@ -3185,6 +3188,10 @@ function clesPeriode(d=new Date()){
   const a=new Date(t.getFullYear(),0,4),w=1+Math.round(((t-a)/864e5-3+((a.getDay()+6)%7))/7);
   return {total:'total',mois:'m'+j.slice(0,7),sem:`s${t.getFullYear()}-${z(w)}`,jour:'j'+j};
 }
+/* classement par niveau : rs_top/<période>_<niveau> (en plus du classement « tous niveaux » rs_top/<période>) */
+const NIV_CLS=[['','Tous'],['decouverte','Déc.'],['federale','Féd.'],['elite','Élite']];
+const cleNiv=(c,niv)=>niv?c+'_'+niv:c;
+function clesToutes(d){const k=clesPeriode(d),L=[];for(const [p] of PERIODES)for(const [n] of NIV_CLS)L.push(cleNiv(k[p],n));return L;}
 const cleNom=n=>String(n).trim().slice(0,20).replace(/[.$#\[\]\/]/g,'_')||'Moi';
 async function fbMeilleur(per,nom,v){
   const u=`${FB_URL}/rs_top/${encodeURIComponent(per)}/${encodeURIComponent(nom)}.json`;
@@ -3258,23 +3265,24 @@ async function viderFile1(){
   for(;;){
     const q=store.get('rs_top_q',[]); if(!q.length)return; const it=q[0];
     const k=clesPeriode(new Date(it.ts));
-    for(const [p] of PERIODES)await fbMeilleur(k[p],it.nom,it.v);   // erreur = on garde la file pour plus tard
+    for(const [p] of PERIODES){await fbMeilleur(k[p],it.nom,it.v); if(it.niv)await fbMeilleur(cleNiv(k[p],it.niv),it.nom,it.v);}   // erreur = on garde la file pour plus tard
     store.set('rs_top_q',store.get('rs_top_q',[]).filter(x=>x.id!==it.id));
   }
 }
-function envoyerScore(nom,total){
-  const v=Math.round(total*1000)/1000,n=cleNom(nom),k=clesPeriode();
+function envoyerScore(nom,total,niv){
+  const v=Math.round(total*1000)/1000,n=cleNom(nom),k=clesPeriode(); niv=NIV_CLS.some(x=>x[0]&&x[0]===niv)?niv:'';
   const loc=store.get('rs_top_loc',{});           // copie locale (affichée si pas d'internet / pas de base)
-  for(const [p] of PERIODES){const t=loc[k[p]]||(loc[k[p]]={});if(!(t[n]>=v))t[n]=v;}
-  for(const c of Object.keys(loc))if(!Object.values(k).includes(c))delete loc[c];
+  for(const [p] of PERIODES)for(const c of [k[p],niv?cleNiv(k[p],niv):null]){if(!c)continue;const t=loc[c]||(loc[c]={});if(!(t[n]>=v))t[n]=v;}
+  const ok=clesToutes(); for(const c of Object.keys(loc))if(!ok.includes(c))delete loc[c];
   store.set('rs_top_loc',loc);
-  if(FB_URL){const q=store.get('rs_top_q',[]);q.push({nom:n,v,ts:Date.now(),id:Math.random().toString(36).slice(2)});store.set('rs_top_q',q.slice(-30));viderFile();}
+  if(FB_URL){const q=store.get('rs_top_q',[]);q.push({nom:n,v,niv,ts:Date.now(),id:Math.random().toString(36).slice(2)});store.set('rs_top_q',q.slice(-30));viderFile();}
 }
 let CLS_CACHE=null,CLS_T=0;
-async function lireClassement(){
+let CLS_NIV=store.get('rs_cls_niv',null);
+async function lireClassement(niv){
   const k=clesPeriode(),out={};
   await Promise.all(PERIODES.map(async([p])=>{
-    const r=await fetch(`${FB_URL}/rs_top/${encodeURIComponent(k[p])}.json?orderBy=%22$value%22&limitToLast=3`);
+    const r=await fetch(`${FB_URL}/rs_top/${encodeURIComponent(cleNiv(k[p],niv))}.json?orderBy=%22$value%22&limitToLast=3`);
     if(!r.ok)throw new Error('fb '+r.status); out[p]=Object.entries(await r.json()||{});
   }));
   return out;
@@ -3282,15 +3290,18 @@ async function lireClassement(){
 async function renderClassement(){
   const box=$('#classement'); if(!box)return; const cb=box.querySelector('.cb');
   const k=clesPeriode(); let data=null,src='';
+  const niv=CLS_NIV!=null&&NIV_CLS.some(x=>x[0]===CLS_NIV)?CLS_NIV:(NIV_CLS.some(x=>x[0]===S.niv)?S.niv:'');
+  if(!CLS_CACHE||CLS_CACHE.niv!==niv)CLS_CACHE=null;
   if(FB_URL){
-    try{ if(!CLS_CACHE||Date.now()-CLS_T>20000){CLS_CACHE=await lireClassement();CLS_T=Date.now();} data=CLS_CACHE; }catch(e){src='hors ligne';}
+    try{ if(!CLS_CACHE||Date.now()-CLS_T>20000){CLS_CACHE={niv,d:await lireClassement(niv)};CLS_T=Date.now();} data=CLS_CACHE.d; }catch(e){src='hors ligne';}
   }
-  if(!data){const loc=store.get('rs_top_loc',{});data={};for(const [p] of PERIODES)data[p]=Object.entries(loc[k[p]]||{});if(!FB_URL)src='cet appareil';}
+  if(!data){const loc=store.get('rs_top_loc',{});data={};for(const [p] of PERIODES)data[p]=Object.entries(loc[cleNiv(k[p],niv)]||{});if(!FB_URL)src='cet appareil';}
   const med=['🥇','🥈','🥉'];
-  cb.innerHTML=PERIODES.map(([p,lib])=>{
+  cb.innerHTML=`<div class="cn">${NIV_CLS.map(([n,l])=>`<button data-cn="${n}" class="${n===niv?'on':''}">${l}</button>`).join('')}</div>`+PERIODES.map(([p,lib])=>{
     const L=(data[p]||[]).sort((a,b)=>b[1]-a[1]).slice(0,3);
     return `<div class="cp">${lib}</div>`+(L.length?L.map(([n,v],i)=>`<div class="cl"><span>${med[i]} ${esc(n)}</span><b class="cv">${fmt(v,2)}</b></div>`).join(''):'<div class="cl"><span style="opacity:.6">—</span></div>');
   }).join('')+(src?`<div style="opacity:.55;text-align:center;margin-top:3px">(${src})</div>`:'');
+  cb.querySelectorAll('[data-cn]').forEach(b=>b.onclick=e=>{e.stopPropagation();CLS_NIV=b.dataset.cn;store.set('rs_cls_niv',CLS_NIV);CLS_CACHE=null;renderClassement();});
 }
 $('#classement .ct').onclick=()=>{const b=$('#classement');b.classList.toggle('ferme');store.set('rs_cls_ferme',b.classList.contains('ferme'));};
 if(store.get('rs_cls_ferme',false))$('#classement').classList.add('ferme');
@@ -3596,12 +3607,13 @@ async function adminModal(vue='menu'){
       const p=b.dataset.raz,lib=p==='defi'?'Défi du jour':PERIODES.find(x=>x[0]===p)[1],cle=p==='defi'?clesPeriode().jour:clesPeriode()[p];
       if(!confirm(`Effacer le classement « ${lib} » pour tout le monde ?`))return;
       if(p==='defi'){const l=store.get('rs_defi_loc',{});delete l[cle];store.set('rs_defi_loc',l);}else{const loc=store.get('rs_top_loc',{});delete loc[cle];store.set('rs_top_loc',loc);}
-      const ok=await effacer((p==='defi'?'rs_defi/':'rs_top/')+encodeURIComponent(cle));
+      let ok=await effacer((p==='defi'?'rs_defi/':'rs_top/')+encodeURIComponent(cle));
+      if(p!=='defi'){const loc=store.get('rs_top_loc',{});for(const [n] of NIV_CLS)if(n){delete loc[cleNiv(cle,n)];ok=await effacer('rs_top/'+encodeURIComponent(cleNiv(cle,n)))&&ok;}store.set('rs_top_loc',loc);}
       CLS_CACHE=null; renderClassement(); msg(ok?`✅ Classement « ${lib} » remis à zéro.`:'⚠️ Pas de connexion à la base : réessaie plus tard.',ok);
     });
     $('#adRetirer').onclick=async()=>{const n=cleNom($('#adPseudo').value);if(!$('#adPseudo').value.trim())return;
       if(!confirm(`Retirer « ${n} » de tous les classements ?`))return; const k=clesPeriode(); let ok=true;
-      for(const [p] of PERIODES)ok=await effacer('rs_top/'+encodeURIComponent(k[p]),[n])&&ok;
+      for(const c of clesToutes())ok=await effacer('rs_top/'+encodeURIComponent(c),[n])&&ok;
       ok=await effacer('rs_defi/'+encodeURIComponent(k.jour),[n])&&ok;
       const loc=store.get('rs_top_loc',{});for(const c of Object.keys(loc))delete loc[c][n];store.set('rs_top_loc',loc);
       CLS_CACHE=null;renderClassement();msg(ok?`✅ « ${n} » a été retiré des classements.`:'⚠️ Pas de connexion à la base.',ok);};
