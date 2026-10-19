@@ -218,7 +218,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 #classement .cv{color:#ddd;font-weight:700}
 #classement.ferme .cb{display:none}
 #classement .cn{display:flex;gap:2px;margin:2px 0 1px}
-#classement .cn button{flex:1;padding:1px 0;border-radius:6px;font-size:.56rem;font-weight:800;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;text-shadow:none;min-width:0}
+#classement .cn button{flex:1;padding:1px 0;border-radius:6px;font-size:.52rem;font-weight:800;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;text-shadow:none;min-width:0}
 #classement .cn button.on{background:linear-gradient(135deg,#ff4fa3,#a24bff);border-color:#fff}
 @media (max-aspect-ratio:1/1){#sAccueil .brand{align-self:stretch;margin-top:0;padding-left:142px;min-height:228px;display:flex;flex-direction:column;justify-content:center}#sAccueil .brand h1{font-size:2.35rem;line-height:1.05}#sAccueil .brand .logo{font-size:2.6rem}#sAccueil .brand .sub{font-size:.85rem}}
 #version{position:absolute;top:calc(max(10px,env(safe-area-inset-top)) + 46px);right:12px;width:42px;text-align:center;font-size:.62rem;color:rgba(200,200,210,.6);z-index:3;pointer-events:none}
@@ -249,7 +249,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <!-- ACCUEIL -->
 <div id="sAccueil" class="screen on">
   <button id="cadenas" title="Code">🔒</button>
-  <div id="version">v2.0</div>
+  <div id="version">v2.2</div>
   <div id="classement"><div class="ct">🏆 Classement ▾</div><div class="cb"></div></div>
   <div class="brand"><div class="soutien"><a class="pill" id="btMail" href="mailto:chris333j@yahoo.fr?subject=Rythmique%20Star">✉️ M'écrire</a><a class="pill" id="btInstall" href="#" style="display:none">📲 Installer l'appli</a><a class="pill cafe" id="btCafe" href="#" target="_blank" rel="noopener">☕ Offrir un café</a></div><div class="logo">🎀</div><h1>Rythmique <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
   <label class="field">Ton prénom<input id="inNom" maxlength="14" placeholder="Prénom" autocomplete="off"></label>
@@ -2157,6 +2157,10 @@ function bonusFin(ok){
     bn.ok++; bn.serie++; bn.best=Math.max(bn.best,bn.serie); bn.lvl++;
     const mult=Math.min(3,1+.25*(bn.serie-1)), pts=(bn.kind==='etoile'?.08:.05)*mult*(CFG.bonusMult||1);
     g.st.bonus=(g.st.bonus||0)+pts;
+    if(g.surv&&!g.done){const v=g.surv; v.bnc=(v.bnc||0)+1;
+      if(v.bnc>=10){v.bnc=0; if(v.vies<VIES_MAX){v.vies++;popup('❤️ +1 cœur !','#ff6b9d','10 bonus attrapés');dire('Un cœur de plus, bravo !',1);try{navigator.vibrate&&navigator.vibrate([60,40,60]);}catch(e){}}
+        else popup('❤️ Cœurs au maximum','#ff6b9d','');}
+      afficherVies(g);}
     if([3,6,10].includes(bn.serie))dire(alea(bn.kind==='etoile'?['Elle attrape toutes les étoiles !','Quelle adresse, les étoiles en série !']:['Bonus en série !','Elle ne rate aucun bonus !']));
     const f=document.createElement('div'); f.className='bnPlus'; f.style.left=c.x+'px'; f.style.top=c.y+'px';
     f.textContent=`+${fmt(pts,2)}${bn.serie>1?' · série ×'+bn.serie:''}`; jeuEl.appendChild(f); setTimeout(()=>f.remove(),1000);
@@ -2537,14 +2541,17 @@ async function demarrerSurvie(){
     const ch=genSurvie(mus,S.engin);
     lancerPartie({choreo:ch,music:mus,nom:S.nom||'Moi',leo:S.leo,design:S.engDesign[S.engin],onFin:()=>{}});
     const g=GAME; if(g){
-      g.modeNom='Survie'; g.classe=false; g.surv={m0:0,w0:g.startAt,r:1,vies:3,next:g.startAt+20,palier:0};
+      g.modeNom='Survie'; g.classe=false; g.surv={m0:0,w0:g.startAt,r:1,vies:3,next:g.startAt+20,palier:0,bnc:0};
+      // en survie, les bonus apparaissent à tous les niveaux : 10 attrapés = 1 cœur en plus
+      if(!g.bn&&CFG.bonus!==false)g.bn={kind:S.niv==='elite'?'etoile':'rond',lvl:0,serie:0,best:0,ok:0,tot:0,cur:null,next:g.first+3+Math.random()*3};
       try{g.src.loop=true;g.src.loopStart=mus.offset;g.src.loopEnd=mus.finAt;}catch(e){}
       afficherVies(g);
     }
   }catch(e){alert('Problème : '+e.message);}
   btn.disabled=false; btn.textContent='C\'est parti !';
 }
-function afficherVies(g,perdu){const v=g.surv,el=$('#hVies');el.style.display='block';el.innerHTML='❤️'.repeat(v.vies)+'🖤'.repeat(3-v.vies)+`<small>⚡ vitesse ×${v.r.toFixed(2).replace('.',',')}</small>`;if(perdu){el.classList.remove('perd');void el.offsetWidth;el.classList.add('perd');}}
+const VIES_MAX=5;
+function afficherVies(g,perdu){const v=g.surv,el=$('#hVies');el.style.display='block';el.innerHTML='❤️'.repeat(Math.max(0,v.vies))+'🖤'.repeat(Math.max(0,3-v.vies))+`<small>⚡ vitesse ×${v.r.toFixed(2).replace('.',',')}${g.bn?` · ${g.bn.kind==='etoile'?'⭐':'🟡'} ${v.bnc||0}/10`:''}</small>`;if(perdu){el.classList.remove('perd');void el.offsetWidth;el.classList.add('perd');}}
 function survieFrame(g){
   const v=g.surv,now=AC.currentTime; if(g.done||now<v.next)return;
   const m=v.m0+(now-v.w0)*v.r; v.m0=m; v.w0=now; v.r=Math.min(1.6,v.r+(CFG.survieAcc||6)/100); v.next=now+20; v.palier++;
@@ -2563,6 +2570,7 @@ function finSurvie(g){
   const tenu=Math.max(0,AC.currentTime-g.startAt), st=g.st, ok=st.count[0]+st.count[1]+st.count[2], parf=st.count[0];
   const recs=store.get('rs_survie_rec',{}),k=cleNom(g.nom||'Moi'),old=recs[k],nouveau=!old||tenu>old.t;
   if(nouveau){recs[k]={t:tenu,n:ok,v:g.surv.r};store.set('rs_survie_rec',recs);}
+  if(tenu>=5&&!g.perturbMode)envoyerScore(g.nom||'Moi',Math.round(tenu),'survie');   // classement survie : temps tenu
   journaliser(g,{total:null});
   const vit=g.surv.r, nom=g.nom; DERNIER=null;
   hEls.Elem.innerHTML=''; hEls.Prompt.innerHTML='';
@@ -3189,7 +3197,8 @@ function clesPeriode(d=new Date()){
   return {total:'total',mois:'m'+j.slice(0,7),sem:`s${t.getFullYear()}-${z(w)}`,jour:'j'+j};
 }
 /* classement par niveau : rs_top/<période>_<niveau> (en plus du classement « tous niveaux » rs_top/<période>) */
-const NIV_CLS=[['','Tous'],['decouverte','Déc.'],['federale','Féd.'],['elite','Élite']];
+const NIV_CLS=[['','Tous'],['decouverte','Déc.'],['federale','Féd.'],['elite','Élite'],['survie','💀']];   // survie : temps tenu en secondes
+const tempsCourt=v=>{v=Math.round(v);return Math.floor(v/60)+':'+String(v%60).padStart(2,'0');};
 const cleNiv=(c,niv)=>niv?c+'_'+niv:c;
 function clesToutes(d){const k=clesPeriode(d),L=[];for(const [p] of PERIODES)for(const [n] of NIV_CLS)L.push(cleNiv(k[p],n));return L;}
 const cleNom=n=>String(n).trim().slice(0,20).replace(/[.$#\[\]\/]/g,'_')||'Moi';
@@ -3265,14 +3274,14 @@ async function viderFile1(){
   for(;;){
     const q=store.get('rs_top_q',[]); if(!q.length)return; const it=q[0];
     const k=clesPeriode(new Date(it.ts));
-    for(const [p] of PERIODES){await fbMeilleur(k[p],it.nom,it.v); if(it.niv)await fbMeilleur(cleNiv(k[p],it.niv),it.nom,it.v);}   // erreur = on garde la file pour plus tard
+    for(const [p] of PERIODES){if(it.niv!=='survie')await fbMeilleur(k[p],it.nom,it.v); if(it.niv)await fbMeilleur(cleNiv(k[p],it.niv),it.nom,it.v);}   // erreur = on garde la file pour plus tard
     store.set('rs_top_q',store.get('rs_top_q',[]).filter(x=>x.id!==it.id));
   }
 }
 function envoyerScore(nom,total,niv){
   const v=Math.round(total*1000)/1000,n=cleNom(nom),k=clesPeriode(); niv=NIV_CLS.some(x=>x[0]&&x[0]===niv)?niv:'';
   const loc=store.get('rs_top_loc',{});           // copie locale (affichée si pas d'internet / pas de base)
-  for(const [p] of PERIODES)for(const c of [k[p],niv?cleNiv(k[p],niv):null]){if(!c)continue;const t=loc[c]||(loc[c]={});if(!(t[n]>=v))t[n]=v;}
+  for(const [p] of PERIODES)for(const c of [niv==='survie'?null:k[p],niv?cleNiv(k[p],niv):null]){if(!c)continue;const t=loc[c]||(loc[c]={});if(!(t[n]>=v))t[n]=v;}
   const ok=clesToutes(); for(const c of Object.keys(loc))if(!ok.includes(c))delete loc[c];
   store.set('rs_top_loc',loc);
   if(FB_URL){const q=store.get('rs_top_q',[]);q.push({nom:n,v,niv,ts:Date.now(),id:Math.random().toString(36).slice(2)});store.set('rs_top_q',q.slice(-30));viderFile();}
@@ -3299,7 +3308,7 @@ async function renderClassement(){
   const med=['🥇','🥈','🥉'];
   cb.innerHTML=`<div class="cn">${NIV_CLS.map(([n,l])=>`<button data-cn="${n}" class="${n===niv?'on':''}">${l}</button>`).join('')}</div>`+PERIODES.map(([p,lib])=>{
     const L=(data[p]||[]).sort((a,b)=>b[1]-a[1]).slice(0,3);
-    return `<div class="cp">${lib}</div>`+(L.length?L.map(([n,v],i)=>`<div class="cl"><span>${med[i]} ${esc(n)}</span><b class="cv">${fmt(v,2)}</b></div>`).join(''):'<div class="cl"><span style="opacity:.6">—</span></div>');
+    return `<div class="cp">${lib}</div>`+(L.length?L.map(([n,v],i)=>`<div class="cl"><span>${med[i]} ${esc(n)}</span><b class="cv">${niv==='survie'?tempsCourt(v):fmt(v,2)}</b></div>`).join(''):'<div class="cl"><span style="opacity:.6">—</span></div>');
   }).join('')+(src?`<div style="opacity:.55;text-align:center;margin-top:3px">(${src})</div>`:'');
   cb.querySelectorAll('[data-cn]').forEach(b=>b.onclick=e=>{e.stopPropagation();CLS_NIV=b.dataset.cn;store.set('rs_cls_niv',CLS_NIV);CLS_CACHE=null;renderClassement();});
 }
