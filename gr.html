@@ -261,7 +261,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <!-- ACCUEIL -->
 <div id="sAccueil" class="screen on">
   <button id="cadenas" title="Code">🔒</button>
-  <div id="version">v2.4</div>
+  <div id="version">v2.5</div>
   <div id="classement"><div class="ct">🏆 Classement ▾</div><div class="cb"></div></div>
   <div class="brand"><div class="soutien"><a class="pill" id="btMail" href="mailto:chris333j@yahoo.fr?subject=Rythmique%20Star">✉️ M'écrire</a><a class="pill" id="btInstall" href="#" style="display:none">📲 Installer l'appli</a><a class="pill cafe" id="btCafe" href="#" target="_blank" rel="noopener">☕ Offrir un café</a></div><div class="logo">🎀</div><h1>Rythmique <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
   <label class="field">Ton prénom<input id="inNom" maxlength="14" placeholder="Prénom" autocomplete="off"></label>
@@ -2562,7 +2562,11 @@ async function demarrerSurvie(){
   if(Date.now()-LANCE<2500)return; LANCE=Date.now();
   const btn=$('#rgGo'); btn.disabled=true; btn.textContent='Préparation…';
   try{
-    getAC(); const mus=await genMusic(MUSIQUES.some(m=>m.id===S.musique)?S.musique:'elan');
+    getAC(); let mus=await getMusicSel();
+    if(!mus.finAt){ // MP3 importé ou musique de gym : on fait boucler un passage d'environ 1'30 calé sur les temps
+      const b4=4*60/mus.bpm, fin=Math.min(mus.dur-1,mus.offset+88), n=Math.max(4,Math.floor((fin-mus.offset)/b4));
+      mus=Object.assign({},mus,{finAt:mus.offset+n*b4});
+    }
     const ch=genSurvie(mus,S.engin);
     lancerPartie({choreo:ch,music:mus,nom:S.nom||'Moi',leo:S.leo,design:S.engDesign[S.engin],onFin:()=>{}});
     const g=GAME; if(g){
