@@ -1,7 +1,7 @@
 /* Rythmique Star – service worker
    - la page du jeu : réseau d'abord (toujours la dernière version), copie de secours si pas de réseau
    - bibliothèques (three.js, PeerJS, polices), modèles 3D et musiques : copie gardée sur le téléphone */
-const CACHE = 'rythmique-star-v3';
+const CACHE = 'rythmique-star-v4';
 const PAGE = 'gr.html';
 
 self.addEventListener('install', e => {
@@ -32,16 +32,17 @@ self.addEventListener('fetch', e => {
     })());
     return;
   }
-  // retouches des modèles : toujours la dernière version si possible
-  if (url.origin === location.origin && /_(retouche|peau)\.png$/.test(url.pathname)) {
+  // modèles 3D et leurs retouches : on vérifie toujours auprès du site s'il y a une nouvelle version
+  // (requête conditionnelle : si rien n'a changé, le site répond « 304 » sans renvoyer le fichier)
+  if (url.origin === location.origin && (/\/modeles\//.test(url.pathname) || /_(retouche|peau)\.png$/.test(url.pathname))) {
     e.respondWith((async () => {
-      try { const r = await fetch(req, { cache: 'no-store' }); if (r.ok) (await caches.open(CACHE)).put(req, r.clone()); return r; }
+      try { const r = await fetch(req, { cache: 'no-cache' }); if (r.ok) (await caches.open(CACHE)).put(req, r.clone()); return r; }
       catch (err) { return (await caches.match(req)) || Response.error(); }
     })());
     return;
   }
   const garder = /unpkg\.com|jsdelivr|fonts\.(googleapis|gstatic)\.com/.test(url.hostname) ||
-    (url.origin === location.origin && /\/(modeles|musiques|sons)\/|\.(png|webmanifest)$/.test(url.pathname));
+    (url.origin === location.origin && /\/(musiques|sons)\/|\.(png|webmanifest)$/.test(url.pathname));
   if (!garder) return;
   e.respondWith((async () => {
     const c = await caches.open(CACHE), hit = await c.match(req);
