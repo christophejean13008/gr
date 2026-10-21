@@ -261,7 +261,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <!-- ACCUEIL -->
 <div id="sAccueil" class="screen on">
   <button id="cadenas" title="Code">🔒</button>
-  <div id="version">v2.7</div>
+  <div id="version">v2.8</div>
   <div id="classement"><div class="ct">🏆 Classement ▾</div><div class="cb"></div></div>
   <div class="brand"><div class="soutien"><a class="pill" id="btMail" href="mailto:chris333j@yahoo.fr?subject=GR%20Star">✉️ M'écrire</a><a class="pill" id="btInstall" href="#" style="display:none">📲 Installer l'appli</a><a class="pill cafe" id="btCafe" href="#" target="_blank" rel="noopener">☕ Offrir un café</a></div><div class="logo">🎀</div><h1>GR <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
   <label class="field">Ton prénom<input id="inNom" maxlength="14" placeholder="Prénom" autocomplete="off"></label>
@@ -3259,15 +3259,18 @@ async function ouvrirDefi(){
     <div class="grid3" style="margin:8px 0"><div><small>Engin</small><b>${E.ico} ${E.nom}</b></div><div><small>Musique</small><b>${esc(M.nom.split(' · ')[0])}</b></div><div><small>Niveau</small><b>Fédérale</b></div></div>
     <div class="lbl">🏆 Classement du jour</div><div id="dfListe"><p class="hint">⏳ Chargement…</p></div>
     <div class="actions"><button id="tmNon">Fermer</button><button class="big" id="dfGo">▶ Relever le défi</button></div>`;
-  $('#tmNon').onclick=fermerTroc; $('#dfGo').onclick=()=>{fermerTroc();lancerDefi();};
+  genMusic(D.mus).catch(()=>{});   // on prépare la musique du défi pendant qu'on lit le classement
+  $('#tmNon').onclick=fermerTroc;
+  $('#dfGo').onclick=async()=>{const b=$('#dfGo');if(b.disabled)return;b.disabled=true;b.textContent='⏳ Préparation…';
+    try{await lancerDefi(true);}finally{fermerTroc();}};
   const {L,src}=await lireDefi(D.cle); const med=['🥇','🥈','🥉'];
   const mien=(store.get('rs_defi_loc',{})[D.cle]||{})[moi];
   $('#dfListe').innerHTML=(L.length?L.map(([n,v],i)=>`<div class="pl"><span>${med[i]||(i+1)+'.'} ${n===moi?'<b>'+esc(n)+'</b> (toi)':esc(n)}</span><b>${fmt(v,2)}</b></div>`).join(''):'<p class="hint">Personne n\'a encore relevé le défi aujourd\'hui. Sois la première !</p>')
     +(mien!=null?`<p class="hint" style="text-align:center">Ton meilleur score aujourd'hui : <b>${fmt(mien,2)}</b></p>`:'')+(src?`<p class="hint" style="text-align:center;opacity:.6">(${src})</p>`:'');
 }
 let LANCE=0;
-async function lancerDefi(){
-  if(Date.now()-LANCE<2500)return; LANCE=Date.now();
+async function lancerDefi(depuisFiche){
+  if(!depuisFiche&&Date.now()-LANCE<2500)return; LANCE=Date.now();
   const D=defiDuJour();
   try{
     getAC(); const mus=await genMusic(D.mus);
