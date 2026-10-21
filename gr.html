@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#12081f">
-<title>Rythmique Star</title>
+<title>GR Star</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Rythmique Star">
+<meta name="apple-mobile-web-app-title" content="GR Star">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
 <style>
@@ -261,9 +261,9 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <!-- ACCUEIL -->
 <div id="sAccueil" class="screen on">
   <button id="cadenas" title="Code">🔒</button>
-  <div id="version">v2.5</div>
+  <div id="version">v2.6</div>
   <div id="classement"><div class="ct">🏆 Classement ▾</div><div class="cb"></div></div>
-  <div class="brand"><div class="soutien"><a class="pill" id="btMail" href="mailto:chris333j@yahoo.fr?subject=Rythmique%20Star">✉️ M'écrire</a><a class="pill" id="btInstall" href="#" style="display:none">📲 Installer l'appli</a><a class="pill cafe" id="btCafe" href="#" target="_blank" rel="noopener">☕ Offrir un café</a></div><div class="logo">🎀</div><h1>Rythmique <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
+  <div class="brand"><div class="soutien"><a class="pill" id="btMail" href="mailto:chris333j@yahoo.fr?subject=GR%20Star">✉️ M'écrire</a><a class="pill" id="btInstall" href="#" style="display:none">📲 Installer l'appli</a><a class="pill cafe" id="btCafe" href="#" target="_blank" rel="noopener">☕ Offrir un café</a></div><div class="logo">🎀</div><h1>GR <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
   <label class="field">Ton prénom<input id="inNom" maxlength="14" placeholder="Prénom" autocomplete="off"></label>
   <div id="rdvBox" class="card rdv" style="display:none"></div>
   <div class="acc3">
@@ -876,7 +876,7 @@ const camera=new THREE.PerspectiveCamera(50,1,.1,100); camera.position.set(0,1.8
 const camLook=new THREE.Vector3(0,1.2,0);
 /* ======================= Salles de compétition (décors inspirés, sans logos officiels) ======================= */
 const SALLES={
-  star:{nom:'⭐ Rythmique Star',lieu:'La salle du jeu',bg:'#12081f',sol:'#1d1030',tapis:['#4d38bd','#2a1d7a'],ligne:'#ffffff',texte:'RYTHMIQUE STAR',foule:'#1a0d2c',points:['#ff4fa3','#ffd166','#4cc9f0','#b388ff','#ffffff','#5be7a9'],dens:1600,band:['#ff4fa3','#8f6bff'],hemi:['#fff4ff','#2a1840',1.25],rim:'#ff7ad9'},
+  star:{nom:'⭐ GR Star',lieu:'La salle du jeu',bg:'#12081f',sol:'#1d1030',tapis:['#4d38bd','#2a1d7a'],ligne:'#ffffff',texte:'GR STAR',foule:'#1a0d2c',points:['#ff4fa3','#ffd166','#4cc9f0','#b388ff','#ffffff','#5be7a9'],dens:1600,band:['#ff4fa3','#8f6bff'],hemi:['#fff4ff','#2a1840',1.25],rim:'#ff7ad9'},
   paris:{nom:'🗼 Paris',lieu:'Jeux olympiques 2024 · Porte de la Chapelle',bg:'#0e1230',sol:'#161b45',tapis:['#3c5bd6','#1e2f8f'],ligne:'#ffffff',texte:'PARIS',foule:'#121638',points:['#c8b6ff','#ff8fc8','#7fd8be','#ffd6a5','#ffffff','#9bb7ff'],dens:1900,band:['#c8b6ff','#7fd8be','#ff8fc8'],hemi:['#f4f2ff','#1b2050',1.3],rim:'#c8b6ff',deco:'tour'},
   tokyo:{nom:'🗾 Tokyo',lieu:'Jeux olympiques 2020 · Ariake',bg:'#0b1430',sol:'#3a2a1c',tapis:['#2f4fb8','#1b2c74'],ligne:'#ffffff',texte:'TOKYO',foule:'#0f1a3a',points:['#ffffff','#4c6ed8','#9fb4ff','#ff5b6e','#dfe6ff'],dens:1500,band:['#1b2c74','#ffffff'],hemi:['#fff8f0','#2a2030',1.35],rim:'#9fb4ff',deco:'damier'},
   rio:{nom:'🌴 Rio de Janeiro',lieu:'Mondiaux 2025 · Parc olympique de Barra',bg:'#082018',sol:'#0f2b22',tapis:['#1f9d6b','#0f6a4a'],ligne:'#ffffff',texte:'RIO',foule:'#0b2a1f',points:['#ffd23f','#2ec4b6','#ffffff','#ff6b35','#5be7a9'],dens:2000,band:['#ffd23f','#1f9d6b','#2e86de'],hemi:['#fffbe8','#103020',1.35],rim:'#ffd23f',deco:'palmiers'},
@@ -3137,13 +3137,13 @@ $('#btInstall').onclick=async e=>{
   e.preventDefault();
   if(INVITE_INSTALL){INVITE_INSTALL.prompt();const r=await INVITE_INSTALL.userChoice.catch(()=>null);if(r&&r.outcome==='accepted')$('#btInstall').style.display='none';INVITE_INSTALL=null;return;}
   const C=$('#tmCorps');$('#trocModal').classList.add('on');
-  C.innerHTML=estIOS?`<div class="lbl" style="text-align:center">📲 Installer Rythmique Star</div>
+  C.innerHTML=estIOS?`<div class="lbl" style="text-align:center">📲 Installer GR Star</div>
     <div class="aide-l"><span class="pt" style="background:#4cc9f0">1</span><div>Ouvre le jeu dans <b>Safari</b>.</div></div>
     <div class="aide-l"><span class="pt" style="background:#ff4fa3">2</span><div>Touche le bouton <b>Partager</b> <span style="font-size:1.3em">⎋</span> (le carré avec une flèche vers le haut, en bas ou en haut de l'écran).</div></div>
     <div class="aide-l"><span class="pt" style="background:#ffd166">3</span><div>Choisis <b>« Sur l'écran d'accueil »</b> puis <b>Ajouter</b>.</div></div>
     <p class="hint" style="text-align:center">L'icône 🎀 apparaît avec tes applis : le jeu s'ouvre en plein écran, sans la barre du navigateur.</p>
     <div class="actions"><button class="big" id="tmNon">OK</button></div>`
-   :`<div class="lbl" style="text-align:center">📲 Installer Rythmique Star</div><p>Dans le menu du navigateur <b>⋮</b>, choisis <b>« Installer l'application »</b> ou <b>« Ajouter à l'écran d'accueil »</b>.</p><div class="actions"><button class="big" id="tmNon">OK</button></div>`;
+   :`<div class="lbl" style="text-align:center">📲 Installer GR Star</div><p>Dans le menu du navigateur <b>⋮</b>, choisis <b>« Installer l'application »</b> ou <b>« Ajouter à l'écran d'accueil »</b>.</p><div class="actions"><button class="big" id="tmNon">OK</button></div>`;
   $('#tmNon').onclick=fermerTroc;
 };
 const FB_URL='https://rythmique-star-default-rtdb.europe-west1.firebasedatabase.app';
@@ -3964,7 +3964,7 @@ async function visuelCrea(nomLeo){
     g.fillStyle='#fff';g.beginPath();g.roundRect?g.roundRect(qx,qy,250,250,18):g.rect(qx,qy,250,250);g.fill();g.fillStyle='#2a0f45';
     for(let r=0;r<n;r++)for(let k=0;k<n;k++)if(q.isDark(r,k))g.fillRect(ox+k*cell,oy+r*cell,cell,cell);qrOk=true;}catch(e){}
   const tx=qrOk?60:W/2,al=qrOk?'left':'center';g.textAlign=al;
-  g.fillStyle='#fff';g.font='700 76px "Dancing Script",cursive';g.fillText('🎀 Rythmique Star',tx,1095);
+  g.fillStyle='#fff';g.font='700 76px "Dancing Script",cursive';g.fillText('🎀 GR Star',tx,1095);
   g.font='700 36px "Baloo 2",system-ui,sans-serif';g.fillStyle='#f3e8ff';
   g.fillText('Le jeu de gymnastique rythmique',tx,1155);g.fillText('gratuit, sans installation 📱',tx,1200);
   g.fillStyle='#ffd166';g.font='800 36px "Baloo 2",system-ui,sans-serif';g.fillText(qrOk?'Crée le tien : scanne le code 👉':'Crée le tien sur :',tx,1258);
@@ -3977,7 +3977,7 @@ async function partagerCrea(){
   let blob; try{blob=await visuelCrea(nomLeo);}catch(e){alert('Impossible de créer l\'image 😕');b.disabled=false;b.textContent=t0;return;}
   b.disabled=false; b.textContent=t0;
   const nomF='justaucorps-'+nomLeo.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\w-]+/g,'_')+'.png', file=new File([blob],nomF,{type:'image/png'}), url=URL.createObjectURL(blob);
-  const texte=`Mon justaucorps « ${nomLeo} » sur Rythmique Star 🎀 Le jeu de gymnastique rythmique gratuit : https://${URL_JEU}`;
+  const texte=`Mon justaucorps « ${nomLeo} » sur GR Star 🎀 Le jeu de gymnastique rythmique gratuit : https://${URL_JEU}`;
   const peut=navigator.canShare&&navigator.canShare({files:[file]});
   const C=$('#tmCorps');$('#trocModal').classList.add('on');
   C.innerHTML=`<div class="lbl" style="text-align:center">📤 Partage ta création !</div>
@@ -3987,7 +3987,7 @@ async function partagerCrea(){
     <p class="hint" style="text-align:center">Une image n'est pas cliquable : le lien est ajouté au message quand tu partages, et le QR code se scanne avec un téléphone.</p>`;
   $('#tmNon').onclick=fermerTroc;
   $('#cpLien').onclick=async()=>{try{await navigator.clipboard.writeText(texte);$('#cpLien').textContent='✓ Lien copié';}catch(e){prompt('Copie ce texte :',texte);}};
-  if(peut)$('#cpPart').onclick=()=>navigator.share({files:[file],title:'Rythmique Star',text:texte}).catch(()=>{});
+  if(peut)$('#cpPart').onclick=()=>navigator.share({files:[file],title:'GR Star',text:texte}).catch(()=>{});
 }
 $('#crPartager').onclick=partagerCrea;
 $('#vsFile').addEventListener('change',e=>{
@@ -4143,7 +4143,7 @@ function veilleSalon(on){
   if(on){
     if(navigator.wakeLock&&!SALON.wl)navigator.wakeLock.request('screen').then(l=>{SALON.wl=l;l.addEventListener('release',()=>{if(SALON.wl===l)SALON.wl=null;});}).catch(()=>{});
     if(!SALON.veille){SALON.veille=new Audio(wavURL(()=>0,2,8000));SALON.veille.loop=true;
-      try{if('mediaSession' in navigator)navigator.mediaSession.metadata=new MediaMetadata({title:'Salon Rythmique Star',artist:'En attente des joueuses'});}catch(e){}}
+      try{if('mediaSession' in navigator)navigator.mediaSession.metadata=new MediaMetadata({title:'Salon GR Star',artist:'En attente des joueuses'});}catch(e){}}
     if(SALON.veille.paused){const pr=SALON.veille.play();if(pr)pr.catch(()=>{});}
   } else {
     if(SALON.veille&&!SALON.veille.paused)SALON.veille.pause();
@@ -4175,8 +4175,8 @@ function quandTxt(q){if(!q)return 'maintenant';const d=new Date(q);if(isNaN(d))r
   if(d.toDateString()===auj.toDateString())return 'aujourd\'hui à '+h; if(d.toDateString()===dem.toDateString())return 'demain à '+h;
   return d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})+' à '+h;}
 async function partager(code,mode,quand){
-  const url=lienSalle(code,mode,quand), txt=`🎀 Rythmique Star : ${S.nom||'Une amie'} t'invite à une partie ${MODES_TXT[mode]||''} ${quandTxt(quand)} ! Salle ${code}. Touche le lien pour la rejoindre :`;
-  if(navigator.share){try{await navigator.share({title:'Rythmique Star',text:txt,url});return 'ok';}catch(e){if(e&&e.name==='AbortError')return 'annule';}}
+  const url=lienSalle(code,mode,quand), txt=`🎀 GR Star : ${S.nom||'Une amie'} t'invite à une partie ${MODES_TXT[mode]||''} ${quandTxt(quand)} ! Salle ${code}. Touche le lien pour la rejoindre :`;
+  if(navigator.share){try{await navigator.share({title:'GR Star',text:txt,url});return 'ok';}catch(e){if(e&&e.name==='AbortError')return 'annule';}}
   $('#tmCorps').innerHTML=`<div class="lbl">📤 Envoyer l'invitation</div><p style="user-select:text;-webkit-user-select:text;background:rgba(0,0,0,.25);padding:10px;border-radius:12px;font-size:.9rem">${esc(txt)}<br>${esc(url)}</p>
     <div class="actions" style="flex-wrap:wrap"><a class="filebtn" style="flex:1;text-decoration:none;background:#25d366" target="_blank" href="https://wa.me/?text=${encodeURIComponent(txt+' '+url)}">WhatsApp</a><a class="filebtn" style="flex:1;text-decoration:none" href="sms:?&body=${encodeURIComponent(txt+' '+url)}">SMS</a><button id="tmCopie" style="flex:1">📋 Copier</button></div>
     <div class="actions"><button class="big" id="tmNon">Fermer</button></div>`;
@@ -4347,7 +4347,7 @@ function recFrame(){
     c.fillStyle='#12081f';c.fillRect(0,0,W,H);c.drawImage(canvas3d,(sw-cw)/2,(sh-ch)/2,cw,ch,0,0,W,H);
   } else c.drawImage(canvas3d,0,0,W,H);
   const gt=c.createLinearGradient(0,0,0,110*u);gt.addColorStop(0,'rgba(18,8,31,.75)');gt.addColorStop(1,'rgba(18,8,31,0)');c.fillStyle=gt;c.fillRect(0,0,W,110*u);
-  c.textAlign='left';c.textBaseline='top';c.fillStyle='#fff';c.font=`700 ${30*u}px "Dancing Script",cursive`;c.fillText('🎀 Rythmique Star',22*u,18*u);
+  c.textAlign='left';c.textBaseline='top';c.fillStyle='#fff';c.font=`700 ${30*u}px "Dancing Script",cursive`;c.fillText('🎀 GR Star',22*u,18*u);
   c.font=`800 ${30*u}px system-ui,sans-serif`;c.textAlign='right';c.fillText(RP?RP.d.nom:'',W-22*u,20*u);
   if(RP){const ec=$('#rpElem'),el=ec.lastChild&&ec.lastChild.nodeType===3?ec.lastChild.textContent:ec.textContent,j=$('#rpJudge').textContent;
     if(el){c.textAlign='center';c.font=`700 ${24*u}px system-ui,sans-serif`;c.fillStyle='rgba(18,8,31,.55)';const tw=c.measureText(el).width+30*u;c.fillRect((W-tw)/2,H-120*u,tw,40*u);c.fillStyle='#fff';c.textBaseline='middle';c.fillText(el,W/2,H-100*u);}
@@ -4368,7 +4368,7 @@ function carteFin(R){
   const g=c.createLinearGradient(0,0,W,H);g.addColorStop(0,'#2a0f45');g.addColorStop(1,'#7a1f5c');c.fillStyle=g;c.fillRect(0,0,W,H);
   c.globalAlpha=a;c.textAlign='center';c.textBaseline='middle';
   for(let i=0;i<40;i++){const y=((i*.618+t*.08*(1+i%3))%1)*H;c.fillStyle=['#ffd166','#ff4fa3','#fff','#a24bff'][i%4];c.globalAlpha=a*.6;c.beginPath();c.arc((i*97)%W,y,(2+i%4)*u,0,7);c.fill();}
-  c.globalAlpha=a;c.fillStyle='#fff';c.font=`700 ${84*u}px "Dancing Script",cursive`;c.fillText('🎀 Rythmique Star',W/2,H*.26);
+  c.globalAlpha=a;c.fillStyle='#fff';c.font=`700 ${84*u}px "Dancing Script",cursive`;c.fillText('🎀 GR Star',W/2,H*.26);
   if(R.score!=null){c.fillStyle='#ffd166';c.font=`900 ${96*u}px system-ui,sans-serif`;c.fillText(fmt(R.score,2)+' pts',W/2,H*.42);
     c.fillStyle='#fff';c.font=`700 ${34*u}px system-ui,sans-serif`;c.fillText('Tu fais mieux ? 😏',W/2,H*.42+80*u);}
   c.font=`800 ${40*u}px system-ui,sans-serif`;c.fillText('Le jeu de gymnastique rythmique',W/2,H*.62);
@@ -4397,7 +4397,7 @@ function finVideo(){
       <p class="hint" style="text-align:center">${(blob.size/1048576).toFixed(1)} Mo · ${ext.toUpperCase()}</p>
       <div class="actions">${peutPartager?'<button class="big" id="vdPart">📤 Partager</button>':''}<a class="filebtn" id="vdDl" href="${url}" download="${nomF}" style="text-align:center;text-decoration:none">💾 Enregistrer</a><button id="tmNon">Fermer</button></div>`;
     $('#tmNon').onclick=()=>{fermerTroc();};
-    if(peutPartager)$('#vdPart').onclick=()=>navigator.share({files:[file],title:'Rythmique Star',text:'Regarde mon passage sur Rythmique Star ! 🎀 Joue gratuitement : https://'+URL_JEU}).catch(()=>{});
+    if(peutPartager)$('#vdPart').onclick=()=>navigator.share({files:[file],title:'GR Star',text:'Regarde mon passage sur GR Star ! 🎀 Joue gratuitement : https://'+URL_JEU}).catch(()=>{});
   };try{R.mr.stop();}catch(e){}},600);
 }
 $('#rpVideo').onclick=choisirVideo;
