@@ -233,7 +233,9 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 #classement .cn button{flex:1;padding:1px 0;border-radius:6px;font-size:.48rem;font-weight:800;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;text-shadow:none;min-width:0}
 #classement .cn button.on{background:linear-gradient(135deg,#ff4fa3,#a24bff);border-color:#fff}
 @media (max-aspect-ratio:1/1){#sAccueil .brand{align-self:stretch;margin-top:0;padding-left:142px;min-height:228px;display:flex;flex-direction:column;justify-content:center}#sAccueil .brand h1{font-size:2.35rem;line-height:1.05}#sAccueil .brand .logo{font-size:2.6rem}#sAccueil .brand .sub{font-size:.85rem}}
-#version{position:absolute;top:calc(max(10px,env(safe-area-inset-top)) + 46px);right:12px;width:42px;text-align:center;font-size:.62rem;color:rgba(200,200,210,.6);z-index:3;pointer-events:none}
+[data-go=defi].clignote{animation:defiClig 1.1s ease-in-out infinite}
+@keyframes defiClig{0%,100%{box-shadow:0 0 0 0 rgba(255,209,102,.0);filter:brightness(1);transform:scale(1)}50%{box-shadow:0 0 22px 6px rgba(255,209,102,.85);filter:brightness(1.25);transform:scale(1.04)}}
+#version{position:absolute;top:calc(max(10px,env(safe-area-inset-top)) + 46px);right:6px;min-width:42px;white-space:nowrap;text-align:center;font-size:.62rem;color:rgba(200,200,210,.6);z-index:3;pointer-events:none}
 #cadenas.tout{background:linear-gradient(135deg,#ffd166,#ffb703);box-shadow:0 0 14px rgba(255,209,102,.8)}
 #cadenas.edit{background:linear-gradient(135deg,#4cc9f0,#a24bff);box-shadow:0 0 14px rgba(76,201,240,.7)}
 .carte .clk{position:absolute;bottom:-9px;right:-9px;width:26px;height:26px;border-radius:50%;background:#2a1840;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:.8rem;box-shadow:0 2px 6px rgba(0,0,0,.4)}
@@ -261,7 +263,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <!-- ACCUEIL -->
 <div id="sAccueil" class="screen on">
   <button id="cadenas" title="Code">🔒</button>
-  <div id="version">v2.9</div>
+  <div id="version">version 2.0</div>
   <div id="classement"><div class="ct">🏆 Classement ▾</div><div class="cb"></div></div>
   <div class="brand"><div class="soutien"><a class="pill" id="btMail" href="mailto:chris333j@yahoo.fr?subject=GR%20Star">✉️ M'écrire</a><a class="pill" id="btInstall" href="#" style="display:none">📲 Installer l'appli</a><a class="pill cafe" id="btCafe" href="#" target="_blank" rel="noopener">☕ Offrir un café</a></div><div class="logo">🎀</div><h1>GR <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
   <label class="field">Ton prénom<input id="inNom" maxlength="14" placeholder="Prénom" autocomplete="off"></label>
@@ -1939,14 +1941,14 @@ function gameTime(){
   CLK.T=T; return T;
 }
 
-function lancerPartie({choreo,music,nom,leo,design=null,opponents=[],online=false,demo=false,retour=null,coop=null,perturb=false,vue=null,debut=null,onFin}){
+function lancerPartie({choreo,music,nom,leo,design=null,opponents=[],online=false,demo=false,retour=null,coop=null,perturb=false,vue=null,debut=null,sansEssai=false,onFin}){
   if(PREV){PREV.dispose();PREV=null;PREVKEY='';}
   if(GAME){const old=GAME;old.done=true;stopAudio(old,.05);finirJeu();}   // une partie déjà lancée (double appui) : on la ferme proprement
   if(VICT)fermerVictoire(true);
   if(RP){if(REC)annulerVideo();if(RP.src){try{RP.src.stop();}catch(e){}}RP.main.dispose();RP.gh.forEach(G=>G.dispose());RP=null;}
   for(const G of [...GYMS])G.dispose();
   const ac=getAC();
-  if(!demo&&nom)leo=compterEssai(nom,leo);
+  if(!demo&&nom&&!sansEssai)leo=compterEssai(nom,leo);
   const decoMoi=demo?null:decoDe(nom);
   const g={choreo,notes:choreo.notes.map(n=>Object.assign({},n)),els:choreo.els.map(e=>Object.assign({},e)),niv:choreo.niv,engin:choreo.engin,B:choreo.B,first:choreo.first,final:choreo.final,
     nom,leo,design,music,rec:{wobs:[],drops:[],grades:[]},online,onFin,st:newStats(),ghosts:new Map(),live:{},running:true,done:false,speed:NIVEAUX[choreo.niv].vit*(CFG.vit[choreo.niv]||1),flash:null,lastHud:0,trails:new Map(),rnd:mulberry32(Date.now()&0xffffff)};
@@ -3239,7 +3241,20 @@ async function fbMeilleur(per,nom,v){
 /* ---- Défi du jour : même chorégraphie pour tout le monde, classement du jour ---- */
 function defiDuJour(){
   const cle=clesPeriode().jour, h=hash('defi-'+cle), E=Object.keys(ENGINS);
-  return {cle,seed:h,engin:E[h%E.length],mus:MUSIQUES[(h>>>4)%MUSIQUES.length].id,niv:'federale'};
+  const NV=['decouverte','federale','elite'];
+  return {cle,seed:h,engin:E[h%E.length],mus:MUSIQUES[(h>>>4)%MUSIQUES.length].id,niv:NV[(h>>>8)%NV.length]};
+}
+/* personnage du défi : le même pour tout le monde (tiré dans la liste des personnages spéciaux du dépôt) */
+async function persoDuJour(D){
+  try{await scannerPersos();}catch(e){}
+  const L=listePersos(); if(!L.length)return null;
+  const p=L[hash('perso-'+D.cle)%L.length]; return {leo:p.id+'|orig',nom:p.nom,emoji:p.emoji};
+}
+/* bouton « Défi du jour » qui clignote tant que la joueuse ne l'a pas fait aujourd'hui */
+function majBoutonDefi(){
+  const b=document.querySelector('[data-go=defi]'); if(!b)return;
+  const fait=(store.get('rs_defi_loc',{})[defiDuJour().cle]||{})[cleNom(S.nom||'Moi')]!=null;
+  b.classList.toggle('clignote',!fait);
 }
 async function lireDefi(cle){
   const loc=store.get('rs_defi_loc',{})[cle]||{};
@@ -3267,10 +3282,12 @@ async function ouvrirDefi(){
   const dat=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
   C.innerHTML=`<div class="lbl" style="text-align:center;font-size:1.15rem">🎯 Défi du ${dat}</div>
     <p class="hint" style="text-align:center;margin-top:0">La même chorégraphie pour tout le monde aujourd'hui. Demain, un nouveau défi !</p>
-    <div class="grid3" style="margin:8px 0"><div><small>Engin</small><b>${E.ico} ${E.nom}</b></div><div><small>Musique</small><b>${esc(M.nom.split(' · ')[0])}</b></div><div><small>Niveau</small><b>Fédérale</b></div></div>
+    <div class="grid3" style="margin:8px 0"><div><small>Engin</small><b>${E.ico} ${E.nom}</b></div><div><small>Musique</small><b>${esc(M.nom.split(' · ')[0])}</b></div><div><small>Niveau</small><b>${NIVEAUX[D.niv].nom}</b></div></div>
+    <p id="dfPerso" class="hint" style="text-align:center;margin:2px 0 6px">🎭 Personnage du jour : ⏳</p>
     <div class="lbl">🏆 Classement du jour</div><div id="dfListe"><p class="hint">⏳ Chargement…</p></div>
     <div class="actions"><button id="tmNon">Fermer</button><button class="big" id="dfGo">▶ Relever le défi</button></div>`;
   genMusic(D.mus).catch(()=>{});   // on prépare la musique du défi pendant qu'on lit le classement
+  persoDuJour(D).then(P=>{const e=$('#dfPerso');if(e)e.innerHTML=P?`🎭 Personnage du jour : <b>${P.emoji} ${esc(P.nom)}</b> <small>(ne compte pas dans tes essais)</small>`:'🎭 Personnage du jour : ta gymnaste';});
   $('#tmNon').onclick=fermerTroc;
   $('#dfGo').onclick=async()=>{const b=$('#dfGo');if(b.disabled)return;b.disabled=true;b.textContent='⏳ Préparation…';
     try{await lancerDefi(true);}finally{fermerTroc();}};
@@ -3286,7 +3303,9 @@ async function lancerDefi(depuisFiche){
   try{
     getAC(); const mus=await genMusic(D.mus);
     const ch=genChoreo({seed:D.seed,engin:D.engin,niv:D.niv,bpm:mus.bpm,offset:mus.offset,dur:mus.dur,finAt:mus.finAt});
-    lancerPartie({choreo:ch,music:mus,nom:S.nom||'Moi',leo:S.leo,design:S.engDesign[D.engin],onFin:res=>{
+    const P=await persoDuJour(D);
+    lancerPartie({choreo:ch,music:mus,nom:S.nom||'Moi',leo:P?P.leo:S.leo,sansEssai:!!P,design:P?null:S.engDesign[D.engin],onFin:res=>{
+      majBoutonDefi();
       const moi=cleNom(S.nom||'Moi'),avant=(store.get('rs_defi_loc',{})[D.cle]||{})[moi],premiere=avant==null;
       let txt='';
       if(!res.abandon){envoyerDefi(D.cle,S.nom||'Moi',Math.round(res.total*1000)/1000);
@@ -3376,10 +3395,10 @@ if(store.get('rs_cls_ferme',false))$('#classement').classList.add('ferme');
 }
 viderFile().catch(()=>{}); renderClassement();
 
-function goAccueil(){if(!GAME&&!RP&&!VICT)for(const G of [...GYMS])if(G!==PREV)G.dispose();renderRecords();renderClassement();setTimeout(()=>{chargerCfg();montrerMessage();},600);construireSalle(S.salle||'star');show('sAccueil');}
+function goAccueil(){majBoutonDefi();if(!GAME&&!RP&&!VICT)for(const G of [...GYMS])if(G!==PREV)G.dispose();renderRecords();renderClassement();setTimeout(()=>{chargerCfg();montrerMessage();},600);construireSalle(S.salle||'star');show('sAccueil');}
 function ecranEnLigne(c){NET.coopMode=c;$('#onTitre').textContent=c?'🤝 Mode coopératif':'Compétition en ligne';$('#onCoopInfo').style.display=c?'':'none';$('#onCreerHint').textContent=c?'Tu obtiens un code à 4 lettres à donner à tes coéquipières (2 à 5 gymnastes).':'Tu obtiens un code à 4 lettres à donner à tes amies (jusqu\'à 6 gymnastes).';netStatus('');show('sOnline');}
 function needNom(){if(S.nom)return true;alert('Écris d\'abord ton prénom 🙂');$('#inNom').focus();return false;}
-$('#inNom').value=S.nom; $('#inNom').addEventListener('input',e=>{S.nom=e.target.value.trim();saveS();});
+$('#inNom').value=S.nom; $('#inNom').addEventListener('input',e=>{S.nom=e.target.value.trim();saveS();majBoutonDefi();}); majBoutonDefi();
 document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>{
   getAC(); chargerApplaudissements(); const go=b.dataset.go;
   const premiere=f=>{if(store.get('rs_aide',0)){f();return;}store.set('rs_aide',1);ouvrirTuto(f);};
