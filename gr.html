@@ -261,7 +261,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <!-- ACCUEIL -->
 <div id="sAccueil" class="screen on">
   <button id="cadenas" title="Code">🔒</button>
-  <div id="version">v2.6</div>
+  <div id="version">v2.7</div>
   <div id="classement"><div class="ct">🏆 Classement ▾</div><div class="cb"></div></div>
   <div class="brand"><div class="soutien"><a class="pill" id="btMail" href="mailto:chris333j@yahoo.fr?subject=GR%20Star">✉️ M'écrire</a><a class="pill" id="btInstall" href="#" style="display:none">📲 Installer l'appli</a><a class="pill cafe" id="btCafe" href="#" target="_blank" rel="noopener">☕ Offrir un café</a></div><div class="logo">🎀</div><h1>GR <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
   <label class="field">Ton prénom<input id="inNom" maxlength="14" placeholder="Prénom" autocomplete="off"></label>
@@ -3303,7 +3303,10 @@ async function viderFile1(){
   for(;;){
     const q=store.get('rs_top_q',[]); if(!q.length)return; const it=q[0];
     const k=clesPeriode(new Date(it.ts));
-    for(const [p] of PERIODES){if(it.niv!=='survie')await fbMeilleur(k[p],it.nom,it.v); if(it.niv)await fbMeilleur(cleNiv(k[p],it.niv),it.nom,it.v);}   // erreur = on garde la file pour plus tard
+    // 1) classement général : indispensable (en cas d'erreur réseau, on garde la file pour plus tard)
+    if(it.niv!=='survie')for(const [p] of PERIODES)await fbMeilleur(k[p],it.nom,it.v);
+    // 2) classements par niveau / survie : un refus de la base ne doit jamais bloquer le classement général
+    if(it.niv)for(const [p] of PERIODES){try{await fbMeilleur(cleNiv(k[p],it.niv),it.nom,it.v);}catch(e){CLS_REFUS=String(e&&e.message||e);break;}}
     store.set('rs_top_q',store.get('rs_top_q',[]).filter(x=>x.id!==it.id));
   }
 }
@@ -3315,7 +3318,7 @@ function envoyerScore(nom,total,niv){
   store.set('rs_top_loc',loc);
   if(FB_URL){const q=store.get('rs_top_q',[]);q.push({nom:n,v,niv,ts:Date.now(),id:Math.random().toString(36).slice(2)});store.set('rs_top_q',q.slice(-30));viderFile();}
 }
-let CLS_CACHE=null,CLS_T=0;
+let CLS_CACHE=null,CLS_T=0,CLS_REFUS='';
 let CLS_NIV=store.get('rs_cls_niv',null);
 async function lireClassement(niv){
   const k=clesPeriode(),out={};
