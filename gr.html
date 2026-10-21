@@ -103,6 +103,16 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 .cols button{width:34px;height:34px;padding:0;border-radius:50%;border:3px solid rgba(255,255,255,.15)}
 .cols button.on{border-color:var(--accent2);transform:scale(1.12)}
 .cols input[type=color]{width:38px;height:38px;padding:0;border:0;border-radius:50%;background:none}
+ #jnl{position:fixed;inset:0;z-index:70;display:none;background:#12081f}
+#jnl.on{display:block}
+#jnlIn{position:absolute;inset:0;overflow:auto;padding:max(12px,env(safe-area-inset-top)) 14px 14px;box-sizing:border-box}
+#jnl.tourne #jnlIn{inset:auto;top:0;left:0;width:100vh;height:100vw;transform:rotate(90deg) translateY(-100%);transform-origin:top left}
+.jnlTete{display:flex;align-items:center;gap:10px;margin-bottom:6px}.jnlTete b{font-size:1.1rem}.jnlTete .hint{flex:1;margin:0}
+#jnlX{width:36px;height:36px;padding:0;border-radius:50%}
+.jnlTab{overflow:auto;max-width:100%;margin-bottom:6px}
+.jnlTab table{border-collapse:collapse;font-size:.8rem;min-width:100%}
+.jnlTab th{text-align:left;padding:4px 7px;border-bottom:1px solid rgba(255,255,255,.25);white-space:nowrap;position:sticky;top:0;background:#12081f}
+.jnlTab td{padding:4px 7px;border-bottom:1px solid rgba(255,255,255,.08);white-space:nowrap}
 .tuto{position:fixed;inset:0;z-index:60;display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:max(14px,env(safe-area-inset-top)) 16px max(14px,env(safe-area-inset-bottom));background:radial-gradient(circle at 50% 30%,#2a1250,#12081f 70%)}
 .tuto.on{display:flex}
 .tuto h2{margin:0;font-size:1.35rem;text-align:center}
@@ -263,7 +273,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <!-- ACCUEIL -->
 <div id="sAccueil" class="screen on">
   <button id="cadenas" title="Code">🔒</button>
-  <div id="version">version 2.0</div>
+  <div id="version">version 2.1</div>
   <div id="classement"><div class="ct">🏆 Classement ▾</div><div class="cb"></div></div>
   <div class="brand"><div class="soutien"><a class="pill" id="btMail" href="mailto:chris333j@yahoo.fr?subject=GR%20Star">✉️ M'écrire</a><a class="pill" id="btInstall" href="#" style="display:none">📲 Installer l'appli</a><a class="pill cafe" id="btCafe" href="#" target="_blank" rel="noopener">☕ Offrir un café</a></div><div class="logo">🎀</div><h1>GR <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
   <label class="field">Ton prénom<input id="inNom" maxlength="14" placeholder="Prénom" autocomplete="off"></label>
@@ -533,6 +543,9 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
   <div id="reCorps" class="wide"></div>
   <div class="actions" id="reActions"></div>
 </div>
+
+<!-- JOURNAL DES JOUEUSES (administration) -->
+<div id="jnl"><div id="jnlIn"></div></div>
 
 <!-- TUTO ANIMÉ DES GESTES -->
 <div id="tuto" class="tuto">
@@ -3121,7 +3134,7 @@ $('#chJouer').onclick=()=>lancerChoreo(false);
 
 /* ============================== Écrans ============================== */
 let VIEW='sAccueil';
-function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id));VIEW=id;try{veilleSalon(id==='sLobby'&&!!NET.peer);}catch(e){}if(id==='sJeu')resizeHUD();}
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id));VIEW=id;try{suiviEcran(id);}catch(e){}try{veilleSalon(id==='sLobby'&&!!NET.peer);}catch(e){}if(id==='sJeu')resizeHUD();}
 /* ========================= Classement en ligne (Firebase Realtime Database) ========================= */
 // Adresse de la base Firebase (ex. https://rythmique-star-default-rtdb.europe-west1.firebasedatabase.app). Vide = classement de cet appareil seulement.
 /* Lien de soutien « offrir un café » (Ko-fi, Buy Me a Coffee, PayPal.me…). Vide = message d'attente. */
@@ -3317,6 +3330,19 @@ async function lancerDefi(depuisFiche){
   }catch(e){alert('Problème : '+e.message);}
 }
 /* ---- journal des parties (qui, quand, combien de temps) ---- */
+/* temps passé dans le vestiaire, le salon en ligne et la carrière (par pseudo) */
+const CAT_ECRAN={sVestiaire:'vestiaire',sCreatrice:'vestiaire',sEngin:'vestiaire',sOnline:'enligne',sLobby:'enligne',sCarriere:'carriere',sClasseur:'carriere',sTroc:'carriere'};
+const SUIVI={cat:null,t0:0};
+function suiviFin(){
+  if(SUIVI.cat&&SUIVI.t0){const dur=Math.round((Date.now()-SUIVI.t0)/1000);
+    if(dur>=5){const e={nom:cleNom(S.nom||'Moi'),ts:SUIVI.t0,dur:Math.min(dur,4*3600),type:'temps',cat:SUIVI.cat,mode:'⏱ '+SUIVI.cat,id:Math.random().toString(36).slice(2)};
+      const loc=store.get('rs_log_loc',[]); loc.push(e); store.set('rs_log_loc',loc.slice(-600));
+      if(FB_URL){const q=store.get('rs_log_q',[]);q.push(e);store.set('rs_log_q',q.slice(-150));viderFile();}}}
+  SUIVI.cat=null; SUIVI.t0=0;
+}
+function suiviEcran(id){const c=CAT_ECRAN[id]||null; if(c===SUIVI.cat)return; suiviFin(); if(c&&!document.hidden){SUIVI.cat=c;SUIVI.t0=Date.now();}}
+document.addEventListener('visibilitychange',()=>{if(document.hidden)suiviFin();else suiviEcran(VIEW);});
+addEventListener('pagehide',suiviFin);
 function journaliser(g,res){
   const e={nom:cleNom(g.nom||'Moi'),ts:g.t0||Date.now(),dur:Math.round((Date.now()-(g.t0||Date.now()))/1000),mode:g.modeNom||'',engin:g.engin||'',niv:g.niv||'',total:res&&isFinite(res.total)&&!res.abandon?Math.round(res.total*1000)/1000:null,ab:!!(res&&res.abandon),id:Math.random().toString(36).slice(2)};
   const loc=store.get('rs_log_loc',[]); loc.push(e); store.set('rs_log_loc',loc.slice(-300));
@@ -3697,7 +3723,7 @@ function codeModal(){
 }
 const dureeTxt=s=>s>=3600?Math.floor(s/3600)+' h '+String(Math.floor(s%3600/60)).padStart(2,'0'):s>=60?Math.floor(s/60)+' min '+String(s%60).padStart(2,'0'):s+' s';
 async function lireJournal(){
-  if(FB_URL){try{const r=await fetch(`${FB_URL}/rs_log.json?orderBy=%22$key%22&limitToLast=300`);if(r.ok){const o=await r.json()||{};return {L:Object.values(o),src:'tous les téléphones'};}}catch(e){}}
+  if(FB_URL){try{const r=await fetch(`${FB_URL}/rs_log.json?orderBy=%22$key%22&limitToLast=1500`);if(r.ok){const o=await r.json()||{};return {L:Object.values(o),src:'tous les téléphones'};}}catch(e){}}
   return {L:store.get('rs_log_loc',[]),src:'cet appareil seulement'};
 }
 async function adminModal(vue='menu'){
@@ -3808,21 +3834,37 @@ async function adminModal(vue='menu'){
     $('#adVideJ').onclick=async()=>{if(!confirm('Effacer tout le journal des parties ?'))return;store.set('rs_log_loc',[]);const ok=await effacer('rs_log');msg(ok?'✅ Journal vidé.':'⚠️ Pas de connexion à la base.',ok);};
     $('#tmNon').onclick=fermerTroc; fin(); return;
   }
-  C.innerHTML=X+`<div class="lbl" style="text-align:center">📋 Journal des parties</div><p class="hint" style="text-align:center">⏳ Chargement…</p>`;$('.adX').onclick=fermerTroc;
-  const {L,src}=await lireJournal(); L.sort((a,b)=>b.ts-a.ts);
-  const par={}; for(const e of L){const t=par[e.nom]||(par[e.nom]={n:0,d:0,der:0,best:null});t.n++;t.d+=e.dur||0;t.der=Math.max(t.der,e.ts);if(e.total!=null&&(t.best==null||e.total>t.best))t.best=e.total;}
-  const dt=ts=>new Date(ts).toLocaleString('fr-FR',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
-  const th='style="text-align:left;padding:3px 5px;border-bottom:1px solid rgba(255,255,255,.2)"',td='style="padding:3px 5px;border-bottom:1px solid rgba(255,255,255,.08);white-space:nowrap"';
-  C.innerHTML=X+`<div class="lbl" style="text-align:center">📋 Journal des parties</div><p class="hint" style="text-align:center;margin-top:0">${L.length} partie(s) · ${src}</p>
-    <div class="lbl" style="margin-top:6px">Par joueuse</div>
-    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.8rem"><tr><th ${th}>Pseudo</th><th ${th}>Parties</th><th ${th}>Temps total</th><th ${th}>Meilleur</th><th ${th}>Dernière fois</th></tr>
-    ${Object.entries(par).sort((a,b)=>b[1].der-a[1].der).map(([n,t])=>`<tr><td ${td}><b>${esc(n)}</b></td><td ${td}>${t.n}</td><td ${td}>${dureeTxt(t.d)}</td><td ${td}>${t.best!=null?fmt(t.best,2):'—'}</td><td ${td}>${dt(t.der)}</td></tr>`).join('')||`<tr><td ${td}>—</td></tr>`}</table></div>
-    <div class="lbl" style="margin-top:10px">Toutes les parties</div>
-    <div style="overflow:auto;max-height:42vh"><table style="width:100%;border-collapse:collapse;font-size:.78rem"><tr><th ${th}>Quand</th><th ${th}>Pseudo</th><th ${th}>Mode</th><th ${th}>Engin</th><th ${th}>Durée</th><th ${th}>Score</th></tr>
-    ${L.map(e=>`<tr><td ${td}>${dt(e.ts)}</td><td ${td}><b>${esc(e.nom)}</b></td><td ${td}>${esc(e.mode||'')}</td><td ${td}>${ENGINS[e.engin]?ENGINS[e.engin].ico+' '+ENGINS[e.engin].nom:esc(e.engin||'')}${NIVEAUX[e.niv]?' · '+NIVEAUX[e.niv].nom:''}</td><td ${td}>${dureeTxt(e.dur||0)}</td><td ${td}>${e.ab?'abandon':e.total!=null?fmt(e.total,2):'—'}</td></tr>`).join('')}</table></div>
-    <div class="actions"><button id="adRet">← Retour</button><button class="big" id="tmNon">Fermer</button></div>`;
-  $('#adRet').onclick=()=>adminModal('menu'); $('#tmNon').onclick=fermerTroc; $('.adX').onclick=fermerTroc;
+  fermerTroc(); ouvrirJournal();
 }
+/* Journal des parties en plein écran : sur téléphone tenu droit, l'affichage est tourné en paysage */
+async function ouvrirJournal(){
+  const J=$('#jnl'), I=$('#jnlIn'); J.classList.add('on'); jnlOrient();
+  I.innerHTML='<p class="hint" style="text-align:center">⏳ Chargement…</p>';
+  const {L,src}=await lireJournal(); L.sort((a,b)=>b.ts-a.ts);
+  const EN_LIGNE=/Compétition|Coopératif|Perturbatrice/;
+  const parties=L.filter(e=>e.type!=='temps'), temps=L.filter(e=>e.type==='temps');
+  const par={}, J0=()=>({n:0,jeu:0,vest:0,lig:0,sal:0,car:0,der:0,best:null});
+  for(const e of L){const t=par[e.nom]||(par[e.nom]=J0()); t.der=Math.max(t.der,e.ts||0); const d=e.dur||0;
+    if(e.type==='temps'){if(e.cat==='vestiaire')t.vest+=d;else if(e.cat==='enligne'){t.lig+=d;t.sal+=d;}else if(e.cat==='carriere')t.car+=d;continue;}
+    t.n++; t.jeu+=d; if(EN_LIGNE.test(e.mode||''))t.lig+=d; if(e.total!=null&&(t.best==null||e.total>t.best))t.best=e.total;}
+  const dt=ts=>new Date(ts).toLocaleString('fr-FR',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  const D=x=>x?dureeTxt(x):'—';
+  const lignes=Object.entries(par).sort((a,b)=>b[1].der-a[1].der);
+  I.innerHTML=`<div class="jnlTete"><b>📋 Journal des joueuses</b><span class="hint">${parties.length} partie(s) · ${src}</span><button id="jnlX">✕</button></div>
+    <div class="lbl">Par joueuse</div>
+    <div class="jnlTab"><table><tr><th>Pseudo</th><th>Parties</th><th>🎮 En jeu</th><th>🌐 En ligne</th><th>👗 Vestiaire</th><th>🏅 Carrière</th><th>⏱ Total</th><th>Meilleur</th><th>Dernière fois</th></tr>
+    ${lignes.map(([n,t])=>`<tr><td><b>${esc(n)}</b></td><td>${t.n}</td><td>${D(t.jeu)}</td><td>${D(t.lig)}</td><td>${D(t.vest)}</td><td>${D(t.car)}</td><td><b>${D(t.jeu+t.vest+t.car+t.sal)}</b></td><td>${t.best!=null?fmt(t.best,2):'—'}</td><td>${dt(t.der)}</td></tr>`).join('')||'<tr><td colspan="9">—</td></tr>'}</table></div>
+    <p class="hint">🌐 En ligne = temps dans le salon + parties en ligne. ⏱ Total = jeu + vestiaire + carrière + salon. Le temps n'est compté que depuis cette mise à jour.</p>
+    <div class="lbl">Toutes les parties</div>
+    <div class="jnlTab"><table><tr><th>Quand</th><th>Pseudo</th><th>Mode</th><th>Engin</th><th>Durée</th><th>Score</th></tr>
+    ${parties.map(e=>`<tr><td>${dt(e.ts)}</td><td><b>${esc(e.nom)}</b></td><td>${esc(e.mode||'')}</td><td>${ENGINS[e.engin]?ENGINS[e.engin].ico+' '+ENGINS[e.engin].nom:esc(e.engin||'')}${NIVEAUX[e.niv]?' · '+NIVEAUX[e.niv].nom:''}</td><td>${dureeTxt(e.dur||0)}</td><td>${e.ab?'abandon':e.total!=null?fmt(e.total,2):'—'}</td></tr>`).join('')}</table></div>
+    <div class="actions"><button id="jnlRet">← Administration</button><button class="big" id="jnlFerme">Fermer</button></div>`;
+  const fermer=()=>J.classList.remove('on');
+  $('#jnlX').onclick=fermer; $('#jnlFerme').onclick=fermer; $('#jnlRet').onclick=()=>{fermer();adminModal('menu');};
+}
+function jnlOrient(){const J=$('#jnl'); if(!J)return; const tel=Math.min(screen.width,screen.height)<600; J.classList.toggle('tourne',tel&&innerHeight>innerWidth);}
+addEventListener('resize',jnlOrient);
+
 $('#cadenas').onclick=()=>{
   const m=modeCode();
   if(m==='tout'){adminModal();}
