@@ -3172,7 +3172,7 @@ function rubanVolant(txt,col){
   const chars=[...txt], cw=chars.map(c=>g.measureText(c).width), tw=cw.reduce((a,b)=>a+b,0);
   const HB=fs*1.75, L=tw+fs*1.8, TAIL=0, D=Math.max(16,(W+L+TAIL+80)/62)*1000, y0=H*.36, A=fs*.75, k=2*Math.PI/Math.max(280,W*.75), w=1.6;
   const t0=performance.now(), PA=[], PC=['#ffffff','#fff3b0','#ffd166',C[0],C[1]];
-  function yc(x,t,dq){return y0+A*Math.sin(x*k-t*w)+A*.35*Math.sin(x*k*.45+t*.7)+dq*A*1.4*Math.sin(x*k*2.2-t*w*1.7);}
+  function yc(x,t,dq){return y0+A*Math.sin(x*k+t*w)+A*.35*Math.sin(x*k*.45-t*.7)+dq*A*1.4*Math.sin(x*k*2.2+t*w*1.7);}
   function frame(now){
     const e=now-t0,p=e/D,t=e/1000, dt=Math.min(.05,(now-(frame.last||now))/1000); frame.last=now;
     g.clearRect(0,0,W,H);
@@ -3185,8 +3185,8 @@ function rubanVolant(txt,col){
       else{g.beginPath();g.arc(q.x,q.y,q.r,0,7);g.fill();}}
     g.restore();g.globalAlpha=1;
     if(p>=1){if(!PA.length){cv.remove();return;}requestAnimationFrame(frame);return;}
-    const head=-40+(W+L+TAIL+80)*p, x0=head-L-TAIL, pts=[];
-    for(let x=x0;x<=head+.1;x+=2){const q=x<head-L?(head-L-x)/TAIL:0;const y=yc(x,t,q*q);pts.push({x,y,q});}
+    const x0=W+40-(W+L+TAIL+80)*p, head=x0+L+TAIL, pts=[];   // x0 = avant du ruban (à gauche), il défile de droite à gauche
+    for(let x=x0;x<=head+.1;x+=2){const y=yc(x,t,0);pts.push({x,y,q:0});}
     for(let i=0;i<pts.length;i++){const a=pts[Math.max(0,i-1)],b=pts[Math.min(pts.length-1,i+1)];const dx=b.x-a.x,dy=b.y-a.y,n=Math.hypot(dx,dy)||1;pts[i].nx=-dy/n;pts[i].ny=dx/n;pts[i].ang=Math.atan2(dy,dx);
       pts[i].h=pts[i].q>0?HB*(1-pts[i].q)*.55+3:HB; pts[i].s=i?pts[i-1].s+Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y):0;}
     // ruban : quadrilatères successifs, ombrés selon la pente (effet de torsion)
@@ -3197,10 +3197,10 @@ function rubanVolant(txt,col){
     // liseré brillant
     g.strokeStyle='rgba(255,255,255,.75)';g.lineWidth=1.6;for(const sg of [1,-1]){g.beginPath();pts.forEach((q,i)=>{const X=q.x+sg*q.nx*q.h/2,Y=q.y+sg*q.ny*q.h/2;i?g.lineTo(X,Y):g.moveTo(X,Y);});g.stroke();}
     // nouvelles paillettes à l'arrière du ruban
-    {const qb=pts[0];for(let n=0;n<7;n++){const o=(Math.random()-.5)*HB;PA.push({x:qb.x+qb.nx*o-Math.random()*8,y:qb.y+qb.ny*o,vx:-10-Math.random()*25,vy:-6+Math.random()*14,r:1.2+Math.random()*2.6,age:0,vie:1.8+Math.random()*2.2,c:PC[Math.floor(Math.random()*PC.length)],ph:Math.random()*6,etoile:Math.random()<.18});}}
+    {const qb=pts[pts.length-1];for(let n=0;n<7;n++){const o=(Math.random()-.5)*HB;PA.push({x:qb.x+qb.nx*o+Math.random()*8,y:qb.y+qb.ny*o,vx:10+Math.random()*25,vy:-6+Math.random()*14,r:1.2+Math.random()*2.6,age:0,vie:1.8+Math.random()*2.2,c:PC[Math.floor(Math.random()*PC.length)],ph:Math.random()*6,etoile:Math.random()<.18});}}
     // texte posé sur le ruban, lettre par lettre (légère rotation : reste lisible)
     g.font=font;g.textAlign='center';g.textBaseline='middle';g.fillStyle='#fff';g.shadowColor='rgba(0,0,0,.55)';g.shadowBlur=4;
-    const sTete=pts[pts.length-1].s; let s=sTete-L+fs*1.2, j=pts.length-1;
+    let s=fs*.9;
     for(let c=0;c<chars.length;c++){const sc=s+cw[c]/2; let i=1; while(i<pts.length-1&&pts[i].s<sc)i++; const P0=pts[i-1],P1=pts[i],f=clamp((sc-P0.s)/((P1.s-P0.s)||1),0,1);
       const PX=P0.x+(P1.x-P0.x)*f,PY=P0.y+(P1.y-P0.y)*f,AN=P0.ang+(P1.ang-P0.ang)*f;
       g.save();g.translate(PX,PY);g.rotate(clamp(AN,-.45,.45));g.fillText(chars[c],0,1);g.restore(); s+=cw[c];}
