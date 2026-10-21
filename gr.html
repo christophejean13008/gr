@@ -230,7 +230,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 #classement .cv{color:#ddd;font-weight:700}
 #classement.ferme .cb{display:none}
 #classement .cn{display:flex;gap:2px;margin:2px 0 1px}
-#classement .cn button{flex:1;padding:1px 0;border-radius:6px;font-size:.52rem;font-weight:800;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;text-shadow:none;min-width:0}
+#classement .cn button{flex:1;padding:1px 0;border-radius:6px;font-size:.48rem;font-weight:800;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;text-shadow:none;min-width:0}
 #classement .cn button.on{background:linear-gradient(135deg,#ff4fa3,#a24bff);border-color:#fff}
 @media (max-aspect-ratio:1/1){#sAccueil .brand{align-self:stretch;margin-top:0;padding-left:142px;min-height:228px;display:flex;flex-direction:column;justify-content:center}#sAccueil .brand h1{font-size:2.35rem;line-height:1.05}#sAccueil .brand .logo{font-size:2.6rem}#sAccueil .brand .sub{font-size:.85rem}}
 #version{position:absolute;top:calc(max(10px,env(safe-area-inset-top)) + 46px);right:12px;width:42px;text-align:center;font-size:.62rem;color:rgba(200,200,210,.6);z-index:3;pointer-events:none}
@@ -261,7 +261,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <!-- ACCUEIL -->
 <div id="sAccueil" class="screen on">
   <button id="cadenas" title="Code">🔒</button>
-  <div id="version">v2.8</div>
+  <div id="version">v2.9</div>
   <div id="classement"><div class="ct">🏆 Classement ▾</div><div class="cb"></div></div>
   <div class="brand"><div class="soutien"><a class="pill" id="btMail" href="mailto:chris333j@yahoo.fr?subject=GR%20Star">✉️ M'écrire</a><a class="pill" id="btInstall" href="#" style="display:none">📲 Installer l'appli</a><a class="pill cafe" id="btCafe" href="#" target="_blank" rel="noopener">☕ Offrir un café</a></div><div class="logo">🎀</div><h1>GR <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
   <label class="field">Ton prénom<input id="inNom" maxlength="14" placeholder="Prénom" autocomplete="off"></label>
@@ -3226,7 +3226,7 @@ function clesPeriode(d=new Date()){
   return {total:'total',mois:'m'+j.slice(0,7),sem:`s${t.getFullYear()}-${z(w)}`,jour:'j'+j};
 }
 /* classement par niveau : rs_top/<période>_<niveau> (en plus du classement « tous niveaux » rs_top/<période>) */
-const NIV_CLS=[['','Tous'],['decouverte','Déc.'],['federale','Féd.'],['elite','Élite'],['survie','💀']];   // survie : temps tenu en secondes
+const NIV_CLS=[['','Tous'],['decouverte','Déc.'],['federale','Féd.'],['elite','Élite'],['survie','💀'],['defi','🎯']];   // survie : temps tenu en secondes
 const tempsCourt=v=>{v=Math.round(v);return Math.floor(v/60)+':'+String(v%60).padStart(2,'0');};
 const cleNiv=(c,niv)=>niv?c+'_'+niv:c;
 function clesToutes(d){const k=clesPeriode(d),L=[];for(const [p] of PERIODES)for(const [n] of NIV_CLS)L.push(cleNiv(k[p],n));return L;}
@@ -3242,13 +3242,24 @@ function defiDuJour(){
   return {cle,seed:h,engin:E[h%E.length],mus:MUSIQUES[(h>>>4)%MUSIQUES.length].id,niv:'federale'};
 }
 async function lireDefi(cle){
-  if(FB_URL){try{const r=await fetch(`${FB_URL}/rs_defi/${encodeURIComponent(cle)}.json?orderBy=%22$value%22&limitToLast=10`);if(r.ok)return {L:Object.entries(await r.json()||{}).sort((a,b)=>b[1]-a[1]),src:''};}catch(e){}}
-  const loc=store.get('rs_defi_loc',{})[cle]||{}; return {L:Object.entries(loc).sort((a,b)=>b[1]-a[1]),src:FB_URL?'hors ligne':'cet appareil'};
+  const loc=store.get('rs_defi_loc',{})[cle]||{};
+  if(FB_URL){try{const r=await fetch(`${FB_URL}/rs_defi/${encodeURIComponent(cle)}.json?orderBy=%22$value%22&limitToLast=10`);if(r.ok){
+    const o=await r.json()||{}; for(const [n,v] of Object.entries(loc))if(!(o[n]>=v))o[n]=v;   // mon score pas encore arrivé dans la base
+    return {L:Object.entries(o).sort((a,b)=>b[1]-a[1]),src:''};}}catch(e){}}
+  return {L:Object.entries(loc).sort((a,b)=>b[1]-a[1]),src:FB_URL?'hors ligne':'cet appareil'};
 }
 async function envoyerDefi(cle,nom,v){
   const loc=store.get('rs_defi_loc',{}); for(const k of Object.keys(loc))if(k!==cle)delete loc[k];
   const t=loc[cle]||(loc[cle]={}); const n=cleNom(nom); if(!(t[n]>=v))t[n]=v; store.set('rs_defi_loc',loc);
-  if(!FB_URL)return; try{const u=`${FB_URL}/rs_defi/${encodeURIComponent(cle)}/${encodeURIComponent(n)}.json`;const old=await (await fetch(u)).json();if(old==null||v>old)await fetch(u,{method:'PUT',body:JSON.stringify(v)});}catch(e){}
+  if(!FB_URL)return; const q=store.get('rs_defi_q',[]); q.push({cle,nom:n,v,id:Math.random().toString(36).slice(2)}); store.set('rs_defi_q',q.slice(-20)); viderFile();
+}
+async function viderDefi(){
+  if(!FB_URL)return;
+  for(;;){const q=store.get('rs_defi_q',[]); if(!q.length)return; const it=q[0];
+    const u=`${FB_URL}/rs_defi/${encodeURIComponent(it.cle)}/${encodeURIComponent(it.nom)}.json`;
+    const old=await (await fetch(u)).json();               // pas de réseau : erreur, on réessaiera plus tard
+    if(old==null||it.v>old){const r=await fetch(u,{method:'PUT',body:JSON.stringify(it.v)}); if(!r.ok&&r.status>=500)throw new Error('fb '+r.status);}  // refus de la base (4xx) : on abandonne ce score
+    store.set('rs_defi_q',store.get('rs_defi_q',[]).filter(x=>x.id!==it.id)); CLS_CACHE=null;}
 }
 async function ouvrirDefi(){
   const D=defiDuJour(),M=MUSIQUES.find(m=>m.id===D.mus),E=ENGINS[D.engin],moi=cleNom(S.nom||'Moi');
@@ -3300,7 +3311,7 @@ async function viderJournal(){
     store.set('rs_log_q',store.get('rs_log_q',[]).filter(x=>x.id!==id));}
 }
 let FILE_P=Promise.resolve();
-function viderFile(){const avant=store.get('rs_top_q',[]).length;FILE_P=FILE_P.then(viderFile1).catch(()=>{}).then(viderJournal).catch(()=>{}).then(()=>{if(avant){CLS_CACHE=null;if(VIEW==='sAccueil')renderClassement();}});return FILE_P;}   // envois l'un après l'autre
+function viderFile(){const avant=store.get('rs_top_q',[]).length+store.get('rs_defi_q',[]).length;FILE_P=FILE_P.then(viderFile1).catch(()=>{}).then(viderDefi).catch(()=>{}).then(viderJournal).catch(()=>{}).then(()=>{if(avant){CLS_CACHE=null;if(VIEW==='sAccueil')renderClassement();}});return FILE_P;}   // envois l'un après l'autre
 async function viderFile1(){
   if(!FB_URL)return;
   for(;;){
@@ -3336,6 +3347,15 @@ async function renderClassement(){
   const k=clesPeriode(); let data=null,src='';
   const niv=CLS_NIV!=null&&NIV_CLS.some(x=>x[0]===CLS_NIV)?CLS_NIV:(NIV_CLS.some(x=>x[0]===S.niv)?S.niv:'');
   if(!CLS_CACHE||CLS_CACHE.niv!==niv)CLS_CACHE=null;
+  if(niv==='defi'){ // défi du jour : uniquement le podium du jour
+    const D=defiDuJour(); let r; if(CLS_CACHE&&CLS_CACHE.niv==='defi'&&Date.now()-CLS_T<20000)r=CLS_CACHE.d; else{r=await lireDefi(D.cle);CLS_CACHE={niv,d:r};CLS_T=Date.now();}
+    const med=['🥇','🥈','🥉'],L=r.L.slice(0,3),E=ENGINS[D.engin];
+    cb.innerHTML=`<div class="cn">${NIV_CLS.map(([n,l])=>`<button data-cn="${n}" class="${n===niv?'on':''}">${l}</button>`).join('')}</div><div class="cp">🎯 Défi du jour ${E?E.ico:''}</div>`
+      +(L.length?L.map(([n,v],i)=>`<div class="cl"><span>${med[i]} ${esc(n)}</span><b class="cv">${fmt(v,2)}</b></div>`).join(''):'<div class="cl"><span style="opacity:.6">Personne encore</span></div>')
+      +(r.src?`<div style="opacity:.55;text-align:center;margin-top:3px">(${r.src})</div>`:'');
+    cb.querySelectorAll('[data-cn]').forEach(b=>b.onclick=e=>{e.stopPropagation();CLS_NIV=b.dataset.cn;store.set('rs_cls_niv',CLS_NIV);CLS_CACHE=null;renderClassement();});
+    return;
+  }
   if(FB_URL){
     try{ if(!CLS_CACHE||Date.now()-CLS_T>20000){CLS_CACHE={niv,d:await lireClassement(niv)};CLS_T=Date.now();} data=CLS_CACHE.d; }catch(e){src='hors ligne';}
   }
@@ -3349,6 +3369,11 @@ async function renderClassement(){
 }
 $('#classement .ct').onclick=()=>{const b=$('#classement');b.classList.toggle('ferme');store.set('rs_cls_ferme',b.classList.contains('ferme'));};
 if(store.get('rs_cls_ferme',false))$('#classement').classList.add('ferme');
+{ // au démarrage : on renvoie mon meilleur score du défi du jour (au cas où un ancien envoi n'aurait pas abouti)
+  const D=defiDuJour(),loc=store.get('rs_defi_loc',{})[D.cle]||{},q=store.get('rs_defi_q',[]);
+  for(const [n,v] of Object.entries(loc))if(!q.some(x=>x.cle===D.cle&&x.nom===n))q.push({cle:D.cle,nom:n,v,id:Math.random().toString(36).slice(2)});
+  if(FB_URL)store.set('rs_defi_q',q.slice(-20));
+}
 viderFile().catch(()=>{}); renderClassement();
 
 function goAccueil(){if(!GAME&&!RP&&!VICT)for(const G of [...GYMS])if(G!==PREV)G.dispose();renderRecords();renderClassement();setTimeout(()=>{chargerCfg();montrerMessage();},600);construireSalle(S.salle||'star');show('sAccueil');}
