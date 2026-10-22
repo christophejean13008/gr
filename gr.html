@@ -1431,7 +1431,7 @@ async function appliquerRetouche(obj,src){
   await Promise.all([tRet,tPeau]);
 }
 /* Noms de fichiers (sans .fbx) des personnages à tourner de 180° parce qu'ils apparaissent de dos */
-const PERSOS_DEMITOUR=['6_7'];
+const PERSOS_DEMITOUR=[];
 const CLIPMAP={idle:'idle',pas:'pas',saut:'saut',equilibre:'equilibre',pivot:'pivot',lancer:'lancer',tour:'tour',rattraper:'rattraper',engin:'engin',final:'salut',chute:'chute'};
 /* Redresse un modèle enregistré couché ou de dos : tête au-dessus des pieds, bras gauche vers +X (donc face à la caméra) */
 function redresser(obj){
