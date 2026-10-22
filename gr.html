@@ -1430,6 +1430,8 @@ async function appliquerRetouche(obj,src){
   }catch(e){}})();
   await Promise.all([tRet,tPeau]);
 }
+/* Noms de fichiers (sans .fbx) des personnages à tourner de 180° parce qu'ils apparaissent de dos */
+const PERSOS_DEMITOUR=['6_7'];
 const CLIPMAP={idle:'idle',pas:'pas',saut:'saut',equilibre:'equilibre',pivot:'pivot',lancer:'lancer',tour:'tour',rattraper:'rattraper',engin:'engin',final:'salut',chute:'chute'};
 /* Redresse un modèle enregistré couché ou de dos : tête au-dessus des pieds, bras gauche vers +X (donc face à la caméra) */
 function redresser(obj){
@@ -1447,6 +1449,9 @@ async function makeCustom(L){
   const base=await loadAsset(L.src);
   const obj=SkeletonUtils.clone(base.scene);
   redresser(obj);
+  // personnages dont le devant et le dos sont inversés (rig fait de dos) : demi-tour
+  if(PERSOS_DEMITOUR.some(n=>String(L.src&&L.src.name||L.src||'').toLowerCase().split('/').pop().replace(/\.[^.]+$/,'')===n)){
+    obj.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),Math.PI)); obj.updateMatrixWorld(true);}
   obj.updateMatrixWorld(true);
   /* mesure le personnage tel qu'il est posé par son squelette (certains modèles sont enregistrés couchés) */
   obj.traverse(o=>{if(o.isSkinnedMesh){o.skeleton.update();o.boundingBox=null;o.computeBoundingBox();}});
