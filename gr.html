@@ -273,7 +273,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <!-- ACCUEIL -->
 <div id="sAccueil" class="screen on">
   <button id="cadenas" title="Code">🔒</button>
-  <div id="version">version 2.1</div>
+  <div id="version">version 2.2</div>
   <div id="classement"><div class="ct">🏆 Classement ▾</div><div class="cb"></div></div>
   <div class="brand"><div class="soutien"><a class="pill" id="btMail" href="mailto:chris333j@yahoo.fr?subject=GR%20Star">✉️ M'écrire</a><a class="pill" id="btInstall" href="#" style="display:none">📲 Installer l'appli</a><a class="pill cafe" id="btCafe" href="#" target="_blank" rel="noopener">☕ Offrir un café</a></div><div class="logo">🎀</div><h1>GR <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
   <label class="field">Ton prénom<input id="inNom" maxlength="14" placeholder="Prénom" autocomplete="off"></label>
@@ -1401,7 +1401,9 @@ function loadAsset(src){
 /* Certains FBX (passage par Mixamo) arrivent avec une lueur grise (« emissive ») et une couleur de base grise :
    le personnage paraît délavé. On remet une couleur de base blanche et on éteint la lueur quand il y a une texture. */
 function corrigerMateriaux(obj){
-  obj.traverse(o=>{if(!o.isMesh)return;(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{
+  obj.traverse(o=>{if(!o.isMesh)return;
+    // modèle sans normales (ex. OBJ passé par Mixamo) : il apparaîtrait tout noir
+    if(o.geometry&&o.geometry.attributes.position&&!o.geometry.attributes.normal)o.geometry.computeVertexNormals();(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{
     if(!m||!m.map)return;
     // uniquement les modèles « délavés » (lueur grise) : les autres gardent exactement leurs couleurs
     if(m.emissive&&!m.emissiveMap&&(m.emissive.r+m.emissive.g+m.emissive.b)>.05){m.emissive.setRGB(0,0,0);if(m.color)m.color.setRGB(.8,.8,.8);}
