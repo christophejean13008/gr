@@ -1,0 +1,68 @@
+# Compilation de l'application Android GR Star (dossier app/)
+# Se lance à chaque modification du dossier app/, ou à la main depuis l'onglet « Actions ».
+# Résultat : un .apk (à installer sur un téléphone) et un .aab (pour le Play Store),
+# à télécharger en bas de la page du build, rubrique « Artifacts ».
+name: App Android
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: app
+    env:
+      VERSION_CODE: ${{ github.run_number }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Dépendances JavaScript
+        run: npm ci
+
+      - name: Clé de publication (si les secrets existent)
+        if: ${{ env.ANDROID_KEYSTORE_PASSWORD != '' }}
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
+
+      - name: Compilation (APK + AAB)
+        working-directory: app/android
+        run: ./gradlew assembleRelease bundleRelease --no-daemon
+
+      - name: Renommage
+        run: |
+          mkdir -p ../sortie
+          cp android/app/build/outputs/apk/release/app-release.apk ../sortie/grstar-${VERSION_CODE}.apk
+          cp android/app/build/outputs/bundle/release/app-release.aab ../sortie/grstar-${VERSION_CODE}.aab
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: grstar-android-${{ github.run_number }}
+          path: sortie/
+          retention-days: 30
