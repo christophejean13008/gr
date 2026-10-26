@@ -273,7 +273,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <!-- ACCUEIL -->
 <div id="sAccueil" class="screen on">
   <button id="cadenas" title="Code">🔒</button>
-  <div id="version">version 2.5</div>
+  <div id="version">version 2.6</div>
   <div id="classement"><div class="ct">🏆 Classement ▾</div><div class="cb"></div></div>
   <div class="brand"><div class="soutien"><a class="pill" id="btMail" href="mailto:chris333j@yahoo.fr?subject=GR%20Star">✉️ M'écrire</a><a class="pill" id="btInstall" href="#" style="display:none">📲 Installer l'appli</a><a class="pill cafe" id="btCafe" href="#" target="_blank" rel="noopener">☕ Offrir un café</a></div><div class="logo">🎀</div><h1>GR <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
   <label class="field">Ton prénom<input id="inNom" maxlength="14" placeholder="Prénom" autocomplete="off"></label>
@@ -669,6 +669,9 @@ const MODELES_TRIPO = [
 /* Si le jeu est ouvert via ton nom de domaine (ex. adapt.boussoleebep.fr), indique ici ton dépôt GitHub
    au format 'pseudo/nom-du-depot'. Sur une adresse en .github.io, il est trouvé tout seul. */
 const GITHUB_DEPOT = 'christophejean13008/gr';
+/* Personnages retirés (droits d'auteur) : jamais proposés, même si le fichier est encore sur GitHub */
+const PERSOS_EXCLUS = ['cynthia','mercredi','seya'];
+const persoExclu=f=>PERSOS_EXCLUS.includes(String(f).split('/').pop().replace(/\.(fbx|glb|gltf)$/i,'').toLowerCase());
 const PERSOS_SPECIAUX = [
   { nom: 'Père Noël',  emoji: '🎅', fichier: 'modeles/persos/papa-noel.fbx', couleurEngin: '#d00000' },
   { nom: 'Monstre',    emoji: '👹', fichier: 'modeles/persos/monstre.fbx',   couleurEngin: '#5be7a9' },
@@ -855,7 +858,7 @@ function persoInfo(fichier){
 function leoDefBody(b){
   if(b&&b[0]==='s'){
     let f=null; if(b.startsWith('s:'))f='modeles/persos/'+b.slice(2); else{const m=PERSOS_SPECIAUX[+b.slice(1)]; if(m)f=m.fichier;}
-    if(f){const i=persoInfo(f); return {id:b,kind:'tripo',nom:i.nom,src:f,color:i.color,motif:'3d',emoji:i.emoji,special:true};}
+    if(f&&!persoExclu(f)){const i=persoInfo(f); return {id:b,kind:'tripo',nom:i.nom,src:f,color:i.color,motif:'3d',emoji:i.emoji,special:true};}
   }
   if(b&&b[0]==='t'){const i=+b.slice(1),m=MODELES_TRIPO[i]; if(m) return {id:b,kind:'tripo',nom:m.nom,src:m.fichier,color:m.couleurEngin||'#ff4fa3',motif:'3d'};}
   if(b==='local'&&LOCAL_LEO) return LOCAL_LEO;
@@ -3903,9 +3906,9 @@ function depotInfo(){
   return {owner,repo,path:dir.replace(/^\//,'')+'modeles/persos'};
 }
 function listePersos(){
-  if(SCAN.etat==='ok') return SCAN.fichiers.map(f=>{const i=persoInfo(f);return {id:'s:'+f.split('/').pop(),fichier:f,nom:i.nom,emoji:i.emoji,dispo:true};});
+  if(SCAN.etat==='ok') return SCAN.fichiers.filter(f=>!persoExclu(f)).map(f=>{const i=persoInfo(f);return {id:'s:'+f.split('/').pop(),fichier:f,nom:i.nom,emoji:i.emoji,dispo:true};});
   if(SCAN.etat!=='secours') return [];
-  return PERSOS_SPECIAUX.filter(m=>DISPO.get(m.fichier)===true).map(m=>{const i=persoInfo(m.fichier);return {id:'s:'+m.fichier.split('/').pop(),fichier:m.fichier,nom:i.nom,emoji:i.emoji,dispo:true};});
+  return PERSOS_SPECIAUX.filter(m=>DISPO.get(m.fichier)===true&&!persoExclu(m.fichier)).map(m=>{const i=persoInfo(m.fichier);return {id:'s:'+m.fichier.split('/').pop(),fichier:m.fichier,nom:i.nom,emoji:i.emoji,dispo:true};});
 }
 async function scannerPersos(){
   if(SCAN.etat==='encours'||SCAN.etat==='ok'||SCAN.etat==='secours')return; SCAN.etat='encours';
