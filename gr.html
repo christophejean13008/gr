@@ -273,7 +273,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <!-- ACCUEIL -->
 <div id="sAccueil" class="screen on">
   <button id="cadenas" title="Code">🔒</button>
-  <div id="version">version 2.7</div>
+  <div id="version">version 2.8</div>
   <div id="classement"><div class="ct">🏆 Classement ▾</div><div class="cb"></div></div>
   <div class="brand"><div class="soutien"><a class="pill" id="btMail" href="mailto:chris333j@yahoo.fr?subject=GR%20Star">✉️ M'écrire</a><a class="pill" id="btInstall" href="#" style="display:none">📲 Installer l'appli</a><a class="pill cafe" id="btCafe" href="#" target="_blank" rel="noopener">☕ Offrir un café</a></div><div class="logo">🎀</div><h1>GR <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
   <label class="field">Ton prénom<input id="inNom" maxlength="14" placeholder="Prénom" autocomplete="off"></label>
@@ -2337,9 +2337,9 @@ jeuEl.addEventListener('pointermove',e=>{
     if(p.tn!==tn){p.tn=tn;p.cx=x;p.cy=y;p.ang=null;p.zx={};p.zy={};}
     if(tn.g==='circle'){
       p.cx+=(x-p.cx)*.08;p.cy+=(y-p.cy)*.08; const a=Math.atan2(y-p.cy,x-p.cx);
-      if(p.ang!=null&&Math.hypot(x-p.cx,y-p.cy)>18){let d=a-p.ang;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;tn.acc=(tn.acc||0)+Math.abs(d)/(2*Math.PI);}
+      if(p.ang!=null&&Math.hypot(x-p.cx,y-p.cy)>18){let d=a-p.ang;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;tn.acc=(tn.acc||0)+Math.abs(d)/(2*Math.PI);if(Math.abs(d)>.01)tn.accT=T;}
       p.ang=a;
-    } else { tn.rx=(tn.rx||0)+rev(p.zx,x); tn.ry=(tn.ry||0)+rev(p.zy,y); tn.acc=Math.max(tn.rx,tn.ry); }
+    } else { const av=tn.acc||0; tn.rx=(tn.rx||0)+rev(p.zx,x); tn.ry=(tn.ry||0)+rev(p.zy,y); tn.acc=Math.max(tn.rx,tn.ry); if(tn.acc>av||Math.hypot(x-p.lx,y-p.ly)>3)tn.accT=T; }
   }
   p.lx=x;p.ly=y;
 });
@@ -2430,15 +2430,20 @@ function drawLane(T){
     const ex=n.dur?(n.t+n.dur-T)*sp:dx; if(ex<-80)continue;
     let al=1; if(n.judged){al=Math.max(0,1-(T-n.jt)*3);if(al<=0)continue;}
     const col=CATCOL[n.cat]; c.globalAlpha=al;
-    const tient=n.g==='hold'&&n.started&&!n.judged;   // maintien en cours : la note reste dans le cercle et se remplit
+    // geste continu en cours (maintien, cercles, zigzags) : la note reste dans le cercle et une jauge se remplit
+    const trace=(n.g==='circle'||n.g==='zigzag')&&!n.judged&&T>=n.t-.05&&T<=n.t+n.dur+.05;
+    const tient=(n.g==='hold'&&n.started&&!n.judged)||trace;
     if(n.dur&&!n.judged){c.fillStyle=col;c.globalAlpha=tient?.85:.4;c.beginPath();const x0=tient?hx:hx+Math.max(dx,-40),x1=hx+ex;c.roundRect?c.roundRect(x0,y-12,Math.max(4,x1-x0),24,12):c.rect(x0,y-12,Math.max(4,x1-x0),24);c.fill();c.globalAlpha=al;}
-    if(tient){const f=clamp((T-n.t)/n.dur,0,1),ok=f>=.85,pu=1+.06*Math.sin(T*18);
-      c.save();c.shadowColor=ok?'#5be7a9':col;c.shadowBlur=18;
+    if(tient){const f=trace?clamp((n.acc||0)/n.need,0,1):clamp((T-n.t)/n.dur,0,1),ok=trace?f>=1:f>=.85,actif=!trace||T-(n.accT??-9)<.18,pu=actif?1+.06*Math.sin(T*18):1;
+      c.save();c.shadowColor=ok?'#5be7a9':col;c.shadowBlur=actif?18:3;
       c.strokeStyle='rgba(255,255,255,.25)';c.lineWidth=7;c.beginPath();c.arc(hx,y,33,0,7);c.stroke();
       c.strokeStyle=ok?'#5be7a9':col;c.lineCap='round';c.beginPath();c.arc(hx,y,33,-Math.PI/2,-Math.PI/2+f*Math.PI*2);c.stroke();c.restore();
       c.fillStyle=col;c.beginPath();c.arc(hx,y,22*pu,0,7);c.fill();
       c.fillStyle='rgba(255,255,255,.55)';c.beginPath();c.moveTo(hx,y);c.arc(hx,y,22*pu,-Math.PI/2,-Math.PI/2+f*Math.PI*2);c.closePath();c.fill();
-      c.fillStyle='#1a0b2e';c.font='900 13px system-ui,sans-serif';c.fillText(ok?'✓':Math.round(f*100)+'%',hx,y+1);c.font='bold 17px system-ui,sans-serif';
+      if(trace&&!ok){c.save();c.translate(hx+(n.g==='zigzag'?Math.sin((n.acc||0)*Math.PI)*5:0),y-6);if(n.g==='circle')c.rotate((n.acc||0)*Math.PI*2);c.fillStyle='#1a0b2e';c.font='900 15px system-ui,sans-serif';c.fillText(ICON[n.g],0,1);c.restore();
+        c.fillStyle='#1a0b2e';c.font='900 11px system-ui,sans-serif';c.fillText(Math.round(f*100)+'%',hx,y+10);}
+      else{c.fillStyle='#1a0b2e';c.font='900 13px system-ui,sans-serif';c.fillText(ok?'✓':Math.round(f*100)+'%',hx,y+1);}
+      c.font='bold 17px system-ui,sans-serif';
       continue;}
     const x=n.judged?hx:hx+dx,r=n.judged?22+(T-n.jt)*40:22;
     c.fillStyle=n.judged?GRADES[n.grade].c:col;c.beginPath();c.arc(x,y,r,0,7);c.fill();
