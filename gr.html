@@ -273,7 +273,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <!-- ACCUEIL -->
 <div id="sAccueil" class="screen on">
   <button id="cadenas" title="Code">🔒</button>
-  <div id="version">version 2.3</div>
+  <div id="version">version 2.5</div>
   <div id="classement"><div class="ct">🏆 Classement ▾</div><div class="cb"></div></div>
   <div class="brand"><div class="soutien"><a class="pill" id="btMail" href="mailto:chris333j@yahoo.fr?subject=GR%20Star">✉️ M'écrire</a><a class="pill" id="btInstall" href="#" style="display:none">📲 Installer l'appli</a><a class="pill cafe" id="btCafe" href="#" target="_blank" rel="noopener">☕ Offrir un café</a></div><div class="logo">🎀</div><h1>GR <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
   <label class="field">Ton prénom<input id="inNom" maxlength="14" placeholder="Prénom" autocomplete="off"></label>
@@ -739,6 +739,7 @@ const MUSIQUES=[
 /* Musiques libres de droit (Kevin MacLeod, incompetech.com, licence Creative Commons BY 3.0),
    à déposer dans le dossier « musiques/ » du dépôt GitHub, à côté de gr.html */
 const BIBLIO=[
+  {id:'dance',nom:'Dance Music · 129 bpm (Aurec)',ico:'🪩',f:'dance-pop.mp3',credit:'Musique : « Dance Music » par Aurec (pixabay.com) · Licence Pixabay'},
   {id:'habanera',nom:'Habanera · Carmen (Bizet)',ico:'🌹',f:'habanera.mp3'},
   {id:'fee',nom:'Fée Dragée · Casse-Noisette (Tchaïkovski)',ico:'🩰',f:'fee-dragee.mp3'},
   {id:'beethoven',nom:'5ᵉ Symphonie (Beethoven)',ico:'⚡',f:'beethoven5.mp3'},
@@ -767,7 +768,8 @@ const ETAB={PX:[0,0,0,0],EX:[0,.1,.3,.5],acro:[0,.1,.3,.5],DB:[0,.1,.3,.5],R:[0,
 const GRADES=[{t:'Parfait !',c:'#5be7a9'},{t:'Bien',c:'#9be15d'},{t:'Juste',c:'#ffd166'},{t:'Raté',c:'#ff6b6b'}];
 
 /* ============================ Réglages ============================ */
-const S=Object.assign({nom:'',leo:'p0',engin:'ruban',niv:'federale',latence:0,musique:'elan'},store.get('rs_cfg',{}));
+const S=Object.assign({nom:'',leo:'p0',engin:'ruban',niv:'federale',latence:0,musique:'lib:dance'},store.get('rs_cfg',{}));
+if(!store.get('rs_mus_dance',0)){store.set('rs_mus_dance',1);if(S.musique==='elan')S.musique='lib:dance';}   // musique par défaut : Dance Music
 S.custom=null; S.prevEngin=S.engin; S.survie=!!store.get('rs_survie_on',false);
 if(!S.corps){if(S.leo&&S.leo[0]==='t'&&!S.leo.includes('|')){S.corps=S.leo;S.tenue='orig';}else{S.corps='mannequin';S.tenue=S.leo||'p0';}}
 if(S.leo&&S.leo.includes('|')){const [cb,ct]=S.leo.split('|');S.corps=cb;S.tenue=ct;} S.engDesign=store.get('rs_eng',{});
@@ -1928,7 +1930,7 @@ async function musiqueImportee(){ // au moment de jouer : on (re)charge la musiq
 }
 async function getMusicSel(){
   if(S.musique==='custom'){const c=await musiqueImportee();return {buffer:c.buffer,bpm:c.bpm,offset:c.offset,dur:c.buffer.duration,finAt:null,nom:c.nom,id:'custom'};}
-  if(String(S.musique).startsWith('lib:')){const c=await chargerBiblio(S.musique.slice(4));return {buffer:c.buffer,bpm:c.bpm,offset:c.offset,dur:c.buffer.duration,finAt:null,nom:c.nom,id:S.musique,bytes:c.bytes};}
+  if(String(S.musique).startsWith('lib:')){let c;try{c=await chargerBiblio(S.musique.slice(4));}catch(e){if(S.musique!=='lib:dance')throw e;return genMusic('elan');}return {buffer:c.buffer,bpm:c.bpm,offset:c.offset,dur:c.buffer.duration,finAt:null,nom:c.nom,id:S.musique,bytes:c.bytes};}
   return genMusic(S.musique);
 }
 function musName(){if(String(S.musique).startsWith('lib:')){const M=BIBLIO.find(m=>'lib:'+m.id===S.musique);if(M)return M.nom;}return S.musique==='custom'&&S.custom?S.custom.nom:(MUSIQUES.find(m=>m.id===S.musique)||MUSIQUES[0]).nom;}
@@ -4127,7 +4129,7 @@ function renderReglage(){
   if(c){$('#bpmV').textContent=Math.round(c.bpm);const d=c.buffer.duration;$('#rgMusInfo').textContent=`Durée ${Math.floor(d/60)}:${String(Math.floor(d%60)).padStart(2,'0')} · tempo détecté. Si les notes ne tombent pas sur les temps, ajuste le tempo.${d<75?' ⚠️ Musique de moins de 1\'15" : pénalité de durée.':''}`;}
   else if(libId)$('#rgMusInfo').textContent='⏳ Chargement de la musique…';
   else $('#rgMusInfo').textContent='Musiques du jeu, ou la tienne (celle de ta compétition !).';
-  if(c&&c.lib)$('#rgMusInfo').textContent+=' '+CREDIT_BIB+'.';
+  if(c&&c.lib)$('#rgMusInfo').textContent+=' '+((BIBLIO.find(m=>m.id===c.lib)||{}).credit||CREDIT_BIB)+'.';
   if(libId&&!c)chargerBiblio(libId).then(()=>{if(VIEW==='sReglage'&&S.musique==='lib:'+libId)renderReglage();}).catch(e=>{if(S.musique==='lib:'+libId)$('#rgMusInfo').textContent='⚠️ '+e.message;});
   chips($('#rgVoix'),[{k:'1',t:'Oui'},{k:'0',t:'Non'}],VOIX.on?'1':'0',k=>{VOIX.on=k==='1';store.set('rs_voix',VOIX.on);if(VOIX.on)dire('Bonjour, je serai ta commentatrice !',2);renderReglage();});
   chips($('#rgQual'),[{k:'auto',t:'Auto'},{k:'beau',t:'Beaux'},{k:'eco',t:'Économie'}],QUAL.mode,k=>{QUAL.mode=k;store.set('rs_qualmode',k);appliquerQual();renderReglage();});
