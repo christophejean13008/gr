@@ -273,7 +273,7 @@ details ul{margin:.5em 0;padding-left:1.2em;font-size:.9rem}details li{margin:.2
 <!-- ACCUEIL -->
 <div id="sAccueil" class="screen on">
   <button id="cadenas" title="Code">🔒</button>
-  <div id="version">version 2.6</div>
+  <div id="version">version 2.7</div>
   <div id="classement"><div class="ct">🏆 Classement ▾</div><div class="cb"></div></div>
   <div class="brand"><div class="soutien"><a class="pill" id="btMail" href="mailto:chris333j@yahoo.fr?subject=GR%20Star">✉️ M'écrire</a><a class="pill" id="btInstall" href="#" style="display:none">📲 Installer l'appli</a><a class="pill cafe" id="btCafe" href="#" target="_blank" rel="noopener">☕ Offrir un café</a></div><div class="logo">🎀</div><h1>GR <span>Star</span></h1><p class="sub">Le jeu de gymnastique rythmique</p></div>
   <label class="field">Ton prénom<input id="inNom" maxlength="14" placeholder="Prénom" autocomplete="off"></label>
@@ -2430,7 +2430,16 @@ function drawLane(T){
     const ex=n.dur?(n.t+n.dur-T)*sp:dx; if(ex<-80)continue;
     let al=1; if(n.judged){al=Math.max(0,1-(T-n.jt)*3);if(al<=0)continue;}
     const col=CATCOL[n.cat]; c.globalAlpha=al;
-    if(n.dur&&!n.judged){c.fillStyle=col;c.globalAlpha=.4;c.beginPath();const x0=hx+Math.max(dx,-40),x1=hx+ex;c.roundRect?c.roundRect(x0,y-12,Math.max(4,x1-x0),24,12):c.rect(x0,y-12,Math.max(4,x1-x0),24);c.fill();c.globalAlpha=al;}
+    const tient=n.g==='hold'&&n.started&&!n.judged;   // maintien en cours : la note reste dans le cercle et se remplit
+    if(n.dur&&!n.judged){c.fillStyle=col;c.globalAlpha=tient?.85:.4;c.beginPath();const x0=tient?hx:hx+Math.max(dx,-40),x1=hx+ex;c.roundRect?c.roundRect(x0,y-12,Math.max(4,x1-x0),24,12):c.rect(x0,y-12,Math.max(4,x1-x0),24);c.fill();c.globalAlpha=al;}
+    if(tient){const f=clamp((T-n.t)/n.dur,0,1),ok=f>=.85,pu=1+.06*Math.sin(T*18);
+      c.save();c.shadowColor=ok?'#5be7a9':col;c.shadowBlur=18;
+      c.strokeStyle='rgba(255,255,255,.25)';c.lineWidth=7;c.beginPath();c.arc(hx,y,33,0,7);c.stroke();
+      c.strokeStyle=ok?'#5be7a9':col;c.lineCap='round';c.beginPath();c.arc(hx,y,33,-Math.PI/2,-Math.PI/2+f*Math.PI*2);c.stroke();c.restore();
+      c.fillStyle=col;c.beginPath();c.arc(hx,y,22*pu,0,7);c.fill();
+      c.fillStyle='rgba(255,255,255,.55)';c.beginPath();c.moveTo(hx,y);c.arc(hx,y,22*pu,-Math.PI/2,-Math.PI/2+f*Math.PI*2);c.closePath();c.fill();
+      c.fillStyle='#1a0b2e';c.font='900 13px system-ui,sans-serif';c.fillText(ok?'✓':Math.round(f*100)+'%',hx,y+1);c.font='bold 17px system-ui,sans-serif';
+      continue;}
     const x=n.judged?hx:hx+dx,r=n.judged?22+(T-n.jt)*40:22;
     c.fillStyle=n.judged?GRADES[n.grade].c:col;c.beginPath();c.arc(x,y,r,0,7);c.fill();
     if(!n.judged){c.fillStyle='#1a0b2e';c.fillText(n.cat==='PX'?PXFX[n.fx].ico:n.role?ROLEICON[n.role]:n.cat==='pas'?'♪':n.cat==='final'?'★':ICON[n.g],x,y+1);}
